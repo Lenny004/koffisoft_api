@@ -1,0 +1,11 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// La Fase 0 configura el cliente y las migraciones sin inventar modelos de negocio.
+// Los modelos se incorporarán después de comparar el dump legacy con una copia aislada.

@@ -17,6 +17,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:migrate": "prisma migrate dev --config ./prisma.config.ts",
+    "db:deploy": "prisma migrate deploy --config ./prisma.config.ts",
+    "db:seed": "prisma db execute --config ./prisma.config.ts --file ./prisma/seed/seed.sql",
+    "db:reset": "prisma migrate reset --config ./prisma.config.ts",
     "prisma:generate": "prisma generate --config ./prisma.config.ts",
     "prisma:validate": "prisma validate --config ./prisma.config.ts"
   },

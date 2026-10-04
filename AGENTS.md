@@ -16,6 +16,13 @@ Estas reglas aplican a Codex, Cursor, Claude y cualquier otro agente que modifiq
 
 Leer [docs/reglas-documentacion.md](docs/reglas-documentacion.md) antes de documentar. Las skills en `.agents/skills/` contienen recetas para módulos NestJS y migraciones Prisma sin saltarse los límites del plan.
 
+## Prisma, schema y migraciones
+
+- `prisma/schema.prisma` y la migración correspondiente deben actualizarse juntos; revisar su coherencia con `prisma migrate diff` antes de entregar.
+- Nunca editar una migración que ya fue aplicada. Los cambios posteriores requieren una nueva migración versionada y la aprobación correspondiente.
+- `CHECK`, `EXCLUDE`, columnas generadas, vistas, triggers e índices parciales o expresivos que Prisma no represente viven en el SQL personalizado de la migración y deben quedar explicados con comentarios `///` en el schema cuando aplique.
+- Los datos demo viven en `prisma/seed/seed.sql`, no en las migraciones. Nunca colocar secretos reales, tokens, contraseñas ni secretos TOTP en el seed.
+
 ## Límites y seguridad
 
 - No modificar `D:\Lenny\Projects\Koffi-Soft`, la base real ni el dump legacy.

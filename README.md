@@ -37,7 +37,7 @@
 - **API documentada:** Swagger está disponible en `/docs` fuera de producción y OpenAPI se puede exportar a un archivo.
 - **Persistencia controlada:** Prisma 7 mantiene el esquema y las migraciones de PostgreSQL en una frontera única.
 - **Catálogo de menú:** la carta web y la administración de categorías, ítems, variantes, precios, alérgenos, disponibilidad y modificadores viven en la API.
-- **Verificación automatizada:** CI ejecuta lint, typecheck, validación de Prisma, pruebas y build.
+- **Reservas y eventos:** disponibilidad pública, mesas, espacios, solicitudes de eventos, paquetes y cotizaciones versionadas usan los modelos reales del dominio.
 
 <!-- section:overview -->
 
@@ -45,9 +45,9 @@
 
 `koffisoft_api` es el backend de Koffi-Soft, un sistema para un café/restaurante de la Ruta Panorámica de El Salvador. Es dueño de los contratos HTTP y el único repositorio que accede a PostgreSQL; `koffisoft_web` y `koffisoft_admin` consumen la API sin incluir SQL, Prisma ni PHP.
 
-El alcance aprobado incluye NestJS sobre Fastify, el endpoint público `GET /health/live`, la carta pública `GET /menu`, el módulo de menú y el módulo de autenticación y autorización de la Fase 1. Los contratos compartidos y los trabajos de correo, QR y PDF quedan sujetos a sus fases y planes aprobados. El repositorio legacy se usa como referencia de solo lectura y no se copian sus credenciales, hashes, datos ni código.
+El alcance aprobado incluye NestJS sobre Fastify, el endpoint público `GET /health/live`, la carta pública `GET /menu`, reservas de mesa, eventos privados y el módulo de autenticación y autorización de la Fase 1. Los contratos compartidos y los trabajos de correo, QR y PDF quedan sujetos a sus fases y planes aprobados. El repositorio legacy se usa como referencia de solo lectura y no se copian sus credenciales, hashes, datos ni código.
 
-Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía del catálogo en [docs/menu.md](docs/menu.md) y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
+Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía del catálogo en [docs/menu.md](docs/menu.md), las guías de [reservas](docs/reservations.md) y [eventos](docs/events.md), y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
 
 **Stack:** Node.js 24.13.0, pnpm 11.1.3, NestJS 12.1.2, Fastify 5.12.5, TypeScript 5.9.3, Prisma 7.10.0 y PostgreSQL.
 
@@ -115,6 +115,8 @@ El módulo de menú expone la carta pública y las rutas administrativas documen
 curl "http://localhost:3000/menu?locationId=TU_LOCATION_ID"
 ```
 
+Las consultas públicas de disponibilidad y el catálogo de eventos están documentados en [docs/reservations.md](docs/reservations.md) y [docs/events.md](docs/events.md).
+
 <!-- section:configuration -->
 
 ## ⚙️ Configuración
@@ -162,6 +164,8 @@ La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los u
 │   ├── generated/              # Cliente Prisma generado, no versionado
 │   ├── health/                 # GET /health/live y prueba HTTP
 │   ├── menu/                   # Carta pública y administración del catálogo
+│   ├── reservations/           # Disponibilidad, reservas, espacios y mesas
+│   ├── events/                 # Eventos privados, paquetes y cotizaciones
 │   └── jobs/                   # Frontera reservada para trabajos futuros
 ├── .env.example                # Variables de entorno de ejemplo
 ├── AGENTS.md                   # Reglas para agentes de código
@@ -215,7 +219,7 @@ pnpm auth:create-user -- --email=TU_CORREO_LOCAL --password=TU_CONTRASEÑA_LOCAL
 pnpm test
 ```
 
-Las pruebas unitarias cubren Argon2id, AES-256-GCM, TOTP, guards de permisos, CSRF y las reglas del servicio de menú; también se verifica el endpoint `GET /health/live` sin PostgreSQL. `src/auth/auth.e2e.spec.ts` y `src/menu/menu.e2e.spec.ts` usan `Fastify.inject` y se omiten si no existe `TEST_DATABASE_URL`; al habilitarlas requieren una base de pruebas aislada con el schema y seed aplicados.
+Las pruebas unitarias cubren Argon2id, AES-256-GCM, TOTP, guards de permisos, CSRF, disponibilidad y transiciones de reservas, solapamientos de espacios, totales exactos de cotizaciones y las reglas del servicio de menú; también se verifica el endpoint `GET /health/live` sin PostgreSQL. `src/auth/auth.e2e.spec.ts`, `src/menu/menu.e2e.spec.ts`, `src/reservations/reservations.e2e.spec.ts` y `src/events/events.e2e.spec.ts` usan `Fastify.inject` y se omiten si no existe `TEST_DATABASE_URL`; al habilitarlas requieren una base de pruebas aislada con el schema y seed aplicados.
 
 La verificación completa del repositorio es:
 
@@ -233,6 +237,7 @@ pnpm build
 - [x] Baseline NestJS/Fastify, health check y frontera Prisma con migraciones versionadas.
 - [x] Fase 1: sesiones, TOTP, recuperación, CSRF, rate limiting, auditoría, roles y permisos efectivos.
 - [x] Módulo de menú: carta pública y administración del catálogo existente.
+- [x] Módulos de reservas y eventos: disponibilidad, mesas, espacios, paquetes y cotizaciones.
 - [ ] Publicar la versión aprobada de `@koffisoft/contracts` en la fase de contratos.
 - [ ] Completar endpoints de negocio únicamente después de aprobar su contrato y análisis del legacy.
 - [ ] Implementar trabajos de correo, QR y PDF dentro de la frontera jobs/outbox cuando una fase posterior los autorice.

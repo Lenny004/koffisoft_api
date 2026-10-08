@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { APP_CONFIG, type AppConfig } from './config/app-config.js';
 import { HttpExceptionFilter } from './common/http-exception.filter.js';
 import { AppModule } from './app.module.js';
+import { MenuModule } from './menu/menu.module.js';
 
 export async function createApplication(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
@@ -51,7 +52,7 @@ export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObjec
     .build();
 
   return SwaggerModule.createDocument(app, options, {
-    include: [AuthModule],
+    include: [AuthModule, MenuModule],
   });
 }
 

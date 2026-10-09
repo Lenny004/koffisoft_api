@@ -17,6 +17,7 @@ import {
 } from '../generated/prisma/enums.js';
 import {
   AssignReservationTablesDto,
+  CreateAdminReservationDto,
   CreateDiningTableDto,
   CreatePublicReservationDto,
   CreateVenueSpaceDto,
@@ -78,6 +79,7 @@ export class ReservationsService {
     const startsAt = localDateTime(query.date, query.time);
     const endsAt = new Date(startsAt.getTime() + query.durationMinutes * 60_000);
     const spaces = await this.findAvailabilitySpaces(
+      this.prisma,
       query.locationId,
       startsAt,
       endsAt,
@@ -186,6 +188,108 @@ export class ReservationsService {
     return this.toReservation(row);
   }
 
+  /** Crea una reserva interna; la reserva y sus mesas se confirman juntas. */
+  async createAdminReservation(
+    dto: CreateAdminReservationDto,
+    createdByUserId?: string,
+  ): Promise<ReservationResponseDto> {
+    const startsAt = localDateTime(dto.date, dto.time);
+    const endsAt = new Date(startsAt.getTime() + dto.durationMinutes * 60_000);
+
+    let reservationId: string;
+    try {
+      reservationId = await this.prisma.$transaction(async (tx) => {
+        const location = await tx.location.findFirst({
+          where: { id: dto.locationId, active: true },
+          select: { id: true },
+        });
+        if (!location) throw new NotFoundException('Sede no encontrada.');
+
+        const customer = dto.customerId
+          ? await tx.customer.findFirst({
+              where: { id: dto.customerId, active: true },
+              select: { displayName: true, phone: true, email: true, preferredLanguage: true },
+            })
+          : null;
+        if (dto.customerId && !customer) throw new NotFoundException('Cliente no encontrado.');
+
+        const contactName = dto.contactName || customer?.displayName;
+        const contactPhone = dto.contactPhone || customer?.phone;
+        if (!contactName)
+          throw new BadRequestException('Debe indicar un cliente o nombre de contacto.');
+        if (!contactPhone) throw new BadRequestException('Debe indicar un teléfono de contacto.');
+
+        if (dto.preferredSpaceId) {
+          const space = await tx.venueSpace.findFirst({
+            where: {
+              id: dto.preferredSpaceId,
+              locationId: dto.locationId,
+              active: true,
+              allowsTableReservation: true,
+            },
+            select: { id: true },
+          });
+          if (!space)
+            throw new BadRequestException(
+              'El espacio no pertenece a la sede o no está disponible.',
+            );
+        }
+
+        if (dto.tableIds.length === 0) {
+          const spaces = await this.findAvailabilitySpaces(
+            tx,
+            dto.locationId,
+            startsAt,
+            endsAt,
+            dto.partySize,
+            dto.preferredSpaceId,
+          );
+          if (!spaces.some((space) => space.available)) {
+            throw new ConflictException('No hay capacidad disponible para el horario solicitado.');
+          }
+        }
+
+        const reservation = await tx.reservation.create({
+          data: {
+            locationId: dto.locationId,
+            customerId: dto.customerId,
+            reservationCode: this.newReservationCode(),
+            contactNameSnapshot: contactName,
+            contactPhoneSnapshot: contactPhone,
+            contactEmailSnapshot: dto.contactEmail ?? customer?.email,
+            preferredLanguage: dto.preferredLanguage ?? customer?.preferredLanguage ?? 'es',
+            startsAt,
+            endsAt,
+            partySize: dto.partySize,
+            status: dto.status,
+            source: ReservationSource.Admin,
+            preferredSpaceId: dto.preferredSpaceId,
+            internalNotes: dto.internalNotes,
+            createdByUserId,
+            ...(dto.status === ReservationStatus.Confirmed ? { confirmedAt: new Date() } : {}),
+          },
+          select: { id: true, locationId: true, partySize: true, startsAt: true, endsAt: true },
+        });
+
+        if (dto.tableIds.length > 0) {
+          await this.assignTablesInTransaction(
+            tx,
+            reservation,
+            dto.tableIds,
+            createdByUserId,
+            dto.preferredSpaceId,
+          );
+        }
+        return reservation.id;
+      });
+    } catch (error) {
+      this.rethrowPrismaConflict(error);
+      throw error;
+    }
+
+    return this.getReservation(reservationId);
+  }
+
   async transitionReservation(
     id: string,
     target: ReservationStatus,
@@ -236,35 +340,62 @@ export class ReservationsService {
     dto: AssignReservationTablesDto,
     assignedByUserId?: string,
   ): Promise<ReservationResponseDto> {
-    const reservation = await this.prisma.reservation.findUnique({
-      where: { id },
-      select: { id: true, locationId: true, partySize: true, startsAt: true, endsAt: true },
-    });
-    if (!reservation) throw new NotFoundException('Reserva no encontrada.');
-    if (dto.tableIds.length === 0) throw new BadRequestException('Debe indicar al menos una mesa.');
-    if (new Set(dto.tableIds).size !== dto.tableIds.length) {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const reservation = await tx.reservation.findUnique({
+          where: { id },
+          select: { id: true, locationId: true, partySize: true, startsAt: true, endsAt: true },
+        });
+        if (!reservation) throw new NotFoundException('Reserva no encontrada.');
+        await this.assignTablesInTransaction(tx, reservation, dto.tableIds, assignedByUserId);
+      });
+    } catch (error) {
+      this.rethrowPrismaConflict(error);
+    }
+
+    return this.getReservation(id);
+  }
+
+  private async assignTablesInTransaction(
+    tx: Prisma.TransactionClient,
+    reservation: {
+      id: string;
+      locationId: string;
+      partySize: number;
+      startsAt: Date;
+      endsAt: Date;
+    },
+    tableIds: string[],
+    assignedByUserId?: string,
+    preferredSpaceId?: string,
+  ): Promise<void> {
+    if (tableIds.length === 0) throw new BadRequestException('Debe indicar al menos una mesa.');
+    if (new Set(tableIds).size !== tableIds.length) {
       throw new BadRequestException('No puede repetir una mesa.');
     }
 
-    const tables = await this.prisma.diningTable.findMany({
+    const tables = await tx.diningTable.findMany({
       where: {
-        id: { in: dto.tableIds },
+        id: { in: tableIds },
         active: true,
-        space: { locationId: reservation.locationId },
+        space: {
+          locationId: reservation.locationId,
+          ...(preferredSpaceId ? { id: preferredSpaceId } : {}),
+        },
       },
       select: { id: true, seatCount: true },
     });
-    if (tables.length !== dto.tableIds.length) {
+    if (tables.length !== tableIds.length) {
       throw new BadRequestException('Una o más mesas no pertenecen a la sede o están inactivas.');
     }
     if (tables.reduce((total, table) => total + table.seatCount, 0) < reservation.partySize) {
       throw new ConflictException('La capacidad de las mesas no cubre el grupo.');
     }
 
-    const conflict = await this.prisma.reservationTable.findFirst({
+    const conflict = await tx.reservationTable.findFirst({
       where: {
-        diningTableId: { in: dto.tableIds },
-        reservationId: { not: id },
+        diningTableId: { in: tableIds },
+        reservationId: { not: reservation.id },
         allocationStatus: { in: reservationTableStatuses },
         startsAt: { lt: reservation.endsAt },
         endsAt: { gt: reservation.startsAt },
@@ -274,31 +405,23 @@ export class ReservationsService {
     });
     if (conflict) throw new ConflictException('Una o más mesas ya están asignadas en ese horario.');
 
-    try {
-      await this.prisma.$transaction(async (tx) => {
-        await tx.reservationTable.updateMany({
-          where: {
-            reservationId: id,
-            allocationStatus: { in: reservationTableStatuses },
-          },
-          data: { allocationStatus: ReservationTableStatus.Released },
-        });
-        await tx.reservationTable.createMany({
-          data: dto.tableIds.map((diningTableId) => ({
-            reservationId: id,
-            diningTableId,
-            startsAt: reservation.startsAt,
-            endsAt: reservation.endsAt,
-            allocationStatus: ReservationTableStatus.Assigned,
-            assignedByUserId,
-          })),
-        });
-      });
-    } catch (error) {
-      this.rethrowPrismaConflict(error);
-    }
-
-    return this.getReservation(id);
+    await tx.reservationTable.updateMany({
+      where: {
+        reservationId: reservation.id,
+        allocationStatus: { in: reservationTableStatuses },
+      },
+      data: { allocationStatus: ReservationTableStatus.Released },
+    });
+    await tx.reservationTable.createMany({
+      data: tableIds.map((diningTableId) => ({
+        reservationId: reservation.id,
+        diningTableId,
+        startsAt: reservation.startsAt,
+        endsAt: reservation.endsAt,
+        allocationStatus: ReservationTableStatus.Assigned,
+        assignedByUserId,
+      })),
+    });
   }
 
   async listSpaces(query: VenueListQueryDto): Promise<VenueSpaceResponseDto[]> {
@@ -402,13 +525,14 @@ export class ReservationsService {
   }
 
   private async findAvailabilitySpaces(
+    client: PrismaService | Prisma.TransactionClient,
     locationId: string,
     startsAt: Date,
     endsAt: Date,
     partySize: number,
     spaceId?: string,
   ): Promise<Array<SpaceRecord & { available: boolean }>> {
-    const rows = await this.prisma.venueSpace.findMany({
+    const rows = await client.venueSpace.findMany({
       where: {
         locationId,
         active: true,

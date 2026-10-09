@@ -38,4 +38,29 @@ databaseTests('Reservas HTTP con Fastify inject', () => {
       spaces: expect.any(Array),
     });
   });
+
+  it('protege la creación administrativa con sesión y permiso', async () => {
+    const response = await app
+      .getHttpAdapter()
+      .getInstance()
+      .inject({
+        method: 'POST',
+        url: '/reservations/admin',
+        headers: {
+          origin: 'http://localhost:5173',
+          referer: 'http://localhost:5173/reservaciones',
+        },
+        payload: {
+          locationId: '20000000-0000-0000-0000-000000000001',
+          date: '2026-10-24',
+          time: '18:30',
+          partySize: 2,
+          contactName: 'Ana',
+          contactPhone: '+503 0000-0000',
+          tableIds: [],
+        },
+      });
+
+    expect(response.statusCode).toBe(401);
+  });
 });

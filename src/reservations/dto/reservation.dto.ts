@@ -110,6 +110,98 @@ export class CreatePublicReservationDto extends ReservationAvailabilityQueryDto 
   specialRequests?: string;
 }
 
+/** Datos para crear desde el panel una reserva con origen administrativo. */
+export class CreateAdminReservationDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  locationId!: string;
+
+  @ApiProperty({ format: 'date', example: '2026-10-24' })
+  @IsDateString({ strict: true })
+  date!: string;
+
+  @ApiProperty({ example: '18:30', pattern: 'HH:mm' })
+  @IsString()
+  @Matches(TIME_PATTERN)
+  time!: string;
+
+  @ApiProperty({ minimum: 1, maximum: 100 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  partySize!: number;
+
+  @ApiPropertyOptional({ minimum: 30, maximum: 360, default: 120 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(30)
+  @Max(360)
+  durationMinutes = 120;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Cliente existente; sus datos completan los snapshots faltantes.',
+  })
+  @IsOptional()
+  @IsUUID()
+  customerId?: string;
+
+  @ApiPropertyOptional({ maxLength: 200 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  @Transform(trimValue)
+  contactName?: string;
+
+  @ApiPropertyOptional({ maxLength: 40 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  @Transform(trimValue)
+  contactPhone?: string;
+
+  @ApiPropertyOptional({ maxLength: 200 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  @Transform(trimValue)
+  contactEmail?: string;
+
+  @ApiPropertyOptional({ enum: ['es', 'en'], default: 'es' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^(es|en)$/u)
+  preferredLanguage?: string;
+
+  @ApiPropertyOptional({ format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  preferredSpaceId?: string;
+
+  @ApiPropertyOptional({ maxLength: 10_000 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10_000)
+  @Transform(trimValue)
+  internalNotes?: string;
+
+  @ApiPropertyOptional({
+    enum: [ReservationStatus.PendingConfirmation, ReservationStatus.Confirmed],
+  })
+  @IsOptional()
+  @IsEnum(ReservationStatus)
+  @IsIn([ReservationStatus.PendingConfirmation, ReservationStatus.Confirmed])
+  status: ReservationStatus = ReservationStatus.PendingConfirmation;
+
+  @ApiPropertyOptional({ type: () => [String], format: 'uuid' })
+  @IsOptional()
+  @IsArray()
+  @IsUUID(undefined, { each: true })
+  tableIds: string[] = [];
+}
+
 /** Filtros de listados administrativos con fechas ISO explícitas. */
 export class ReservationListQueryDto {
   @ApiProperty({ format: 'uuid' })

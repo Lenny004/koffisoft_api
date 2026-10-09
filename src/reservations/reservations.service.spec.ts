@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { ReservationStatus, ReservationTableStatus } from '../generated/prisma/enums.js';
+import {
+  ReservationSource,
+  ReservationStatus,
+  ReservationTableStatus,
+} from '../generated/prisma/enums.js';
 import { ReservationsService } from './reservations.service.js';
 
 const locationId = '20000000-0000-0000-0000-000000000001';
@@ -123,5 +127,179 @@ describe('ReservationsService', () => {
       },
       data: { allocationStatus: ReservationTableStatus.Released },
     });
+  });
+
+  it('crea una reserva administrativa y asigna mesas dentro de la misma transacción', async () => {
+    const detail = {
+      id: reservationId,
+      locationId,
+      reservationCode: 'RES-ADMIN',
+      contactNameSnapshot: 'Ana',
+      contactPhoneSnapshot: '+503 0000-0000',
+      contactEmailSnapshot: 'ana@example.test',
+      preferredLanguage: 'es',
+      startsAt: new Date('2026-10-24T00:30:00.000Z'),
+      endsAt: new Date('2026-10-24T02:30:00.000Z'),
+      partySize: 2,
+      status: ReservationStatus.Confirmed,
+      source: ReservationSource.Admin,
+      preferredSpaceId: spaceId,
+      specialRequests: null,
+      internalNotes: 'Cliente frecuente',
+      createdAt: new Date('2026-10-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-10-01T00:00:00.000Z'),
+      tables: [],
+      preferredSpace: null,
+    };
+    const tx = {
+      location: { findFirst: vi.fn().mockResolvedValue({ id: locationId }) },
+      customer: { findFirst: vi.fn().mockResolvedValue(null) },
+      venueSpace: { findFirst: vi.fn().mockResolvedValue({ id: spaceId }) },
+      reservation: {
+        create: vi.fn().mockResolvedValue({
+          id: reservationId,
+          locationId,
+          partySize: 2,
+          startsAt: detail.startsAt,
+          endsAt: detail.endsAt,
+        }),
+      },
+      diningTable: { findMany: vi.fn().mockResolvedValue([{ id: tableId, seatCount: 2 }]) },
+      reservationTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        updateMany: vi.fn().mockResolvedValue({ count: 0 }),
+        createMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+      reservation: { findUnique: vi.fn().mockResolvedValue(detail) },
+    };
+    const service = new ReservationsService(prisma as never);
+
+    const result = await service.createAdminReservation(
+      {
+        locationId,
+        date: '2026-10-23',
+        time: '18:30',
+        durationMinutes: 120,
+        partySize: 2,
+        contactName: 'Ana',
+        contactPhone: '+503 0000-0000',
+        contactEmail: 'ana@example.test',
+        preferredSpaceId: spaceId,
+        internalNotes: 'Cliente frecuente',
+        status: ReservationStatus.Confirmed,
+        tableIds: [tableId],
+      },
+      'user-1',
+    );
+
+    expect(result.reservationCode).toBe('RES-ADMIN');
+    expect(prisma.$transaction).toHaveBeenCalledOnce();
+    expect(tx.reservation.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          source: ReservationSource.Admin,
+          createdByUserId: 'user-1',
+          status: ReservationStatus.Confirmed,
+        }),
+      }),
+    );
+    expect(tx.reservationTable.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          reservationId,
+          diningTableId: tableId,
+          assignedByUserId: 'user-1',
+        }),
+      ],
+    });
+  });
+
+  it('rechaza la creación administrativa cuando las mesas no cubren el grupo', async () => {
+    const tx = {
+      location: { findFirst: vi.fn().mockResolvedValue({ id: locationId }) },
+      customer: { findFirst: vi.fn().mockResolvedValue(null) },
+      venueSpace: { findFirst: vi.fn().mockResolvedValue({ id: spaceId }) },
+      reservation: {
+        create: vi.fn().mockResolvedValue({
+          id: reservationId,
+          locationId,
+          partySize: 5,
+          startsAt: new Date('2026-10-24T00:30:00.000Z'),
+          endsAt: new Date('2026-10-24T02:30:00.000Z'),
+        }),
+      },
+      diningTable: { findMany: vi.fn().mockResolvedValue([{ id: tableId, seatCount: 2 }]) },
+      reservationTable: { findFirst: vi.fn(), updateMany: vi.fn(), createMany: vi.fn() },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+    };
+    const service = new ReservationsService(prisma as never);
+
+    await expect(
+      service.createAdminReservation({
+        locationId,
+        date: '2026-10-23',
+        time: '18:30',
+        durationMinutes: 120,
+        partySize: 5,
+        contactName: 'Ana',
+        contactPhone: '+503 0000-0000',
+        status: ReservationStatus.PendingConfirmation,
+        tableIds: [tableId],
+      }),
+    ).rejects.toThrow('capacidad de las mesas');
+    expect(tx.reservation.create).toHaveBeenCalledOnce();
+  });
+
+  it('rechaza la creación administrativa cuando una mesa ya está ocupada', async () => {
+    const tx = {
+      location: { findFirst: vi.fn().mockResolvedValue({ id: locationId }) },
+      customer: { findFirst: vi.fn().mockResolvedValue(null) },
+      venueSpace: { findFirst: vi.fn().mockResolvedValue({ id: spaceId }) },
+      reservation: {
+        create: vi.fn().mockResolvedValue({
+          id: reservationId,
+          locationId,
+          partySize: 2,
+          startsAt: new Date('2026-10-24T00:30:00.000Z'),
+          endsAt: new Date('2026-10-24T02:30:00.000Z'),
+        }),
+      },
+      diningTable: { findMany: vi.fn().mockResolvedValue([{ id: tableId, seatCount: 2 }]) },
+      reservationTable: {
+        findFirst: vi.fn().mockResolvedValue({ id: 'busy-reservation-table' }),
+        updateMany: vi.fn(),
+        createMany: vi.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+    };
+    const service = new ReservationsService(prisma as never);
+
+    await expect(
+      service.createAdminReservation({
+        locationId,
+        date: '2026-10-23',
+        time: '18:30',
+        durationMinutes: 120,
+        partySize: 2,
+        contactName: 'Ana',
+        contactPhone: '+503 0000-0000',
+        status: ReservationStatus.PendingConfirmation,
+        tableIds: [tableId],
+      }),
+    ).rejects.toThrow('ya están asignadas');
+    expect(tx.reservationTable.createMany).not.toHaveBeenCalled();
   });
 });

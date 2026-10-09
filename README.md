@@ -37,7 +37,7 @@
 - **API documentada:** Swagger está disponible en `/docs` fuera de producción y OpenAPI se puede exportar a un archivo.
 - **Persistencia controlada:** Prisma 7 mantiene el esquema y las migraciones de PostgreSQL en una frontera única.
 - **Catálogo de menú:** la carta web y la administración de categorías, ítems, variantes, precios, alérgenos, disponibilidad y modificadores viven en la API.
-- **Reservas y eventos:** disponibilidad pública, mesas, espacios, solicitudes de eventos, paquetes y cotizaciones versionadas usan los modelos reales del dominio.
+- **Reservas y eventos:** disponibilidad pública, creación administrativa, mesas, espacios, solicitudes de eventos, paquetes y cotizaciones versionadas usan los modelos reales del dominio.
 
 <!-- section:overview -->
 

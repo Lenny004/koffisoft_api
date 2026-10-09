@@ -27,6 +27,13 @@ Las lecturas usan `reservations.read`; las mutaciones usan `reservations.manage`
 
 - `GET /reservations/admin`: listado paginado por `locationId`, rango de fechas, `status` y `spaceId`.
 - `GET /reservations/admin/{id}`: detalle con contacto snapshot, notas internas y mesas asignadas.
+- `POST /reservations/admin`: crea una reserva interna con `locationId`, fecha y hora local, grupo,
+  contacto o `customerId`, teléfono/correo, espacio preferido, notas internas, estado inicial
+  (`PendingConfirmation` o `Confirmed`, mapeados a sus valores persistidos) y `tableIds` opcionales. La duración se expresa en
+  `durationMinutes` (30–360, 120 por defecto); se persiste como origen `admin` y registra
+  `createdByUserId` cuando la sesión tiene usuario.
+  La creación valida sede, cliente, capacidad y cruces de mesas dentro de una transacción. Si no se
+  envían mesas, valida capacidad y bloqueos del espacio para dejar la reserva pendiente de asignación.
 - `POST /reservations/admin/{id}/confirm`: `requested` o `pending_confirmation` → `confirmed`.
 - `POST /reservations/admin/{id}/seat`: `confirmed` → `seated`.
 - `POST /reservations/admin/{id}/complete`: `seated` → `completed`.

@@ -7,6 +7,7 @@ import type { AuthenticatedRequest } from '../auth/auth.types.js';
 import { ReservationStatus } from '../generated/prisma/enums.js';
 import {
   AssignReservationTablesDto,
+  CreateAdminReservationDto,
   CreateDiningTableDto,
   CreatePublicReservationDto,
   CreateVenueSpaceDto,
@@ -70,6 +71,18 @@ export class ReservationsController {
   @ApiResponse({ status: 200, type: ReservationResponseDto })
   async get(@Param('id') id: string): Promise<ReservationResponseDto> {
     return this.service.getReservation(id);
+  }
+
+  @Post('admin')
+  @ApiSecurity('sessionCookie')
+  @RequirePermissions('reservations.manage')
+  @ApiOperation({ summary: 'Crea una reserva interna y asigna mesas opcionales' })
+  @ApiResponse({ status: 201, type: ReservationResponseDto })
+  async createAdmin(
+    @Body() dto: CreateAdminReservationDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ReservationResponseDto> {
+    return this.service.createAdminReservation(dto, request.auth?.userId);
   }
 
   @Post('admin/:id/confirm')

@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 dist/
 coverage/
+openapi.json
 .prisma-cache/
 .env
 .env.*

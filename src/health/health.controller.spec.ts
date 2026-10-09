@@ -12,6 +12,8 @@ describe('GET /health/live', () => {
 
   beforeAll(async () => {
     process.env.DATABASE_CONNECT_ON_BOOT = 'false';
+    process.env.MFA_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString('base64');
+    process.env.MFA_KEY_VERSION = '1';
 
     const moduleRef: TestingModule = await Test.createTestingModule({
       imports: [AppModule],

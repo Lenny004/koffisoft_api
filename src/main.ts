@@ -1,18 +1,16 @@
 import 'reflect-metadata';
+import 'dotenv/config';
 
-import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
-
-import { AppModule } from './app.module.js';
+import { APP_CONFIG, type AppConfig } from './config/app-config.js';
+import { createApplication } from './bootstrap.js';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+  const app = await createApplication();
 
   app.enableShutdownHooks();
 
-  const port = Number(process.env.PORT ?? 3000);
-  const host = process.env.HOST ?? '0.0.0.0';
-  await app.listen({ port, host });
+  const config = app.get<AppConfig>(APP_CONFIG);
+  await app.listen({ port: config.port, host: config.host });
 }
 
 void bootstrap();

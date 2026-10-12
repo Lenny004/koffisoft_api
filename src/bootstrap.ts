@@ -10,6 +10,7 @@ import { APP_CONFIG, type AppConfig } from './config/app-config.js';
 import { HttpExceptionFilter } from './common/http-exception.filter.js';
 import { EventsModule } from './events/events.module.js';
 import { AppModule } from './app.module.js';
+import { InventoryModule } from './inventory/inventory.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { ReservationsModule } from './reservations/reservations.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -63,6 +64,7 @@ export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObjec
       EventsModule,
       AnnouncementsModule,
       UsersModule,
+      InventoryModule,
     ],
   });
 }

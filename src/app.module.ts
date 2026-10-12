@@ -6,6 +6,7 @@ import { ConfigModule } from './config/config.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { EventsModule } from './events/events.module.js';
 import { HealthModule } from './health/health.module.js';
+import { InventoryModule } from './inventory/inventory.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { ReservationsModule } from './reservations/reservations.module.js';
 import { UsersModule } from './users/users.module.js';
@@ -16,6 +17,7 @@ import { UsersModule } from './users/users.module.js';
     DatabaseModule,
     AuthModule,
     HealthModule,
+    InventoryModule,
     MenuModule,
     ReservationsModule,
     EventsModule,

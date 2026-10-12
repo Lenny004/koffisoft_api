@@ -40,6 +40,7 @@
 - **Reservas y eventos:** disponibilidad pública, creación administrativa, mesas, espacios, solicitudes de eventos, paquetes y cotizaciones versionadas usan los modelos reales del dominio.
 - **Avisos importantes:** publicación pública por sede y CRUD administrativo con ventanas de vigencia.
 - **Administración de acceso:** CRUD de usuarios y empleados, asignación de roles, MFA, bloqueo y auditoría de cambios sensibles.
+- **Inventario P1:** ingredientes, proveedores, recepciones, lotes, movimientos, alertas de saldo/vencimiento y recetas versionadas.
 
 <!-- section:overview -->
 
@@ -49,7 +50,7 @@
 
 El alcance aprobado incluye NestJS sobre Fastify, el endpoint público `GET /health/live`, la carta pública `GET /menu`, reservas de mesa, eventos privados y el módulo de autenticación y autorización de la Fase 1. Los contratos compartidos y los trabajos de correo, QR y PDF quedan sujetos a sus fases y planes aprobados. El repositorio legacy se usa como referencia de solo lectura y no se copian sus credenciales, hashes, datos ni código.
 
-Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía de [usuarios y empleados](docs/users.md), la guía del catálogo en [docs/menu.md](docs/menu.md), las guías de [reservas](docs/reservations.md) y [eventos](docs/events.md), y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
+Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía de [usuarios y empleados](docs/users.md), la guía del catálogo en [docs/menu.md](docs/menu.md), las guías de [reservas](docs/reservations.md), [eventos](docs/events.md) e [inventario](docs/inventory.md), y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
 
 **Stack:** Node.js 24.13.0, pnpm 11.1.3, NestJS 12.1.2, Fastify 5.12.5, TypeScript 5.9.3, Prisma 7.10.0 y PostgreSQL.
 
@@ -121,6 +122,8 @@ curl "http://localhost:3000/menu?locationId=TU_LOCATION_ID"
 
 Las consultas públicas de disponibilidad y el catálogo de eventos están documentados en [docs/reservations.md](docs/reservations.md) y [docs/events.md](docs/events.md).
 
+El módulo administrativo de inventario, proveedores, recepciones, movimientos y recetas está documentado en [docs/inventory.md](docs/inventory.md).
+
 <!-- section:configuration -->
 
 ## ⚙️ Configuración
@@ -172,6 +175,7 @@ La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los u
 │   ├── events/                 # Eventos privados, paquetes y cotizaciones
 │   ├── announcements/          # Avisos públicos y administración editorial
 │   ├── users/                  # Usuarios, empleados, roles y permisos
+│   ├── inventory/              # Ingredientes, proveedores, movimientos y recetas
 │   └── jobs/                   # Frontera reservada para trabajos futuros
 ├── .env.example                # Variables de entorno de ejemplo
 ├── AGENTS.md                   # Reglas para agentes de código
@@ -225,7 +229,7 @@ pnpm auth:create-user -- --email=TU_CORREO_LOCAL --password=TU_CONTRASEÑA_LOCAL
 pnpm test
 ```
 
-Las pruebas unitarias cubren Argon2id, AES-256-GCM, TOTP, guards de permisos, CSRF, disponibilidad y transiciones de reservas, solapamientos de espacios, totales exactos de cotizaciones y las reglas del servicio de menú; también se verifica el endpoint `GET /health/live` sin PostgreSQL. `src/auth/auth.e2e.spec.ts`, `src/menu/menu.e2e.spec.ts`, `src/reservations/reservations.e2e.spec.ts` y `src/events/events.e2e.spec.ts` usan `Fastify.inject` y se omiten si no existe `TEST_DATABASE_URL`; al habilitarlas requieren una base de pruebas aislada con el schema y seed aplicados.
+Las pruebas unitarias cubren Argon2id, AES-256-GCM, TOTP, guards de permisos, CSRF, disponibilidad y transiciones de reservas, solapamientos de espacios, totales exactos de cotizaciones, menú e idempotencia/stock del inventario; también se verifica el endpoint `GET /health/live` sin PostgreSQL. Las pruebas e2e usan `Fastify.inject` y se omiten si no existe `TEST_DATABASE_URL`; al habilitarlas requieren una base de pruebas aislada con el schema y seed aplicados.
 
 La verificación completa del repositorio es:
 
@@ -247,6 +251,7 @@ pnpm build
 - [x] Módulos de reservas y eventos: disponibilidad, mesas, espacios, paquetes y cotizaciones.
 - [x] Avisos importantes: publicación vigente y CRUD protegido por permisos.
 - [x] Usuarios, empleados, roles y permisos: CRUD administrativo, MFA, bloqueo y auditoría.
+- [x] Inventario P1: ingredientes, proveedores, recepciones, movimientos, alertas y recetas.
 - [ ] Publicar la versión aprobada de `@koffisoft/contracts` en la fase de contratos.
 - [ ] Completar endpoints de negocio únicamente después de aprobar su contrato y análisis del legacy.
 - [ ] Implementar trabajos de correo, QR y PDF dentro de la frontera jobs/outbox cuando una fase posterior los autorice.

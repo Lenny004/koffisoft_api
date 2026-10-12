@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AuthModule } from './auth/auth.module.js';
+import { AnnouncementsModule } from './announcements/announcements.module.js';
 import { ConfigModule } from './config/config.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { EventsModule } from './events/events.module.js';
@@ -17,6 +18,7 @@ import { ReservationsModule } from './reservations/reservations.module.js';
     MenuModule,
     ReservationsModule,
     EventsModule,
+    AnnouncementsModule,
   ],
 })
 export class AppModule {}

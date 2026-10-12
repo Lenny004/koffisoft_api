@@ -44,7 +44,7 @@ import {
 
 const eventInclude = {
   spaceBookings: { orderBy: { startsAt: 'asc' as const } },
-  requirements: { orderBy: { createdAt: 'asc' as const } },
+  requirements: { where: { active: true }, orderBy: { createdAt: 'asc' as const } },
 } as const;
 
 const packageInclude = {
@@ -277,7 +277,7 @@ export class EventsService {
     }
   }
 
-  /** El schema no tiene `active` para eventos; eliminar equivale a cancelarlos. */
+  /** El evento conserva su fila y usa `cancelled`; sus requisitos se desactivan por separado. */
   async deleteEvent(id: string): Promise<EventResponseDto> {
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -490,7 +490,10 @@ export class EventsService {
           },
         });
         if (dto.lines !== undefined) {
-          await tx.eventPackageLine.deleteMany({ where: { eventPackageId: id } });
+          await tx.eventPackageLine.updateMany({
+            where: { eventPackageId: id, active: true },
+            data: { active: false },
+          });
           if (dto.lines.length) {
             await tx.eventPackageLine.createMany({
               data: dto.lines.map((line) => ({
@@ -638,7 +641,10 @@ export class EventsService {
 
   async deleteRequirement(id: string): Promise<void> {
     try {
-      await this.prisma.eventRequirement.delete({ where: { id } });
+      await this.prisma.eventRequirement.update({
+        where: { id },
+        data: { active: false },
+      });
     } catch (error) {
       this.rethrowPrisma(error);
       throw error;

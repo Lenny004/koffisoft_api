@@ -11,6 +11,7 @@ import {
 
 import {
   AuthEventType,
+  JobCode,
   MfaFactorStatus,
   MfaFactorType,
   UserStatus,
@@ -21,6 +22,7 @@ import type { AccessSnapshot, AuthContext, RequestMetadata } from './auth.types.
 import { ChangePasswordDto } from './dto/password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { MfaCodeDto, MfaSetupDto, PasswordAndMfaCodeDto, RecoveryCodeDto } from './dto/mfa.dto.js';
+import { InitialSetupDto } from './dto/setup.dto.js';
 import { AuditService } from './security/audit.service.js';
 import { MfaCryptoService } from './security/mfa-crypto.service.js';
 import { PasswordService } from './security/password.service.js';
@@ -63,6 +65,25 @@ interface RecoveryCodeMaterial {
 
 const GENERIC_LOGIN_ERROR = 'Credenciales inválidas.';
 
+interface UsernameLookup {
+  user: {
+    findFirst(args: {
+      where: { username: { equals: string; mode: 'insensitive' } };
+      select: { id: true };
+    }): Promise<{ id: string } | null>;
+  };
+}
+
+function nameSlug(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+    .slice(0, 40);
+}
+
 /** Coordina autenticación, MFA, recuperación, cambio de contraseña y auditoría. */
 @Injectable()
 export class AuthService {
@@ -87,12 +108,14 @@ export class AuthService {
         passwordChangedAt: true,
         emailVerifiedAt: true,
         roles: {
+          where: { active: true },
           select: {
             role: {
               select: {
                 code: true,
                 active: true,
                 rolePermissions: {
+                  where: { active: true },
                   select: {
                     permission: {
                       select: { code: true, active: true },
@@ -253,6 +276,131 @@ export class AuthService {
     return { session, requiresMfa, requiresMfaSetup };
   }
 
+  /** true solo mientras no exista la fila única de system_setups. */
+  async isSetupRequired(): Promise<boolean> {
+    const existing = await this.prisma.systemSetup.findUnique({
+      where: { id: 1 },
+      select: { id: true },
+    });
+    return !existing;
+  }
+
+  /**
+   * Crea al primer propietario y cierra el alta en la misma transacción.
+   * Un candado de sesión y la clave id = 1 impiden que dos peticiones completen el alta.
+   */
+  async completeInitialSetup(
+    dto: InitialSetupDto,
+    metadata: RequestMetadata,
+    existingToken?: string,
+  ): Promise<LoginResult> {
+    const email = dto.email.trim().toLowerCase();
+    const firstName = dto.firstName.trim();
+    const lastName = dto.lastName.trim();
+    const passwordHash = await this.passwords.hash(dto.password);
+    const now = new Date();
+
+    const userId = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(71001001)`;
+      const existing = await tx.systemSetup.findUnique({
+        where: { id: 1 },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('El sistema ya fue configurado.');
+      }
+
+      const ownerRole = await tx.role.findFirst({
+        where: { code: 'owner', active: true },
+        select: { id: true },
+      });
+      if (!ownerRole) {
+        throw new ConflictException('Falta el rol owner. Aplica la semilla antes del primer uso.');
+      }
+
+      const emailTaken = await tx.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (emailTaken) {
+        throw new ConflictException('Ese correo ya está registrado.');
+      }
+
+      const location = await tx.location.findFirst({
+        where: { active: true },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      const username = await this.availableUsername(
+        tx as unknown as UsernameLookup,
+        firstName,
+        lastName,
+        email,
+      );
+      const employeeId = location
+        ? (
+            await tx.employee.create({
+              data: {
+                locationId: location.id,
+                employeeCode: `OWN-${randomBytes(3).toString('hex')}`,
+                firstName,
+                lastName,
+                jobCode: JobCode.Manager,
+                email,
+                hireDate: now,
+              },
+              select: { id: true },
+            })
+          ).id
+        : undefined;
+
+      const user = await tx.user.create({
+        data: {
+          employeeId,
+          username,
+          email,
+          passwordHash,
+          status: UserStatus.Active,
+          passwordChangedAt: now,
+          emailVerifiedAt: now,
+          roles: { create: { roleId: ownerRole.id, active: true } },
+        },
+        select: { id: true },
+      });
+
+      await tx.systemSetup.create({
+        data: { id: 1, ownerUserId: user.id, completedAt: now },
+      });
+
+      return user.id;
+    });
+
+    if (existingToken) {
+      await this.sessions.revokeToken(existingToken, 'login_rotation', metadata);
+    }
+
+    const access = await this.getAccessSnapshot(userId);
+    if (!access) {
+      throw new ConflictException('No se pudo abrir la sesión del primer uso.');
+    }
+
+    const requiresMfa = access.mfa.enabled;
+    const requiresMfaSetup = access.mfa.required && !access.mfa.enabled;
+    const session = await this.sessions.createSession(
+      userId,
+      !requiresMfa && !requiresMfaSetup,
+      metadata,
+      now,
+    );
+    await this.audit.record(AuthEventType.LoginSucceeded, metadata, {
+      userId,
+      sessionId: session.record.id,
+      details: { initialSetup: true, mfaSetupRequired: requiresMfaSetup },
+    });
+
+    return { session, requiresMfa, requiresMfaSetup };
+  }
+
   async verifyMfa(
     context: AuthContext,
     dto: MfaCodeDto,
@@ -322,8 +470,9 @@ export class AuthService {
     const uri = this.totp.generateUri(context.user.email, secret);
     const encrypted = this.mfaCrypto.encrypt(secret);
 
-    await this.prisma.userMfaFactor.deleteMany({
+    await this.prisma.userMfaFactor.updateMany({
       where: { userId: context.userId, status: MfaFactorStatus.Pending },
+      data: { status: MfaFactorStatus.Disabled, disabledAt: new Date() },
     });
     const factor = await this.prisma.userMfaFactor.create({
       data: {
@@ -396,7 +545,10 @@ export class AuthService {
         throw new ConflictException('El alta de MFA ya no está pendiente.');
       }
 
-      await transaction.userMfaRecoveryCode.deleteMany({ where: { userId: context.userId } });
+      await transaction.userMfaRecoveryCode.updateMany({
+        where: { userId: context.userId, usedAt: null },
+        data: { usedAt: new Date() },
+      });
       await transaction.userMfaRecoveryCode.createMany({
         data: recoveryCodes.map(({ hash }) => ({ userId: context.userId, codeHash: hash })),
       });
@@ -492,7 +644,10 @@ export class AuthService {
       throw new BadRequestException('No existe un factor MFA activo.');
     }
 
-    await this.prisma.userMfaRecoveryCode.deleteMany({ where: { userId: context.userId } });
+    await this.prisma.userMfaRecoveryCode.updateMany({
+      where: { userId: context.userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
     const access = await this.getAccessSnapshot(context.userId);
     if (!access) {
       throw new UnauthorizedException('Sesión inválida o expirada.');
@@ -698,11 +853,37 @@ export class AuthService {
 
   private async replaceRecoveryCodes(userId: string, codes: RecoveryCodeMaterial[]): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
-      await transaction.userMfaRecoveryCode.deleteMany({ where: { userId } });
+      await transaction.userMfaRecoveryCode.updateMany({
+        where: { userId, usedAt: null },
+        data: { usedAt: new Date() },
+      });
       await transaction.userMfaRecoveryCode.createMany({
         data: codes.map(({ hash }) => ({ userId, codeHash: hash })),
       });
     });
+  }
+
+  private async availableUsername(
+    tx: UsernameLookup,
+    firstName: string,
+    lastName: string,
+    email: string,
+  ): Promise<string> {
+    const fromName = [nameSlug(firstName), nameSlug(lastName)].filter(Boolean).join('.');
+    const fromEmail = nameSlug(email.split('@')[0] ?? '');
+    const base = (fromName || fromEmail || 'owner').slice(0, 90);
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const username =
+        attempt === 0 ? base : `${base.slice(0, 84)}.${randomBytes(2).toString('hex')}`;
+      const taken = await tx.user.findFirst({
+        where: { username: { equals: username, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      if (!taken) return username;
+    }
+
+    throw new ConflictException('No se pudo reservar un nombre de usuario único.');
   }
 
   private async rotateContextSession(

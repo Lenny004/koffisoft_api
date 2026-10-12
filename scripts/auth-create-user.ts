@@ -86,8 +86,15 @@ try {
         select: { id: true, username: true, email: true },
       });
 
-  await prisma.userRole.deleteMany({ where: { userId: user.id } });
-  await prisma.userRole.create({ data: { userId: user.id, roleId: role.id } });
+  await prisma.userRole.updateMany({
+    where: { userId: user.id, roleId: { not: role.id }, active: true },
+    data: { active: false },
+  });
+  await prisma.userRole.upsert({
+    where: { userId_roleId: { userId: user.id, roleId: role.id } },
+    update: { active: true, assignedAt: new Date() },
+    create: { userId: user.id, roleId: role.id, active: true },
+  });
 
   console.log(JSON.stringify({ user, role: role.code }));
 } finally {

@@ -174,7 +174,9 @@ INSERT INTO permissions (id, code, description) VALUES
     ('80000000-0000-0000-0000-000000000045', 'recipes.manage', 'Administrar recetas'),
     ('80000000-0000-0000-0000-000000000046', 'dte.read', 'Consultar documentos DTE'),
     ('80000000-0000-0000-0000-000000000047', 'dte.issue', 'Emitir documentos DTE'),
-    ('80000000-0000-0000-0000-000000000048', 'reports.read', 'Consultar reportes');
+    ('80000000-0000-0000-0000-000000000048', 'reports.read', 'Consultar reportes'),
+    ('80000000-0000-0000-0000-000000000049', 'important_announcements.read', 'Consultar avisos importantes'),
+    ('80000000-0000-0000-0000-000000000050', 'important_announcements.manage', 'Administrar avisos importantes');
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000001'),
@@ -225,6 +227,8 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000046'),
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000047'),
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000048'),
+    ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000049'),
+    ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000050'),
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000001'),
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000002'),
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000003'),
@@ -550,7 +554,8 @@ INSERT INTO menu_categories (
     ('60000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 'lunch', 'Almuerzos', 'Lunch', 'Platos fuertes para compartir la vista.', 'Main dishes for enjoying the view.', 2),
     ('60000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', 'coffee', 'Café', 'Coffee', 'Café de especialidad y bebidas calientes.', 'Specialty coffee and hot drinks.', 3),
     ('60000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000001', 'desserts', 'Postres', 'Desserts', 'Postres para acompañar la tarde.', 'Desserts for the afternoon.', 4),
-    ('60000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000001', 'cold-drinks', 'Bebidas frías', 'Cold drinks', 'Bebidas refrescantes y naturales.', 'Refreshing and natural drinks.', 5);
+    ('60000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000001', 'cold-drinks', 'Bebidas frías', 'Cold drinks', 'Bebidas refrescantes y naturales.', 'Refreshing and natural drinks.', 5),
+    ('60000000-0000-0000-0000-000000000006', '20000000-0000-0000-0000-000000000001', 'tasting', 'Menú de degustación', 'Tasting menu', 'Secuencia de cocina mexicana contemporánea.', 'Contemporary Mexican tasting sequence.', 6);
 
 INSERT INTO menu_items (
     id, category_id, sku, slug, item_type, name_es, name_en,
@@ -564,7 +569,20 @@ INSERT INTO menu_items (
     ('61000000-0000-0000-0000-000000000006', '60000000-0000-0000-0000-000000000003', 'DRINK-COFFEE-002', 'pour-over-coffee', 'beverage', 'Café filtrado', 'Pour-over coffee', 'Café de especialidad preparado al momento.', 'Specialty coffee prepared to order.'),
     ('61000000-0000-0000-0000-000000000007', '60000000-0000-0000-0000-000000000005', 'DRINK-COLD-001', 'hibiscus-iced-tea', 'beverage', 'Té frío de jamaica', 'Iced hibiscus tea', 'Infusión fría de jamaica con un toque cítrico.', 'Cold hibiscus infusion with a citrus note.'),
     ('61000000-0000-0000-0000-000000000008', '60000000-0000-0000-0000-000000000004', 'DESSERT-001', 'cheesecake', 'dessert', 'Cheesecake de la casa', 'House cheesecake', 'Cheesecake cremoso con base de galleta.', 'Creamy cheesecake with a biscuit base.'),
-    ('61000000-0000-0000-0000-000000000009', '60000000-0000-0000-0000-000000000004', 'DESSERT-002', 'chocolate-cake', 'dessert', 'Pastel de chocolate', 'Chocolate cake', 'Pastel húmedo de chocolate con crema.', 'Moist chocolate cake with cream.');
+    ('61000000-0000-0000-0000-000000000009', '60000000-0000-0000-0000-000000000004', 'DESSERT-002', 'chocolate-cake', 'dessert', 'Pastel de chocolate', 'Chocolate cake', 'Pastel húmedo de chocolate con crema.', 'Moist chocolate cake with cream.'),
+    ('61000000-0000-0000-0000-000000000011', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-001', 'charred-nopal-tostada', 'food', 'Tostada de nopal tatemado, caviar, aguacate', 'Charred nopal tostada, caviar, avocado', 'Tostada de nopal tatemado con caviar y aguacate.', 'Charred nopal tostada with caviar and avocado.'),
+    ('61000000-0000-0000-0000-000000000012', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-002', 'agua-chile-tuna', 'food', 'Chile de agua de atún a la mexicana', 'Agua chile tuna a la mexicana', 'Atún en chile de agua, preparado a la mexicana.', 'Tuna in agua chile, prepared a la mexicana.'),
+    ('61000000-0000-0000-0000-000000000013', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-003', 'nopal-tigers-milk', 'food', 'Leche de tigre de nopal', 'Nopal tiger''s milk', 'Leche de tigre elaborada con nopal.', 'Tiger''s milk made with nopal.'),
+    ('61000000-0000-0000-0000-000000000014', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-004', 'mussel-salbut', 'food', 'Salbut de mejillón, mole de mar', 'Mussel salbut, sea mole', 'Salbut de mejillón con mole de mar.', 'Mussel salbut with sea mole.'),
+    ('61000000-0000-0000-0000-000000000015', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-005', 'homage-oyster', 'food', 'Ostión Homenaje, dashi de salsa bruja', 'Homage oyster, salsa bruja dashi', 'Ostión con dashi de salsa bruja.', 'Oyster with salsa bruja dashi.'),
+    ('61000000-0000-0000-0000-000000000016', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-006', 'butternut-squash-salad', 'food', 'Ensalada de calabaza mantequilla, horchata de arroz, chilacayote', 'Butternut squash salad, rice horchata, chilacayote', 'Ensalada de calabaza mantequilla con horchata de arroz y chilacayote.', 'Butternut squash salad with rice horchata and chilacayote.'),
+    ('61000000-0000-0000-0000-000000000017', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-007', 'king-crab-pipian', 'food', 'Cangrejo centollo, pipián verde de semilla de girasol, lima tailandesa', 'King crab, sunflower-seed green pipián, Thai lime', 'Centollo con pipián verde de semilla de girasol y lima tailandesa.', 'King crab with sunflower-seed green pipián and Thai lime.'),
+    ('61000000-0000-0000-0000-000000000018', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-008', 'steelhead-trout', 'food', 'Trucha steelhead, adobo de chicatana, setas en escabeche de higuera', 'Steelhead trout, chicatana adobo, fig-leaf mushroom escabeche', 'Trucha con adobo de chicatana y setas en escabeche de higuera.', 'Trout with chicatana adobo and mushrooms in fig-leaf escabeche.'),
+    ('61000000-0000-0000-0000-000000000019', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-009', 'ayocote-tamal', 'food', 'Tamal de frijol ayocote y maíz cacahuazintle, crema de elote tierno', 'Ayocote bean and cacahuazintle tamal, young corn cream', 'Tamal de ayocote y cacahuazintle con crema de elote tierno.', 'Ayocote and cacahuazintle tamal with young corn cream.'),
+    ('61000000-0000-0000-0000-000000000020', '60000000-0000-0000-0000-000000000006', 'FOOD-TASTE-010', 'rib-eye-chichilo', 'food', 'Rib eye, chichilo negro, chorizo de cocopache, huitlacoche', 'Rib eye, black chichilo, cocopache chorizo, huitlacoche', 'Rib eye con chichilo negro, chorizo de cocopache y huitlacoche.', 'Rib eye with black chichilo, cocopache chorizo and huitlacoche.'),
+    ('61000000-0000-0000-0000-000000000021', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-001', 'nopal-sorbet', 'dessert', 'Nieve de nopal', 'Nopal sorbet', 'Nieve de nopal.', 'Nopal sorbet.'),
+    ('61000000-0000-0000-0000-000000000022', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-002', 'corn-bread-rompope', 'dessert', 'Pan de elote con rompope de nixtamal, vainilla de Chichicaxtle, maracuyá', 'Cornbread with nixtamal rompope, Chichicaxtle vanilla, passion fruit', 'Pan de elote con rompope de nixtamal, vainilla de Chichicaxtle y maracuyá.', 'Cornbread with nixtamal rompope, Chichicaxtle vanilla and passion fruit.'),
+    ('61000000-0000-0000-0000-000000000023', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-003', 'mamey-tartlet', 'dessert', 'Tartaleta de mamey, caviar', 'Mamey tartlet, caviar', 'Tartaleta de mamey con caviar.', 'Mamey tartlet with caviar.');
 
 INSERT INTO menu_item_variants (
     id, menu_item_id, prep_station_id, sku, name_es, name_en, is_default
@@ -578,7 +596,20 @@ INSERT INTO menu_item_variants (
     ('62000000-0000-0000-0000-000000000007', '61000000-0000-0000-0000-000000000006', '30000000-0000-0000-0000-000000000002', 'DRINK-COFFEE-002-REG', 'Taza', 'Cup', true),
     ('62000000-0000-0000-0000-000000000008', '61000000-0000-0000-0000-000000000007', '30000000-0000-0000-0000-000000000004', 'DRINK-COLD-001-REG', 'Vaso', 'Glass', true),
     ('62000000-0000-0000-0000-000000000009', '61000000-0000-0000-0000-000000000008', '30000000-0000-0000-0000-000000000003', 'DESSERT-001-SLICE', 'Porción', 'Slice', true),
-    ('62000000-0000-0000-0000-000000000010', '61000000-0000-0000-0000-000000000009', '30000000-0000-0000-0000-000000000003', 'DESSERT-002-SLICE', 'Porción', 'Slice', true);
+    ('62000000-0000-0000-0000-000000000010', '61000000-0000-0000-0000-000000000009', '30000000-0000-0000-0000-000000000003', 'DESSERT-002-SLICE', 'Porción', 'Slice', true),
+    ('62000000-0000-0000-0000-000000000011', '61000000-0000-0000-0000-000000000011', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-001-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000012', '61000000-0000-0000-0000-000000000012', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-002-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000013', '61000000-0000-0000-0000-000000000013', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-003-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000014', '61000000-0000-0000-0000-000000000014', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-004-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000015', '61000000-0000-0000-0000-000000000015', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-005-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000016', '61000000-0000-0000-0000-000000000016', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-006-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000017', '61000000-0000-0000-0000-000000000017', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-007-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000018', '61000000-0000-0000-0000-000000000018', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-008-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000019', '61000000-0000-0000-0000-000000000019', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-009-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000020', '61000000-0000-0000-0000-000000000020', '30000000-0000-0000-0000-000000000001', 'FOOD-TASTE-010-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000021', '61000000-0000-0000-0000-000000000021', '30000000-0000-0000-0000-000000000003', 'DESSERT-TASTE-001-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000022', '61000000-0000-0000-0000-000000000022', '30000000-0000-0000-0000-000000000003', 'DESSERT-TASTE-002-REG', 'Porción', 'Portion', true),
+    ('62000000-0000-0000-0000-000000000023', '61000000-0000-0000-0000-000000000023', '30000000-0000-0000-0000-000000000003', 'DESSERT-TASTE-003-REG', 'Porción', 'Portion', true);
 
 INSERT INTO menu_prices (
     id, variant_id, location_id, channel, price, includes_tax, tax_rate_id, valid_from
@@ -842,7 +873,20 @@ INSERT INTO allergens (id, code, name_es, name_en) VALUES
     ('6f000000-0000-0000-0000-000000000001', 'MILK', 'Leche', 'Milk'),
     ('6f000000-0000-0000-0000-000000000002', 'EGG', 'Huevo', 'Egg'),
     ('6f000000-0000-0000-0000-000000000003', 'GLUTEN', 'Gluten', 'Gluten'),
-    ('6f000000-0000-0000-0000-000000000004', 'NUTS', 'Frutos secos', 'Nuts');
+    ('6f000000-0000-0000-0000-000000000004', 'NUTS', 'Frutos secos', 'Tree nuts'),
+    ('6f000000-0000-0000-0000-000000000005', 'FISH', 'Pescado', 'Fish'),
+    ('6f000000-0000-0000-0000-000000000006', 'CRUSTACEANS', 'Crustáceos', 'Crustaceans'),
+    ('6f000000-0000-0000-0000-000000000007', 'MOLLUSCS', 'Moluscos', 'Molluscs'),
+    ('6f000000-0000-0000-0000-000000000008', 'PEANUTS', 'Cacahuate', 'Peanuts'),
+    ('6f000000-0000-0000-0000-000000000009', 'SOY', 'Soya', 'Soy'),
+    ('6f000000-0000-0000-0000-000000000010', 'SESAME', 'Ajonjolí', 'Sesame'),
+    ('6f000000-0000-0000-0000-000000000011', 'CELERY', 'Apio', 'Celery'),
+    ('6f000000-0000-0000-0000-000000000012', 'MUSTARD', 'Mostaza', 'Mustard'),
+    ('6f000000-0000-0000-0000-000000000013', 'SULPHITES', 'Sulfitos', 'Sulphites'),
+    ('6f000000-0000-0000-0000-000000000014', 'LUPIN', 'Altramuz', 'Lupin'),
+    ('6f000000-0000-0000-0000-000000000015', 'CORN', 'Maíz', 'Corn'),
+    ('6f000000-0000-0000-0000-000000000016', 'SEEDS', 'Semillas', 'Seeds'),
+    ('6f000000-0000-0000-0000-000000000017', 'INSECTS', 'Insectos', 'Insects');
 
 INSERT INTO ingredient_allergens (ingredient_id, allergen_id, presence_type) VALUES
     ('67000000-0000-0000-0000-000000000002', '6f000000-0000-0000-0000-000000000001', 'contains'),
@@ -868,7 +912,56 @@ INSERT INTO menu_item_allergens (
     ('62000000-0000-0000-0000-000000000006', '6f000000-0000-0000-0000-000000000001', 'contains', true, '2026-09-20 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
     ('62000000-0000-0000-0000-000000000008', '6f000000-0000-0000-0000-000000000001', 'contains', true, '2026-09-20 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
     ('62000000-0000-0000-0000-000000000008', '6f000000-0000-0000-0000-000000000002', 'contains', true, '2026-09-20 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
-    ('62000000-0000-0000-0000-000000000008', '6f000000-0000-0000-0000-000000000003', 'contains', true, '2026-09-20 10:00:00-06', '41000000-0000-0000-0000-000000000001');
+    ('62000000-0000-0000-0000-000000000008', '6f000000-0000-0000-0000-000000000003', 'contains', true, '2026-09-20 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Tostada de nopal tatemado, caviar, aguacate
+    ('62000000-0000-0000-0000-000000000011', '6f000000-0000-0000-0000-000000000005', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000011', '6f000000-0000-0000-0000-000000000015', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000011', '6f000000-0000-0000-0000-000000000003', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Chile de agua de atún a la mexicana
+    ('62000000-0000-0000-0000-000000000012', '6f000000-0000-0000-0000-000000000005', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Leche de tigre de nopal
+    ('62000000-0000-0000-0000-000000000013', '6f000000-0000-0000-0000-000000000005', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Salbut de mejillón, mole de mar
+    ('62000000-0000-0000-0000-000000000014', '6f000000-0000-0000-0000-000000000007', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000014', '6f000000-0000-0000-0000-000000000015', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000014', '6f000000-0000-0000-0000-000000000005', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000014', '6f000000-0000-0000-0000-000000000010', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000014', '6f000000-0000-0000-0000-000000000004', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Ostión Homenaje, dashi de salsa bruja
+    ('62000000-0000-0000-0000-000000000015', '6f000000-0000-0000-0000-000000000007', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000015', '6f000000-0000-0000-0000-000000000005', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000015', '6f000000-0000-0000-0000-000000000009', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Ensalada de calabaza mantequilla, horchata de arroz, chilacayote
+    ('62000000-0000-0000-0000-000000000016', '6f000000-0000-0000-0000-000000000001', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Cangrejo centollo, pipián verde de semilla de girasol, lima tailandesa
+    ('62000000-0000-0000-0000-000000000017', '6f000000-0000-0000-0000-000000000006', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000017', '6f000000-0000-0000-0000-000000000016', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Trucha steelhead, adobo de chicatana, setas en escabeche de higuera
+    ('62000000-0000-0000-0000-000000000018', '6f000000-0000-0000-0000-000000000005', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000018', '6f000000-0000-0000-0000-000000000017', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000018', '6f000000-0000-0000-0000-000000000013', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Tamal de frijol ayocote y maíz cacahuazintle, crema de elote tierno
+    ('62000000-0000-0000-0000-000000000019', '6f000000-0000-0000-0000-000000000015', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000019', '6f000000-0000-0000-0000-000000000001', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Rib eye, chichilo negro, chorizo de cocopache, huitlacoche
+    ('62000000-0000-0000-0000-000000000020', '6f000000-0000-0000-0000-000000000015', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000020', '6f000000-0000-0000-0000-000000000010', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000020', '6f000000-0000-0000-0000-000000000004', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000020', '6f000000-0000-0000-0000-000000000013', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000020', '6f000000-0000-0000-0000-000000000003', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Nieve de nopal
+    ('62000000-0000-0000-0000-000000000021', '6f000000-0000-0000-0000-000000000001', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000021', '6f000000-0000-0000-0000-000000000002', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Pan de elote con rompope de nixtamal, vainilla de Chichicaxtle, maracuyá
+    ('62000000-0000-0000-0000-000000000022', '6f000000-0000-0000-0000-000000000015', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000022', '6f000000-0000-0000-0000-000000000002', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000022', '6f000000-0000-0000-0000-000000000001', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000022', '6f000000-0000-0000-0000-000000000003', 'may_contain', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    -- Tartaleta de mamey, caviar
+    ('62000000-0000-0000-0000-000000000023', '6f000000-0000-0000-0000-000000000003', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000023', '6f000000-0000-0000-0000-000000000005', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000023', '6f000000-0000-0000-0000-000000000002', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001'),
+    ('62000000-0000-0000-0000-000000000023', '6f000000-0000-0000-0000-000000000001', 'contains', true, '2026-10-10 10:00:00-06', '41000000-0000-0000-0000-000000000001');
 
 INSERT INTO venue_spaces (
     id, location_id, code, name_es, name_en, space_type, seated_capacity,

@@ -61,4 +61,55 @@ describe('AuthService', () => {
       expect.objectContaining({ userId: 'user-1' }),
     );
   });
+
+  it('expone el primer uso solo mientras no exista la fila única', async () => {
+    const systemSetup = {
+      findUnique: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 1 }),
+    };
+    const service = new AuthService(
+      { systemSetup } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(service.isSetupRequired()).resolves.toBe(true);
+    await expect(service.isSetupRequired()).resolves.toBe(false);
+  });
+
+  it('rechaza un segundo alta inicial dentro de la transacción', async () => {
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(undefined),
+      systemSetup: { findUnique: vi.fn().mockResolvedValue({ id: 1 }) },
+    };
+    const service = new AuthService(
+      {
+        $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) =>
+          callback(tx),
+        ),
+      } as never,
+      { hash: vi.fn().mockResolvedValue('$argon2id$hashed') } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      service.completeInitialSetup(
+        {
+          firstName: 'Ana',
+          lastName: 'López',
+          email: 'ana@koffisoft.example',
+          password: 'Una Clave Segura 123',
+        },
+        { ipAddress: '127.0.0.1' },
+      ),
+    ).rejects.toThrow('El sistema ya fue configurado.');
+    expect(tx.$executeRaw).toHaveBeenCalled();
+  });
 });

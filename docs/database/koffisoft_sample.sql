@@ -2567,7 +2567,20 @@ INSERT INTO allergens (id, code, name_es, name_en) VALUES
     ('6f000000-0000-0000-0000-000000000001', 'MILK', 'Leche', 'Milk'),
     ('6f000000-0000-0000-0000-000000000002', 'EGG', 'Huevo', 'Egg'),
     ('6f000000-0000-0000-0000-000000000003', 'GLUTEN', 'Gluten', 'Gluten'),
-    ('6f000000-0000-0000-0000-000000000004', 'NUTS', 'Frutos secos', 'Nuts');
+    ('6f000000-0000-0000-0000-000000000004', 'NUTS', 'Frutos secos', 'Tree nuts'),
+    ('6f000000-0000-0000-0000-000000000005', 'FISH', 'Pescado', 'Fish'),
+    ('6f000000-0000-0000-0000-000000000006', 'CRUSTACEANS', 'Crustáceos', 'Crustaceans'),
+    ('6f000000-0000-0000-0000-000000000007', 'MOLLUSCS', 'Moluscos', 'Molluscs'),
+    ('6f000000-0000-0000-0000-000000000008', 'PEANUTS', 'Cacahuate', 'Peanuts'),
+    ('6f000000-0000-0000-0000-000000000009', 'SOY', 'Soya', 'Soy'),
+    ('6f000000-0000-0000-0000-000000000010', 'SESAME', 'Ajonjolí', 'Sesame'),
+    ('6f000000-0000-0000-0000-000000000011', 'CELERY', 'Apio', 'Celery'),
+    ('6f000000-0000-0000-0000-000000000012', 'MUSTARD', 'Mostaza', 'Mustard'),
+    ('6f000000-0000-0000-0000-000000000013', 'SULPHITES', 'Sulfitos', 'Sulphites'),
+    ('6f000000-0000-0000-0000-000000000014', 'LUPIN', 'Altramuz', 'Lupin'),
+    ('6f000000-0000-0000-0000-000000000015', 'CORN', 'Maíz', 'Corn'),
+    ('6f000000-0000-0000-0000-000000000016', 'SEEDS', 'Semillas', 'Seeds'),
+    ('6f000000-0000-0000-0000-000000000017', 'INSECTS', 'Insectos', 'Insects');
 
 INSERT INTO ingredient_allergens (ingredient_id, allergen_id, presence_type) VALUES
     ('67000000-0000-0000-0000-000000000002', '6f000000-0000-0000-0000-000000000001', 'contains'),

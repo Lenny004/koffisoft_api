@@ -266,8 +266,8 @@ export class EventsController {
   @ApiSecurity('sessionCookie')
   @RequirePermissions('events.manage')
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOperation({ summary: 'Elimina un requisito no necesario' })
-  @ApiResponse({ status: 204, description: 'Requisito eliminado.' })
+  @ApiOperation({ summary: 'Desactiva un requisito no necesario' })
+  @ApiResponse({ status: 204, description: 'Requisito desactivado lógicamente.' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteRequirement(@Param('id') id: string): Promise<void> {
     return this.service.deleteRequirement(id);

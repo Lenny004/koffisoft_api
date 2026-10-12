@@ -30,6 +30,7 @@ import {
 } from './dto/mfa.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { ChangePasswordDto } from './dto/password.dto.js';
+import { InitialSetupDto, SetupStatusDto } from './dto/setup.dto.js';
 import { SessionService } from './security/session.service.js';
 
 @ApiTags('auth')
@@ -39,6 +40,40 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly sessions: SessionService,
   ) {}
+
+  @Get('setup')
+  @Public()
+  @ApiOperation({ summary: 'Indica si el alta inicial del propietario sigue disponible' })
+  @ApiResponse({ status: 200, type: SetupStatusDto })
+  async setupStatus(): Promise<SetupStatusDto> {
+    return { required: await this.authService.isSetupRequired() };
+  }
+
+  @Post('setup')
+  @HttpCode(HttpStatus.CREATED)
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Crea al primer propietario una sola vez' })
+  @ApiResponse({ status: 201, type: LoginResponseDto })
+  async completeSetup(
+    @Body() dto: InitialSetupDto,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<LoginResponseDto> {
+    const result = await this.authService.completeInitialSetup(
+      dto,
+      requestMetadata(request),
+      this.sessions.getToken(request),
+    );
+    this.sessions.setCookie(reply, result.session.token, result.session.record.expiresAt);
+
+    return {
+      authenticated: true,
+      requiresMfa: result.requiresMfa,
+      requiresMfaSetup: result.requiresMfaSetup,
+      expiresAt: result.session.record.expiresAt.toISOString(),
+    };
+  }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)

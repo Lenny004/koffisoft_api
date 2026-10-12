@@ -77,7 +77,7 @@ sequenceDiagram
     API-->>Usuario: sesión autenticada
 ```
 
-Para desactivar MFA se exige la contraseña actual y un código TOTP de la sesión autenticada. La acción elimina los códigos de recuperación, revoca las demás sesiones y rota la sesión actual. Un rol incluido en `MFA_REQUIRED_ROLES` queda nuevamente restringido a la inscripción si desactiva su único factor.
+Para desactivar MFA se exige la contraseña actual y un código TOTP de la sesión autenticada. La acción invalida los códigos de recuperación conservando sus filas, revoca las demás sesiones y rota la sesión actual. Un rol incluido en `MFA_REQUIRED_ROLES` queda nuevamente restringido a la inscripción si desactiva su único factor.
 
 ## Endpoints
 
@@ -112,6 +112,13 @@ Todos los cuerpos se validan con `ValidationPipe` global, `whitelist=true`, `for
 ### Contraseña
 
 - `POST /auth/password`: exige `{ currentPassword, newPassword }`, requiere una sesión plenamente autenticada, guarda el nuevo hash, actualiza `password_changed_at`, revoca otras sesiones y rota la actual.
+- No hay restablecimiento público por correo. El panel muestra «Olvidé mi contraseña» para explicar ese límite. El envío de correo queda para la fase de jobs/outbox.
+
+### Primer uso
+
+- `GET /auth/setup`: público. Devuelve `{ required: true }` solo si `system_setups` no tiene su fila única.
+- `POST /auth/setup`: público y limitado por throttling. Crea al primer propietario (`firstName`, `lastName`, `email`, `password`), le asigna el rol `owner` y abre sesión. La transacción toma `pg_advisory_xact_lock` y escribe `system_setups.id = 1`. El `CHECK (id = 1)` impide una segunda fila. Una petición posterior responde `409` con `El sistema ya fue configurado.`
+- El correo no puede coincidir con una cuenta ya sembrada. Si no existe el rol `owner`, el alta se rechaza para no crear un propietario sin permisos.
 
 ## Autorización
 

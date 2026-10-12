@@ -810,7 +810,7 @@ export class MenuService {
   async listVariantAllergens(variantId: string): Promise<AdminMenuAllergenResponseDto[]> {
     await this.requireVariantWithLocation(variantId);
     const rows = await this.prisma.menuItemAllergen.findMany({
-      where: { menuItemVariantId: variantId },
+      where: { menuItemVariantId: variantId, active: true },
       orderBy: { allergen: { nameEs: 'asc' } },
       include: { allergen: true },
     });
@@ -845,17 +845,37 @@ export class MenuService {
 
     await this.db(() =>
       this.prisma.$transaction(async (tx) => {
-        await tx.menuItemAllergen.deleteMany({ where: { menuItemVariantId: variantId } });
-        if (dto.allergens.length > 0) {
-          await tx.menuItemAllergen.createMany({
-            data: dto.allergens.map((allergen) => ({
+        await tx.menuItemAllergen.updateMany({
+          where: {
+            menuItemVariantId: variantId,
+            ...(ids.length ? { allergenId: { notIn: ids } } : {}),
+          },
+          data: { active: false },
+        });
+        for (const allergen of dto.allergens) {
+          await tx.menuItemAllergen.upsert({
+            where: {
+              menuItemVariantId_allergenId: {
+                menuItemVariantId: variantId,
+                allergenId: allergen.allergenId,
+              },
+            },
+            create: {
               menuItemVariantId: variantId,
               allergenId: allergen.allergenId,
               presenceType: allergen.presenceType,
               isReviewed: allergen.isReviewed,
               reviewedAt: allergen.isReviewed ? new Date() : null,
               reviewedByUserId: allergen.isReviewed ? userId : null,
-            })),
+              active: true,
+            },
+            update: {
+              presenceType: allergen.presenceType,
+              isReviewed: allergen.isReviewed,
+              reviewedAt: allergen.isReviewed ? new Date() : null,
+              reviewedByUserId: allergen.isReviewed ? userId : null,
+              active: true,
+            },
           });
         }
       }),
@@ -1214,22 +1234,41 @@ export class MenuService {
 
     await this.db(() =>
       this.prisma.$transaction(async (tx) => {
-        await tx.menuItemModifierGroup.deleteMany({ where: { variantId } });
-        if (dto.groups.length > 0) {
-          await tx.menuItemModifierGroup.createMany({
-            data: dto.groups.map((group) => ({
+        await tx.menuItemModifierGroup.updateMany({
+          where: {
+            variantId,
+            ...(ids.length ? { modifierGroupId: { notIn: ids } } : {}),
+          },
+          data: { active: false },
+        });
+        for (const group of dto.groups) {
+          await tx.menuItemModifierGroup.upsert({
+            where: {
+              variantId_modifierGroupId: {
+                variantId,
+                modifierGroupId: group.modifierGroupId,
+              },
+            },
+            create: {
               variantId,
               modifierGroupId: group.modifierGroupId,
               selectionMin: group.selectionMin ?? null,
               selectionMax: group.selectionMax ?? null,
               displayOrder: group.displayOrder,
-            })),
+              active: true,
+            },
+            update: {
+              selectionMin: group.selectionMin ?? null,
+              selectionMax: group.selectionMax ?? null,
+              displayOrder: group.displayOrder,
+              active: true,
+            },
           });
         }
       }),
     );
     const assigned = await this.prisma.menuItemModifierGroup.findMany({
-      where: { variantId },
+      where: { variantId, active: true },
       orderBy: { displayOrder: 'asc' },
       select: {
         selectionMin: true,
@@ -1259,7 +1298,10 @@ export class MenuService {
       ...(allergen
         ? {
             menuItemAllergens: {
-              some: { allergen: { active: true, code: { equals: allergen, mode: 'insensitive' } } },
+              some: {
+                active: true,
+                allergen: { active: true, code: { equals: allergen, mode: 'insensitive' } },
+              },
             },
           }
         : {}),
@@ -1333,7 +1375,7 @@ export class MenuService {
             take: 1,
           },
           menuItemAllergens: {
-            where: { allergen: { active: true } },
+            where: { active: true, allergen: { active: true } },
             orderBy: { allergen: { nameEs: 'asc' } },
             select: {
               presenceType: true,
@@ -1341,7 +1383,7 @@ export class MenuService {
             },
           },
           modifierGroups: {
-            where: { modifierGroup: { active: true } },
+            where: { active: true, modifierGroup: { active: true } },
             orderBy: { displayOrder: 'asc' },
             select: {
               selectionMin: true,

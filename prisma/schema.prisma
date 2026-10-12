@@ -374,6 +374,17 @@ enum AuthEventType {
   @@map("auth_event_type")
 }
 
+/// Alta inicial del propietario. La fila única (id = 1) y el CHECK SQL impiden repetirla.
+model SystemSetup {
+  id          Int      @id @db.SmallInt
+  completedAt DateTime @default(now()) @map("completed_at") @db.Timestamptz(3)
+  ownerUserId String   @unique(map: "system_setups_owner_user_id_key") @map("owner_user_id") @db.Uuid
+
+  owner User @relation(fields: [ownerUserId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@map("system_setups")
+}
+
 /// Identidad legal, comercial y fiscal del negocio.
 model Business {
   id                   String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
@@ -436,6 +447,7 @@ model Location {
   menuItemOutages       MenuItemOutage[]
   modifierGroups        ModifierGroup[]
   promotions            Promotion[]
+  importantAnnouncements ImportantAnnouncement[]
   suppliers             Supplier[]
   storageLocations      StorageLocation[]
   venueSpaces           VenueSpace[]
@@ -453,6 +465,27 @@ model Location {
   @@unique([businessId, code], map: "locations_code_unique")
   /// Los límites de latitud y longitud son CHECK exclusivos de SQL.
   @@map("locations")
+}
+
+/// Aviso editorial que puede publicarse temporalmente en la portada pública.
+model ImportantAnnouncement {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId   String   @map("location_id") @db.Uuid
+  title        String   @db.VarChar(160)
+  message      String   @db.Text
+  ctaLabel     String?  @map("cta_label") @db.VarChar(80)
+  ctaUrl       String?  @map("cta_url") @db.VarChar(500)
+  startsAt     DateTime? @map("starts_at") @db.Timestamptz(3)
+  endsAt       DateTime? @map("ends_at") @db.Timestamptz(3)
+  displayOrder Int      @map("display_order") @default(0)
+  active       Boolean  @default(true)
+  createdAt    DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([locationId, active, displayOrder], map: "important_announcements_public_idx")
+  @@map("important_announcements")
 }
 
 /// Horario recurrente por día y tipo de servicio.
@@ -560,6 +593,7 @@ model User {
   reviewedMenuItemAllergens      MenuItemAllergen[]     @relation("MenuItemAllergenReviewer")
   assignedContactMessages        ContactMessage[]       @relation("ContactMessageAssignee")
   createdInventoryMovements      InventoryMovement[]   @relation("InventoryMovementCreator")
+  completedSystemSetup           SystemSetup?
 
   /// Los CHECK de Argon2id, contador y bloqueo se conservan únicamente en SQL.
   /// Los índices lower(username/email) se conservan como índices expresivos SQL-only.
@@ -603,6 +637,7 @@ model RolePermission {
   roleId       String   @map("role_id") @db.Uuid
   permissionId String   @map("permission_id") @db.Uuid
   assignedAt   DateTime @map("assigned_at") @default(now()) @db.Timestamptz(3)
+  active       Boolean  @default(true)
 
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -616,6 +651,7 @@ model UserRole {
   userId     String   @map("user_id") @db.Uuid
   roleId     String   @map("role_id") @db.Uuid
   assignedAt DateTime @map("assigned_at") @default(now()) @db.Timestamptz(3)
+  active     Boolean  @default(true)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   role Role @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: NoAction)
@@ -1022,6 +1058,7 @@ model MenuItemModifierGroup {
   selectionMin   Int?   @map("selection_min") @db.SmallInt
   selectionMax   Int?   @map("selection_max") @db.SmallInt
   displayOrder   Int    @map("display_order") @default(0) @db.SmallInt
+  active         Boolean @default(true)
 
   variant       MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   modifierGroup ModifierGroup   @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -1610,6 +1647,7 @@ model EventRequirement {
   status          String   @default("open") @db.VarChar(20)
   resolvedAt      DateTime? @map("resolved_at") @db.Timestamptz(3)
   createdAt       DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  active          Boolean  @default(true)
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
@@ -2065,6 +2103,7 @@ model MenuItemAllergen {
   allergenId        String   @map("allergen_id") @db.Uuid
   presenceType      String   @map("presence_type") @db.VarChar(20)
   isReviewed        Boolean  @map("is_reviewed") @default(false)
+  active            Boolean  @default(true)
   reviewedAt        DateTime? @map("reviewed_at") @db.Timestamptz(3)
   reviewedByUserId  String?  @map("reviewed_by_user_id") @db.Uuid
 

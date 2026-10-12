@@ -562,6 +562,7 @@ model User {
   passwordHash         String    @map("password_hash") @db.VarChar(255)
   status               UserStatus @default(Active)
   passwordChangedAt    DateTime  @map("password_changed_at") @default(now()) @db.Timestamptz(3)
+  mustChangePassword   Boolean   @map("must_change_password") @default(false)
   emailVerifiedAt      DateTime? @map("email_verified_at") @db.Timestamptz(3)
   failedLoginAttempts  Int       @map("failed_login_attempts") @default(0) @db.SmallInt
   lockedAt             DateTime? @map("locked_at") @db.Timestamptz(3)

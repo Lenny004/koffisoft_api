@@ -13,6 +13,7 @@ export interface AccessSnapshot {
     readonly email: string;
     readonly status: string;
     readonly passwordChangedAt: Date;
+    readonly mustChangePassword: boolean;
     readonly emailVerifiedAt: Date | null;
   };
   readonly roles: readonly string[];

@@ -12,6 +12,7 @@ import { EventsModule } from './events/events.module.js';
 import { AppModule } from './app.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { ReservationsModule } from './reservations/reservations.module.js';
+import { UsersModule } from './users/users.module.js';
 
 export async function createApplication(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
@@ -55,7 +56,14 @@ export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObjec
     .build();
 
   return SwaggerModule.createDocument(app, options, {
-    include: [AuthModule, MenuModule, ReservationsModule, EventsModule, AnnouncementsModule],
+    include: [
+      AuthModule,
+      MenuModule,
+      ReservationsModule,
+      EventsModule,
+      AnnouncementsModule,
+      UsersModule,
+    ],
   });
 }
 

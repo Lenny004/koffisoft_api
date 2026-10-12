@@ -8,6 +8,7 @@ import { EventsModule } from './events/events.module.js';
 import { HealthModule } from './health/health.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { ReservationsModule } from './reservations/reservations.module.js';
+import { UsersModule } from './users/users.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ReservationsModule } from './reservations/reservations.module.js';
     ReservationsModule,
     EventsModule,
     AnnouncementsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

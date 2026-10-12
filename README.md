@@ -39,6 +39,7 @@
 - **Catálogo de menú:** la carta web y la administración de categorías, ítems, variantes, precios, alérgenos, disponibilidad y modificadores viven en la API.
 - **Reservas y eventos:** disponibilidad pública, creación administrativa, mesas, espacios, solicitudes de eventos, paquetes y cotizaciones versionadas usan los modelos reales del dominio.
 - **Avisos importantes:** publicación pública por sede y CRUD administrativo con ventanas de vigencia.
+- **Administración de acceso:** CRUD de usuarios y empleados, asignación de roles, MFA, bloqueo y auditoría de cambios sensibles.
 
 <!-- section:overview -->
 
@@ -48,7 +49,7 @@
 
 El alcance aprobado incluye NestJS sobre Fastify, el endpoint público `GET /health/live`, la carta pública `GET /menu`, reservas de mesa, eventos privados y el módulo de autenticación y autorización de la Fase 1. Los contratos compartidos y los trabajos de correo, QR y PDF quedan sujetos a sus fases y planes aprobados. El repositorio legacy se usa como referencia de solo lectura y no se copian sus credenciales, hashes, datos ni código.
 
-Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía del catálogo en [docs/menu.md](docs/menu.md), las guías de [reservas](docs/reservations.md) y [eventos](docs/events.md), y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
+Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía de [usuarios y empleados](docs/users.md), la guía del catálogo en [docs/menu.md](docs/menu.md), las guías de [reservas](docs/reservations.md) y [eventos](docs/events.md), y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
 
 **Stack:** Node.js 24.13.0, pnpm 11.1.3, NestJS 12.1.2, Fastify 5.12.5, TypeScript 5.9.3, Prisma 7.10.0 y PostgreSQL.
 
@@ -110,6 +111,8 @@ El módulo de autenticación expone estos endpoints; los cuerpos, estados, cooki
 - `POST /auth/mfa/recovery-codes`
 - `POST /auth/password`
 
+La administración de usuarios, empleados, roles y permisos está documentada en [docs/users.md](docs/users.md) y usa las rutas protegidas bajo `/users/admin` y `/employees/admin`.
+
 El módulo de menú expone la carta pública y las rutas administrativas documentadas en [docs/menu.md](docs/menu.md). Una consulta mínima de la carta es:
 
 ```bash
@@ -168,6 +171,7 @@ La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los u
 │   ├── reservations/           # Disponibilidad, reservas, espacios y mesas
 │   ├── events/                 # Eventos privados, paquetes y cotizaciones
 │   ├── announcements/          # Avisos públicos y administración editorial
+│   ├── users/                  # Usuarios, empleados, roles y permisos
 │   └── jobs/                   # Frontera reservada para trabajos futuros
 ├── .env.example                # Variables de entorno de ejemplo
 ├── AGENTS.md                   # Reglas para agentes de código
@@ -242,6 +246,7 @@ pnpm build
 - [x] Módulo de menú: carta pública y administración del catálogo existente.
 - [x] Módulos de reservas y eventos: disponibilidad, mesas, espacios, paquetes y cotizaciones.
 - [x] Avisos importantes: publicación vigente y CRUD protegido por permisos.
+- [x] Usuarios, empleados, roles y permisos: CRUD administrativo, MFA, bloqueo y auditoría.
 - [ ] Publicar la versión aprobada de `@koffisoft/contracts` en la fase de contratos.
 - [ ] Completar endpoints de negocio únicamente después de aprobar su contrato y análisis del legacy.
 - [ ] Implementar trabajos de correo, QR y PDF dentro de la frontera jobs/outbox cuando una fase posterior los autorice.

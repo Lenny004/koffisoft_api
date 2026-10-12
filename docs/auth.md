@@ -111,7 +111,7 @@ Todos los cuerpos se validan con `ValidationPipe` global, `whitelist=true`, `for
 
 ### Contraseña
 
-- `POST /auth/password`: exige `{ currentPassword, newPassword }`, requiere una sesión plenamente autenticada, guarda el nuevo hash, actualiza `password_changed_at`, revoca otras sesiones y rota la actual.
+- `POST /auth/password`: exige `{ currentPassword, newPassword }`, requiere una sesión plenamente autenticada, guarda el nuevo hash, actualiza `password_changed_at`, limpia `must_change_password`, revoca otras sesiones y rota la actual.
 - No hay restablecimiento público por correo. El panel muestra «Olvidé mi contraseña» para explicar ese límite. El envío de correo queda para la fase de jobs/outbox.
 
 ### Primer uso
@@ -132,7 +132,7 @@ getUser() {
 }
 ```
 
-`@Public()` excluye una ruta del guard de sesión. Los códigos de auth y administración de acceso del seed inicial son `auth.sessions.read`, `auth.sessions.revoke`, `auth.mfa.manage`, `auth.password.change`, `users.read`, `users.create`, `users.update`, `users.disable`, `roles.read`, `roles.manage`, `permissions.read`, `permissions.manage` y `audit_logs.read`; el seed también contiene los códigos de negocio correspondientes a las fases posteriores. Las rutas de autoservicio de esta fase validan la propiedad de la sesión y no inventan un endpoint administrativo de usuarios.
+`@Public()` excluye una ruta del guard de sesión. Los códigos de auth y administración de acceso del seed inicial son `auth.sessions.read`, `auth.sessions.revoke`, `auth.mfa.manage`, `auth.password.change`, `users.read`, `users.create`, `users.update`, `users.disable`, `users.manage`, `roles.read`, `roles.manage`, `permissions.read`, `permissions.manage` y `audit_logs.read`; el seed también contiene los códigos de negocio correspondientes a las fases posteriores. Las rutas administrativas de usuarios están documentadas en [docs/users.md](users.md).
 
 ## Configuración y rotación de llave
 

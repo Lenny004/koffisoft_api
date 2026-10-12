@@ -33,6 +33,7 @@ export interface LoginResult {
   readonly session: CreatedSession;
   readonly requiresMfa: boolean;
   readonly requiresMfaSetup: boolean;
+  readonly mustChangePassword: boolean;
 }
 
 export interface MfaSessionResult {
@@ -106,6 +107,7 @@ export class AuthService {
         email: true,
         status: true,
         passwordChangedAt: true,
+        mustChangePassword: true,
         emailVerifiedAt: true,
         roles: {
           where: { active: true },
@@ -176,6 +178,7 @@ export class AuthService {
         email: user.email,
         status: user.status,
         passwordChangedAt: user.passwordChangedAt,
+        mustChangePassword: user.mustChangePassword,
         emailVerifiedAt: user.emailVerifiedAt,
       },
       roles,
@@ -273,7 +276,12 @@ export class AuthService {
       details: { mfaPending: requiresMfa, mfaSetupRequired: requiresMfaSetup },
     });
 
-    return { session, requiresMfa, requiresMfaSetup };
+    return {
+      session,
+      requiresMfa,
+      requiresMfaSetup,
+      mustChangePassword: access.user.mustChangePassword,
+    };
   }
 
   /** true solo mientras no exista la fila única de system_setups. */
@@ -398,7 +406,12 @@ export class AuthService {
       details: { initialSetup: true, mfaSetupRequired: requiresMfaSetup },
     });
 
-    return { session, requiresMfa, requiresMfaSetup };
+    return {
+      session,
+      requiresMfa,
+      requiresMfaSetup,
+      mustChangePassword: access.user.mustChangePassword,
+    };
   }
 
   async verifyMfa(
@@ -693,6 +706,7 @@ export class AuthService {
       data: {
         passwordHash: await this.passwords.hash(dto.newPassword),
         passwordChangedAt: new Date(),
+        mustChangePassword: false,
       },
     });
 

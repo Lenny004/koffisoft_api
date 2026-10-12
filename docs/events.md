@@ -10,7 +10,7 @@ El módulo `events` administra solicitudes de eventos privados, bloqueos de espa
 - Un bloqueo usa el rango de montaje (`setup_starts_at` cuando existe) hasta desmontaje (`teardown_ends_at` cuando existe). Solo `held` y `confirmed` bloquean; la base aplica `event_space_bookings_no_overlap`.
 - Las cotizaciones son versionadas por evento. Crear una cotización genera la siguiente versión y sus líneas en una transacción; las líneas se congelan con sus etiquetas e importes.
 - Los importes se reciben como cadenas decimales y se calculan en el servidor con `Prisma.Decimal`: subtotal bruto, descuento, base imponible, impuesto y total. El cliente nunca envía los totales persistidos.
-- Los paquetes se desactivan con `active = false`. Los requisitos no tienen columna de borrado lógico en el schema; `DELETE` se reserva para eliminar un requisito operativo y la resolución normal usa `status`/`resolvedAt`.
+- Los paquetes, sus líneas y los requisitos se desactivan con `active = false`; las filas se conservan para historial. La resolución normal de requisitos usa `status`/`resolvedAt`.
 
 ## Rutas públicas
 
@@ -29,7 +29,7 @@ Las lecturas de eventos y catálogo usan `events.read`; las mutaciones operativa
 - `GET /events/admin/{id}`: detalle con bloqueos y requisitos.
 - `POST /events/admin`: crea un evento administrativo.
 - `PATCH /events/admin/{id}`: actualiza datos del evento y su estado.
-- `DELETE /events/admin/{id}`: cancela lógicamente el evento (`status = cancelled`), porque el schema no tiene `active` ni un borrado físico seguro para sus relaciones.
+- `DELETE /events/admin/{id}`: cancela lógicamente el evento (`status = cancelled`); no elimina el evento ni sus relaciones.
 
 ### Bloqueos de espacios
 
@@ -55,7 +55,7 @@ Las lecturas de eventos y catálogo usan `events.read`; las mutaciones operativa
 
 - `POST /events/admin/{eventId}/requirements`
 - `PATCH /events/admin/requirements/{id}`
-- `DELETE /events/admin/requirements/{id}`
+- `DELETE /events/admin/requirements/{id}`: desactiva lógicamente un requisito no necesario.
 
 ## Tablas y verificaciones
 

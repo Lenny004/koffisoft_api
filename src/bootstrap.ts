@@ -5,6 +5,7 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swagger';
 
 import { AuthModule } from './auth/auth.module.js';
+import { AnnouncementsModule } from './announcements/announcements.module.js';
 import { APP_CONFIG, type AppConfig } from './config/app-config.js';
 import { HttpExceptionFilter } from './common/http-exception.filter.js';
 import { EventsModule } from './events/events.module.js';
@@ -54,7 +55,7 @@ export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObjec
     .build();
 
   return SwaggerModule.createDocument(app, options, {
-    include: [AuthModule, MenuModule, ReservationsModule, EventsModule],
+    include: [AuthModule, MenuModule, ReservationsModule, EventsModule, AnnouncementsModule],
   });
 }
 

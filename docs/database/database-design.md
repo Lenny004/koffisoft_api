@@ -79,6 +79,7 @@ OWASP también recomienda no poner tokens de autenticación en `localStorage`; l
 ### Historial, seguridad y borrado
 
 - Los maestros se desactivan con active; no se borran si ya fueron usados.
+- Las asignaciones de usuarios/roles, relaciones de menú, líneas de paquetes y requisitos operativos conservan sus filas y se desactivan con active; los reemplazos nunca usan borrado físico.
 - Órdenes cerradas, pagos, movimientos de inventario, sesiones de caja, cotizaciones aceptadas, DTE y auditoría no se eliminan ni se editan para cambiar la historia: se anulan, revierten o generan un nuevo documento.
 - Contraseñas, tokens de sesión, tarjetas, certificados y claves privadas nunca se almacenan en claro. PostgreSQL conserva hashes de contraseña/token, y solo ciphertext TOTP con su IV, auth tag y versión de llave; el SQL contiene material ficticio de demostración.
 - Los certificados y claves DTE se referencian por dte_certificate_ref/dte_private_key_ref; el secreto vive en un gestor externo.

@@ -73,7 +73,7 @@ El catálogo global se consulta con `catalog.read`:
 - `GET /menu/admin/variants/{variantId}/allergens`: consulta las declaraciones de una variante.
 - `PUT /menu/admin/variants/{variantId}/allergens`: reemplaza todas las declaraciones. Requiere `catalog.manage` y registra `reviewedByUserId`/`reviewedAt` cuando `isReviewed=true`.
 
-El reemplazo valida que no haya alérgenos repetidos y que todos estén activos; la eliminación y creación de filas se realiza dentro de una transacción.
+El reemplazo valida que no haya alérgenos repetidos y que todos estén activos; las filas retiradas se desactivan y las nuevas o reactivadas se guardan dentro de una transacción.
 
 ## Disponibilidad y agotados
 
@@ -107,8 +107,10 @@ Las lecturas requieren `catalog.read`; las mutaciones requieren `modifiers.manag
 - `DELETE /menu/admin/modifiers/{id}`: desactiva una opción.
 - `PUT /menu/admin/variants/{variantId}/modifier-groups`: reemplaza y reordena los grupos de una variante en una transacción.
 
+Las relaciones de alérgenos y grupos de modificadores también usan `active = false` cuando dejan de aplicar; no se eliminan físicamente.
+
 Los límites `selectionMin` y `selectionMax` se validan antes de persistir y respetan los `CHECK` existentes.
 
 ## Tablas usadas
 
-El módulo consulta o escribe `locations`, `menu_categories`, `menu_items`, `menu_item_variants`, `prep_stations`, `menu_prices`, `tax_rates`, `menu_availability`, `menu_item_outages`, `allergens`, `menu_item_allergens`, `modifier_groups`, `modifiers` y `menu_item_modifier_groups`. No se modificó `prisma/schema.prisma`, `prisma/seed/seed.sql` ni `20261003120000_init`.
+El módulo consulta o escribe `locations`, `menu_categories`, `menu_items`, `menu_item_variants`, `prep_stations`, `menu_prices`, `tax_rates`, `menu_availability`, `menu_item_outages`, `allergens`, `menu_item_allergens`, `modifier_groups`, `modifiers` y `menu_item_modifier_groups`. La migración `20261010090000_logical_deletes` agrega la bandera `active` a las relaciones para conservar su historial.

@@ -200,7 +200,9 @@ INSERT INTO permissions (id, code, description) VALUES
     ('80000000-0000-0000-0000-000000000051', 'users.manage', 'Administrar cuentas y empleados'),
     ('80000000-0000-0000-0000-000000000052', 'suppliers.manage', 'Administrar proveedores'),
     ('80000000-0000-0000-0000-000000000053', 'site_content.read', 'Consultar contenido del sitio'),
-    ('80000000-0000-0000-0000-000000000054', 'site_content.manage', 'Administrar contenido del sitio')
+    ('80000000-0000-0000-0000-000000000054', 'site_content.manage', 'Administrar contenido del sitio'),
+    ('80000000-0000-0000-0000-000000000055', 'contact.read', 'Consultar mensajes de contacto'),
+    ('80000000-0000-0000-0000-000000000056', 'contact.manage', 'Gestionar mensajes y conversiones de contacto')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
@@ -415,6 +417,14 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000054'),
     ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000053'),
     ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000054')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code IN ('contact.read', 'contact.manage')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id) VALUES

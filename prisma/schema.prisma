@@ -619,6 +619,7 @@ model User {
   paidTipDistributions           TipDistribution[]      @relation("TipPayout")
   reviewedMenuItemAllergens      MenuItemAllergen[]     @relation("MenuItemAllergenReviewer")
   assignedContactMessages        ContactMessage[]       @relation("ContactMessageAssignee")
+  archivedContactMessages        ContactMessage[]       @relation("ContactMessageArchiver")
   createdInventoryMovements      InventoryMovement[]   @relation("InventoryMovementCreator")
   completedSystemSetup           SystemSetup?
 
@@ -2160,13 +2161,18 @@ model ContactMessage {
   assignedToUserId   String?               @map("assigned_to_user_id") @db.Uuid
   receivedAt         DateTime              @map("received_at") @default(now()) @db.Timestamptz(3)
   repliedAt          DateTime?             @map("replied_at") @db.Timestamptz(3)
+  archivedAt         DateTime?             @map("archived_at") @db.Timestamptz(3)
+  archivedByUserId   String?               @map("archived_by_user_id") @db.Uuid
 
   location     Location     @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
   customer     Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   reservation  Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   event        Event?       @relation(fields: [eventId], references: [id], onDelete: SetNull, onUpdate: NoAction)
   assignedTo   User?        @relation("ContactMessageAssignee", fields: [assignedToUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  archivedBy   User?        @relation("ContactMessageArchiver", fields: [archivedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
+  @@index([locationId, status, receivedAt], map: "contact_messages_location_status_received_idx")
+  @@index([locationId, receivedAt], map: "contact_messages_location_received_idx")
   /// language_code y topic son CHECK de SQL.
   @@map("contact_messages")
 }

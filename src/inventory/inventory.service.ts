@@ -847,7 +847,13 @@ export class InventoryService {
     await this.requireLocation(this.prisma, query.locationId);
     const ingredients = await this.prisma.ingredient.findMany({
       where: { active: true },
-      include: ingredientInclude,
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        reorderLevel: true,
+        baseUnit: { select: { code: true } },
+      },
       orderBy: { name: 'asc' },
     });
     const stocks = await this.stockByIngredient(

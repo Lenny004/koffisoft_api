@@ -200,8 +200,11 @@ export class UsersController {
   @RequirePermissions('users.read')
   @ApiOperation({ summary: 'Lista empleados con filtros y paginación server-side' })
   @ApiResponse({ status: 200, type: EmployeePageDto })
-  listEmployees(@Query() query: EmployeeListQueryDto): Promise<EmployeePageDto> {
-    return this.service.listEmployees(query);
+  listEmployees(
+    @Query() query: EmployeeListQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<EmployeePageDto> {
+    return this.service.listEmployees(query, this.actorId(request));
   }
 
   @Get('employees/admin/:id')
@@ -210,8 +213,11 @@ export class UsersController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta el detalle de un empleado' })
   @ApiResponse({ status: 200, type: EmployeeResponseDto })
-  getEmployee(@Param('id', ParseUUIDPipe) id: string): Promise<EmployeeResponseDto> {
-    return this.service.getEmployee(id);
+  getEmployee(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<EmployeeResponseDto> {
+    return this.service.getEmployee(id, this.actorId(request));
   }
 
   @Post('employees/admin')

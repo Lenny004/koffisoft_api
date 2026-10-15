@@ -13,7 +13,7 @@ import { ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger
 import { Throttle } from '@nestjs/throttler';
 import type { FastifyReply } from 'fastify';
 
-import type { AuthenticatedRequest } from './auth.types.js';
+import type { AuthContext, AuthenticatedRequest } from './auth.types.js';
 import { AuthService } from './auth.service.js';
 import { requestMetadata } from './auth.types.js';
 import {
@@ -196,7 +196,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Devuelve el usuario, roles, permisos y estado MFA' })
   @ApiResponse({ status: 200, type: MeResponseDto })
   async me(@Req() request: AuthenticatedRequest): Promise<MeResponseDto> {
-    return this.authService.me(this.requiredContext(request)) as unknown as MeResponseDto;
+    return this.authService.me(this.requiredContext(request));
   }
 
   @Post('mfa/totp/setup')
@@ -292,7 +292,7 @@ export class AuthController {
     return { ok: true };
   }
 
-  private requiredContext(request: AuthenticatedRequest) {
+  private requiredContext(request: AuthenticatedRequest): AuthContext {
     if (!request.auth) {
       throw new UnauthorizedException('Autenticación requerida.');
     }

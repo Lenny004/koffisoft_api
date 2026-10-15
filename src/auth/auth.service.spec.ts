@@ -112,6 +112,45 @@ describe('AuthService', () => {
     );
   });
 
+  it('rechaza una cuenta bloqueada manualmente aunque no tenga fecha de desbloqueo', async () => {
+    const prisma = {
+      user: {
+        findFirst: vi.fn().mockResolvedValue({
+          id: 'user-1',
+          passwordHash: 'hash',
+          status: UserStatus.Locked,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+          employee: null,
+        }),
+        update: vi.fn(),
+      },
+    };
+    const passwords = {
+      verify: vi.fn().mockResolvedValue(true),
+      needsRehash: vi.fn(),
+      burn: vi.fn(),
+    };
+    const audit = { record: vi.fn().mockResolvedValue(undefined) };
+    const service = new AuthService(
+      prisma as never,
+      passwords as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      audit as never,
+      { loginMaxAttempts: 5, loginLockMinutes: 15 } as AppConfig,
+    );
+
+    await expect(
+      service.login(
+        { email: 'user@example.com', password: 'Correct Password 123!' },
+        { ipAddress: '127.0.0.1' },
+      ),
+    ).rejects.toThrow('Credenciales inválidas.');
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
   it('expone el primer uso solo mientras no exista la fila única', async () => {
     const systemSetup = {
       findUnique: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({ id: 1 }),

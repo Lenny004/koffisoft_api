@@ -19,6 +19,7 @@ export interface AppConfig {
 }
 
 type Environment = Record<string, string | undefined>;
+const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
 
 function parseBoolean(value: string | undefined, name: string, fallback: boolean): boolean {
   if (value === undefined) {
@@ -81,6 +82,10 @@ function parseMfaKey(value: string | undefined, nodeEnv: string): Buffer {
     throw new Error(
       `Falta MFA_ENCRYPTION_KEY. Define una llave base64 de exactamente 32 bytes antes de arrancar (${nodeEnv}).`,
     );
+  }
+
+  if (!BASE64_RE.test(value)) {
+    throw new Error('MFA_ENCRYPTION_KEY debe ser Base64 vÃ¡lido.');
   }
 
   const key = Buffer.from(value, 'base64');

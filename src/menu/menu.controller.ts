@@ -351,7 +351,9 @@ export class MenuController {
   @ApiParam({ name: 'variantId', format: 'uuid' })
   @ApiOperation({ summary: 'Lista alérgenos declarados para una variante' })
   @ApiResponse({ status: 200, type: [AdminMenuAllergenResponseDto] })
-  async listVariantAllergens(@Param('variantId', ParseUUIDPipe) variantId: string) {
+  async listVariantAllergens(
+    @Param('variantId', ParseUUIDPipe) variantId: string,
+  ): Promise<AdminMenuAllergenResponseDto[]> {
     return this.menuService.listVariantAllergens(variantId);
   }
 

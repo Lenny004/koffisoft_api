@@ -452,7 +452,11 @@ export class MenuService {
     return this.toAdminCategory(row);
   }
 
-  async updateCategory(id: string, locationId: string, dto: UpdateMenuCategoryDto) {
+  async updateCategory(
+    id: string,
+    locationId: string,
+    dto: UpdateMenuCategoryDto,
+  ): Promise<AdminCategoryResponseDto> {
     await this.getCategory(id, locationId);
     const data: Prisma.MenuCategoryUncheckedUpdateInput = {};
     if (dto.slug !== undefined) data.slug = dto.slug;

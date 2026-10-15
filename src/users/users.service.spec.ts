@@ -184,6 +184,7 @@ describe('UsersService', () => {
     const current = {
       id: 'employee-1',
       locationId: 'location-1',
+      location: { businessId: 'business-1' },
       employeeCode: 'EMP-001',
       firstName: 'Ana',
       lastName: 'Rivera',
@@ -202,6 +203,9 @@ describe('UsersService', () => {
       employee: {
         findUnique: vi.fn().mockResolvedValue(current),
         update: vi.fn().mockResolvedValue(updated),
+      },
+      userRole: {
+        findMany: vi.fn().mockResolvedValue([{ role: { businessId: 'business-1' } }]),
       },
       user: { update: vi.fn().mockResolvedValue(undefined) },
       userSession: { updateMany: vi.fn().mockResolvedValue({ count: 2 }) },
@@ -274,6 +278,7 @@ describe('UsersService', () => {
     const employee = {
       id: 'employee-1',
       locationId: 'location-1',
+      location: { businessId: 'business-1' },
       employeeCode: 'EMP-001',
       firstName: 'Ana',
       lastName: 'Rivera',
@@ -288,13 +293,35 @@ describe('UsersService', () => {
       user: { id: 'user-1', username: 'ana', status: UserStatus.Active },
     };
     const prisma = {
-      employee: { findUnique: vi.fn().mockResolvedValue(employee) },
+      employee: { findFirst: vi.fn().mockResolvedValue(employee) },
+      userRole: {
+        findMany: vi.fn().mockResolvedValue([{ role: { businessId: 'business-1' } }]),
+      },
     };
     const service = new UsersService(prisma as never, {} as never);
 
-    await expect(service.getEmployee('employee-1')).resolves.toMatchObject({
+    await expect(service.getEmployee('employee-1', 'actor-1')).resolves.toMatchObject({
       id: 'employee-1',
       user: { id: 'user-1', username: 'ana' },
     });
+  });
+
+  it('oculta empleados de negocios no autorizados', async () => {
+    const prisma = {
+      employee: { findFirst: vi.fn().mockResolvedValue(null) },
+      userRole: {
+        findMany: vi.fn().mockResolvedValue([{ role: { businessId: 'business-1' } }]),
+      },
+    };
+    const service = new UsersService(prisma as never, {} as never);
+
+    await expect(service.getEmployee('employee-2', 'actor-1')).rejects.toThrow(
+      'Empleado no encontrado.',
+    );
+    expect(prisma.employee.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'employee-2', location: { businessId: { in: ['business-1'] } } },
+      }),
+    );
   });
 });

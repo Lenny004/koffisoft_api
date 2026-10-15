@@ -31,6 +31,7 @@ import type {
 import type {
   EmployeePageDto,
   EmployeeResponseDto,
+  PageMetaDto,
   PermissionResponseDto,
   RoleResponseDto,
   UserPageDto,
@@ -39,6 +40,13 @@ import type {
 
 const ADMIN_ROLE_CODES = ['owner', 'admin'] as const;
 const ROLE_RANK: Record<string, number> = { manager: 1, admin: 2, owner: 3 };
+const ADMIN_INVARIANT_LOCK_KEY = 71_001_002;
+
+interface ActiveRole {
+  readonly id: string;
+  readonly code: string;
+  readonly businessId: string;
+}
 
 const userSelect = {
   id: true,
@@ -90,6 +98,7 @@ const employeeSelect = {
   terminationDate: true,
   createdAt: true,
   updatedAt: true,
+  location: { select: { businessId: true } },
   user: { select: { id: true, username: true, status: true } },
 } as const satisfies Prisma.EmployeeSelect;
 
@@ -392,13 +401,13 @@ export class UsersService {
 
   async listRoles(query: RoleListQueryDto, actorUserId: string): Promise<RoleResponseDto[]> {
     const authorizedBusinesses = await this.actorBusinessIds(this.prisma, actorUserId);
+    if (query.businessId && !authorizedBusinesses.includes(query.businessId)) {
+      return [];
+    }
+    const businessIds = query.businessId ? [query.businessId] : authorizedBusinesses;
     const rows = await this.prisma.role.findMany({
       where: {
-        businessId: query.businessId
-          ? authorizedBusinesses.includes(query.businessId)
-            ? query.businessId
-            : { in: [] }
-          : { in: authorizedBusinesses },
+        businessId: { in: businessIds },
         ...(query.includeInactive ? {} : { active: true }),
       },
       orderBy: [{ name: 'asc' }, { code: 'asc' }],
@@ -408,19 +417,21 @@ export class UsersService {
   }
 
   async listPermissions(query: PermissionListQueryDto): Promise<PermissionResponseDto[]> {
-    return this.prisma.permission
-      .findMany({
-        where: query.includeInactive ? {} : { active: true },
-        orderBy: { code: 'asc' },
-        select: { id: true, code: true, description: true, active: true },
-      })
-      .then((rows) => rows);
+    return this.prisma.permission.findMany({
+      where: query.includeInactive ? {} : { active: true },
+      orderBy: { code: 'asc' },
+      select: { id: true, code: true, description: true, active: true },
+    });
   }
 
-  async listEmployees(query: EmployeeListQueryDto): Promise<EmployeePageDto> {
+  async listEmployees(query: EmployeeListQueryDto, actorUserId: string): Promise<EmployeePageDto> {
+    const authorizedBusinesses = await this.actorBusinessIds(this.prisma, actorUserId);
     const search = query.search || undefined;
     const where: Prisma.EmployeeWhereInput = {
-      ...(query.locationId ? { locationId: query.locationId } : {}),
+      location: {
+        businessId: { in: authorizedBusinesses },
+        ...(query.locationId ? { id: query.locationId } : {}),
+      },
       ...(query.status ? { status: query.status } : {}),
       ...(query.jobCode ? { jobCode: query.jobCode } : {}),
       ...(search
@@ -451,8 +462,8 @@ export class UsersService {
     };
   }
 
-  async getEmployee(id: string): Promise<EmployeeResponseDto> {
-    return this.toEmployeeResponse(await this.requireEmployee(id));
+  async getEmployee(id: string, actorUserId: string): Promise<EmployeeResponseDto> {
+    return this.toEmployeeResponse(await this.requireEmployee(id, actorUserId));
   }
 
   async createEmployee(
@@ -461,7 +472,7 @@ export class UsersService {
     metadata: RequestMetadata,
   ): Promise<EmployeeResponseDto> {
     const row = await this.prisma.$transaction(async (tx) => {
-      await this.requireLocation(tx, dto.locationId);
+      await this.requireLocation(tx, dto.locationId, actorUserId);
       await this.requireUserForEmployeeLink(tx, dto.userId);
       this.validateEmployeeDates(dto.hireDate, null);
       const created = await tx.employee.create({
@@ -505,6 +516,7 @@ export class UsersService {
     const row = await this.prisma.$transaction(async (tx) => {
       const current = await tx.employee.findUnique({ where: { id }, select: employeeSelect });
       if (!current) throw new NotFoundException('Empleado no encontrado.');
+      await this.assertBusinessAccess(tx, actorUserId, current.location.businessId);
       const hireDate = dto.hireDate === undefined ? current.hireDate : new Date(dto.hireDate);
       const terminationDate =
         dto.terminationDate === undefined
@@ -563,6 +575,7 @@ export class UsersService {
     const row = await this.prisma.$transaction(async (tx) => {
       const current = await tx.employee.findUnique({ where: { id }, select: employeeSelect });
       if (!current) throw new NotFoundException('Empleado no encontrado.');
+      await this.assertBusinessAccess(tx, actorUserId, current.location.businessId);
       const updated = await tx.employee.update({
         where: { id },
         data: {
@@ -689,9 +702,10 @@ export class UsersService {
     return user;
   }
 
-  private async requireEmployee(id: string): Promise<EmployeeRow> {
-    const employee = await this.prisma.employee.findUnique({
-      where: { id },
+  private async requireEmployee(id: string, actorUserId: string): Promise<EmployeeRow> {
+    const authorizedBusinesses = await this.actorBusinessIds(this.prisma, actorUserId);
+    const employee = await this.prisma.employee.findFirst({
+      where: { id, location: { businessId: { in: authorizedBusinesses } } },
       select: employeeSelect,
     });
     if (!employee) throw new NotFoundException('Empleado no encontrado.');
@@ -745,8 +759,8 @@ export class UsersService {
     tx: Prisma.TransactionClient,
     roleIds: string[],
     actorUserId: string,
-  ) {
-    if (roleIds.length === 0) return [] as Array<{ id: string; code: string }>;
+  ): Promise<ActiveRole[]> {
+    if (roleIds.length === 0) return [];
     const businesses = await this.actorBusinessIds(tx, actorUserId);
     const roles = await tx.role.findMany({
       where: { id: { in: roleIds }, active: true, businessId: { in: businesses } },
@@ -845,13 +859,18 @@ export class UsersService {
     }
   }
 
-  private async requireLocation(tx: Prisma.TransactionClient, id: string): Promise<void> {
+  private async requireLocation(
+    tx: Prisma.TransactionClient,
+    id: string,
+    actorUserId: string,
+  ): Promise<void> {
     const location = await tx.location.findUnique({
       where: { id },
-      select: { id: true, active: true },
+      select: { id: true, active: true, businessId: true },
     });
     if (!location || !location.active)
       throw new NotFoundException('Sede no encontrada o inactiva.');
+    await this.assertBusinessAccess(tx, actorUserId, location.businessId);
   }
 
   private async assertAnotherActiveAdmin(
@@ -876,7 +895,7 @@ export class UsersService {
 
   /** Serializa cambios de estado y roles para que el conteo de admins sea atómico. */
   private async lockAdminInvariant(tx: Prisma.TransactionClient): Promise<void> {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(71001002)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADMIN_INVARIANT_LOCK_KEY})`;
   }
 
   private validateEmployeeDates(hireDate: string, terminationDate: string | null): void {
@@ -999,7 +1018,7 @@ export class UsersService {
     return [...new Set(ids)];
   }
 
-  private pageMeta(page: number, pageSize: number, total: number) {
+  private pageMeta(page: number, pageSize: number, total: number): PageMetaDto {
     return { page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
   }
 }

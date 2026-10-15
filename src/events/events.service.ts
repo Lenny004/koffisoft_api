@@ -215,19 +215,20 @@ export class EventsService {
   async updateEvent(id: string, dto: UpdateEventDto): Promise<EventResponseDto> {
     const current = await this.prisma.event.findUnique({
       where: { id },
-      select: { startsAt: true, endsAt: true, setupStartsAt: true },
+      select: {
+        startsAt: true,
+        endsAt: true,
+        setupStartsAt: true,
+        estimatedGuestCount: true,
+        confirmedGuestCount: true,
+      },
     });
     if (!current) throw new NotFoundException('Evento no encontrado.');
     const startsAt = dto.startsAt ? new Date(dto.startsAt) : current.startsAt;
     const endsAt = dto.endsAt ? new Date(dto.endsAt) : current.endsAt;
-    const currentEvent = await this.prisma.event.findUnique({
-      where: { id },
-      select: { estimatedGuestCount: true, confirmedGuestCount: true },
-    });
-    if (!currentEvent) throw new NotFoundException('Evento no encontrado.');
     validateGuestRange(
-      dto.estimatedGuestCount ?? currentEvent.estimatedGuestCount,
-      dto.confirmedGuestCount ?? currentEvent.confirmedGuestCount ?? undefined,
+      dto.estimatedGuestCount ?? current.estimatedGuestCount,
+      dto.confirmedGuestCount ?? current.confirmedGuestCount ?? undefined,
     );
     validateNonNegativeDecimal(dto.budgetTarget, 'El presupuesto');
     validateInterval(

@@ -27,6 +27,12 @@ describe('loadAppConfig', () => {
     ).toThrow('CORS_ORIGIN');
   });
 
+  it('rechaza una llave MFA con formato Base64 inválido', () => {
+    expect(() =>
+      loadAppConfig(environment({ MFA_ENCRYPTION_KEY: `${key.slice(0, -1)}!` })),
+    ).toThrow('MFA_ENCRYPTION_KEY');
+  });
+
   it('normaliza la cookie segura a __Host- y acepta solo orígenes HTTPS', () => {
     const config = loadAppConfig(
       environment({

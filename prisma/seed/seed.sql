@@ -206,7 +206,11 @@ INSERT INTO permissions (id, code, description) VALUES
     ('80000000-0000-0000-0000-000000000057', 'seo.read', 'Consultar metadatos SEO'),
     ('80000000-0000-0000-0000-000000000058', 'seo.manage', 'Administrar metadatos SEO'),
     ('80000000-0000-0000-0000-000000000059', 'content.publish', 'Programar y publicar contenido editorial'),
-    ('80000000-0000-0000-0000-000000000060', 'analytics.read', 'Consultar estadisticas anonimas')
+    ('80000000-0000-0000-0000-000000000060', 'analytics.read', 'Consultar estadisticas anonimas'),
+    ('80000000-0000-0000-0000-000000000061', 'backups.read', 'Consultar respaldos'),
+    ('80000000-0000-0000-0000-000000000062', 'backups.create', 'Generar respaldos'),
+    ('80000000-0000-0000-0000-000000000063', 'backups.download', 'Descargar respaldos'),
+    ('80000000-0000-0000-0000-000000000064', 'backups.delete', 'Eliminar respaldos')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
@@ -453,6 +457,14 @@ FROM roles
 CROSS JOIN permissions
 WHERE roles.code IN ('owner', 'admin', 'manager')
   AND permissions.code = 'analytics.read'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin')
+  AND permissions.code IN ('backups.read', 'backups.create', 'backups.download', 'backups.delete')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id) VALUES

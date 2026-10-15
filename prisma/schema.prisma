@@ -382,6 +382,24 @@ enum AuthEventType {
   @@map("auth_event_type")
 }
 
+enum BackupType {
+  Database @map("database")
+  Uploads  @map("uploads")
+  Full     @map("full")
+
+  @@map("backup_type")
+}
+
+enum BackupStatus {
+  Pending   @map("pending")
+  Running   @map("running")
+  Succeeded @map("succeeded")
+  Failed    @map("failed")
+  Expired   @map("expired")
+
+  @@map("backup_status")
+}
+
 /// Alta inicial del propietario. La fila única (id = 1) y el CHECK SQL impiden repetirla.
 model SystemSetup {
   id          Int      @id @db.SmallInt
@@ -648,6 +666,7 @@ model User {
   mfaRecoveryCodes              UserMfaRecoveryCode[]
   authEvents                    AuthEvent[]
   auditLogs                     AuditLog[]             @relation("AuditLogActor")
+  backupJobs                    BackupJob[]            @relation("BackupJobActor")
   createdMenuItemOutages        MenuItemOutage[]       @relation("MenuItemOutageCreator")
   receivedGoodsReceipts         GoodsReceipt[]         @relation("GoodsReceiptReceiver")
   createdReservations            Reservation[]          @relation("ReservationCreator")
@@ -863,6 +882,29 @@ model AuditLog {
   @@index([entityType, entityId, createdAt], map: "audit_logs_entity_idx")
   @@index([createdAt], map: "audit_logs_created_idx")
   @@map("audit_logs")
+}
+
+/// Referencia de un respaldo fuera de PostgreSQL, con estado y retención auditables.
+model BackupJob {
+  id           String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  type         BackupType
+  status       BackupStatus @default(Pending)
+  sizeBytes    BigInt?      @map("size_bytes") @db.BigInt
+  checksum     String?      @db.Char(64)
+  storageKey   String?      @map("storage_key") @db.VarChar(500)
+  expiresAt    DateTime?    @map("expires_at") @db.Timestamptz(3)
+  actorUserId  String?      @map("actor_user_id") @db.Uuid
+  startedAt    DateTime?    @map("started_at") @db.Timestamptz(3)
+  completedAt  DateTime?    @map("completed_at") @db.Timestamptz(3)
+  errorMessage String?      @map("error_message") @db.Text
+  createdAt    DateTime     @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime     @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  actor User? @relation("BackupJobActor", fields: [actorUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([status, createdAt], map: "backup_jobs_status_created_idx")
+  @@index([expiresAt], map: "backup_jobs_expires_idx")
+  @@map("backup_jobs")
 }
 
 /// Estación operativa de preparación o despacho.

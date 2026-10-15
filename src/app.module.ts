@@ -15,6 +15,7 @@ import { SeoModule } from './seo/seo.module.js';
 import { UsersModule } from './users/users.module.js';
 import { PublicationModule } from './publication/publication.module.js';
 import { AnalyticsModule } from './analytics/analytics.module.js';
+import { BackupsModule } from './backups/backups.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AnalyticsModule } from './analytics/analytics.module.js';
     UsersModule,
     PublicationModule,
     AnalyticsModule,
+    BackupsModule,
   ],
 })
 export class AppModule {}

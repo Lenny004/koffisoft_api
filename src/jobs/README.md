@@ -1,3 +1,6 @@
 # Trabajos en segundo plano
 
-La Fase 0 solo reserva esta frontera para los trabajos de correo, generación de QR y PDFs definidos en el plan. No se agrega todavía una cola, un outbox ni lógica de negocio: esos trabajos deberán tener contrato, persistencia y pruebas aprobadas antes de implementarse.
+Los respaldos viven en `src/backups/` porque tienen un contrato administrativo,
+persistencia de estado, worker idempotente y pruebas con procesos mockeados.
+Otros trabajos de correo, QR y PDF deberán agregarse aquí solo cuando tengan un
+contrato, persistencia y pruebas aprobadas.

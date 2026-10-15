@@ -55,4 +55,29 @@ describe('loadAppConfig', () => {
       loadAppConfig(environment({ PUBLIC_SITE_URL: 'https://user:pass@example.com' })),
     ).toThrow('PUBLIC_SITE_URL');
   });
+
+  it('carga la configuración de almacenamiento y retención de respaldos', () => {
+    const config = loadAppConfig(
+      environment({
+        BACKUP_ENABLED: 'true',
+        BACKUP_STORAGE_ROOT: './private-backups',
+        UPLOADS_DIRECTORY: './uploads',
+        BACKUP_RETENTION_DAYS: '14',
+        BACKUP_MAX_SIZE_BYTES: '1048576',
+        BACKUP_SCHEDULE_MINUTES: '60',
+      }),
+    );
+
+    expect(config.backupsEnabled).toBe(true);
+    expect(config.backupRetentionDays).toBe(14);
+    expect(config.backupMaxSizeBytes).toBe(1_048_576);
+    expect(config.backupScheduleMinutes).toBe(60);
+    expect(config.pgDumpPath).toBe('pg_dump');
+  });
+
+  it('rechaza una retención no positiva', () => {
+    expect(() => loadAppConfig(environment({ BACKUP_RETENTION_DAYS: '0' }))).toThrow(
+      'BACKUP_RETENTION_DAYS',
+    );
+  });
 });

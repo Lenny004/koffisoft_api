@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { resolve } from 'node:path';
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
@@ -17,6 +18,15 @@ export interface AppConfig {
   readonly sessionAbsoluteHours: number;
   readonly loginMaxAttempts: number;
   readonly loginLockMinutes: number;
+  readonly databaseUrl: string;
+  readonly backupsEnabled: boolean;
+  readonly backupStorageRoot: string;
+  readonly uploadsDirectory: string;
+  readonly pgDumpPath: string;
+  readonly tarPath: string;
+  readonly backupRetentionDays: number;
+  readonly backupMaxSizeBytes: number;
+  readonly backupScheduleMinutes: number;
 }
 
 type Environment = Record<string, string | undefined>;
@@ -46,6 +56,34 @@ function parsePositiveNumber(value: string | undefined, name: string, fallback: 
   }
 
   return parsed;
+}
+
+function parseNonNegativeNumber(value: string | undefined, name: string, fallback: number): number {
+  const parsed = value === undefined ? fallback : Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${name} debe ser un número mayor o igual que cero.`);
+  }
+
+  return parsed;
+}
+
+function parsePath(value: string | undefined, name: string, fallback: string): string {
+  const candidate = (value ?? fallback).trim();
+  if (!candidate || candidate.includes('\0')) {
+    throw new Error(`${name} debe ser una ruta no vacía.`);
+  }
+
+  return resolve(candidate);
+}
+
+function parseCommand(value: string | undefined, name: string, fallback: string): string {
+  const candidate = (value ?? fallback).trim();
+  if (!candidate || candidate.includes('\0')) {
+    throw new Error(`${name} debe ser un comando no vacío.`);
+  }
+
+  return candidate;
 }
 
 function parseOrigins(value: string | undefined, nodeEnv: string): readonly string[] {
@@ -184,6 +222,31 @@ export function loadAppConfig(environment: Environment = process.env): AppConfig
       environment.AUTH_LOGIN_LOCK_MINUTES,
       'AUTH_LOGIN_LOCK_MINUTES',
       15,
+    ),
+    databaseUrl: environment.DATABASE_URL ?? 'postgresql://localhost:5432/koffisoft_local',
+    backupsEnabled: parseBoolean(environment.BACKUP_ENABLED, 'BACKUP_ENABLED', false),
+    backupStorageRoot: parsePath(
+      environment.BACKUP_STORAGE_ROOT,
+      'BACKUP_STORAGE_ROOT',
+      './var/backups',
+    ),
+    uploadsDirectory: parsePath(environment.UPLOADS_DIRECTORY, 'UPLOADS_DIRECTORY', './uploads'),
+    pgDumpPath: parseCommand(environment.PG_DUMP_PATH, 'PG_DUMP_PATH', 'pg_dump'),
+    tarPath: parseCommand(environment.TAR_PATH, 'TAR_PATH', 'tar'),
+    backupRetentionDays: parsePositiveNumber(
+      environment.BACKUP_RETENTION_DAYS,
+      'BACKUP_RETENTION_DAYS',
+      30,
+    ),
+    backupMaxSizeBytes: parsePositiveNumber(
+      environment.BACKUP_MAX_SIZE_BYTES,
+      'BACKUP_MAX_SIZE_BYTES',
+      50 * 1024 * 1024 * 1024,
+    ),
+    backupScheduleMinutes: parseNonNegativeNumber(
+      environment.BACKUP_SCHEDULE_MINUTES,
+      'BACKUP_SCHEDULE_MINUTES',
+      0,
     ),
   };
 }

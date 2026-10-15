@@ -30,6 +30,9 @@
 
 <!-- section:highlights -->
 
+- **Publicacion editorial:** avisos, eventos y platos admiten borrador,
+  programacion, expiracion y preview temporal; ve [docs/publicacion.md](docs/publicacion.md).
+
 - **Bandeja de contacto:** recibe mensajes publicos con honeypot, limite por IP,
   deduplicacion, estados, conversiones y auditoria por sede.
 - **Sitio editable por sede:** `GET /site` público y `/site/admin` protegido actualizan horarios, contacto, hero, Nosotros y redes con auditoría.
@@ -161,6 +164,9 @@ La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los u
 `DATABASE_URL` tiene un respaldo local para generar y validar Prisma, pero debe configurarse para migrar o consultar una base. `SHADOW_DATABASE_URL` nunca debe apuntar a la misma base que `DATABASE_URL`.
 
 <!-- section:structure -->
+
+El modulo `src/publication/` comparte estados editoriales, permisos, preview
+de un solo uso y transiciones automaticas para los tres tipos de contenido.
 
 ## 🗂️ Estructura del proyecto
 

@@ -12,6 +12,7 @@ import {
   EventQuoteLineType,
   EventSpaceBookingStatus,
   EventStatus,
+  PublicationStatus,
   QuoteStatus,
 } from '../generated/prisma/enums.js';
 import {
@@ -39,6 +40,7 @@ import {
   EventSpaceBookingResponseDto,
   PublicEventCatalogResponseDto,
   PublicEventRequestResponseDto,
+  PublicPublishedEventDto,
   PublicEventSpaceDto,
 } from './dto/event-response.dto.js';
 
@@ -105,6 +107,44 @@ export class EventsService {
         maxGuestCount: pkg.maxGuestCount,
       })),
     };
+  }
+
+  async getPublicEvents(locationId: string): Promise<PublicPublishedEventDto[]> {
+    const location = await this.prisma.location.findFirst({
+      where: { id: locationId, active: true },
+      select: { id: true },
+    });
+    if (!location) throw new NotFoundException('Sede no encontrada.');
+
+    const now = new Date();
+    const rows = await this.prisma.event.findMany({
+      where: {
+        locationId,
+        status: { not: EventStatus.Cancelled },
+        publicationStatus: PublicationStatus.Published,
+        publishedAt: { lte: now },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
+      orderBy: [{ startsAt: 'asc' }, { title: 'asc' }],
+      select: {
+        id: true,
+        locationId: true,
+        eventCode: true,
+        eventType: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+        estimatedGuestCount: true,
+        publicationStatus: true,
+        publishedAt: true,
+      },
+    });
+    return rows.map((row) => ({
+      ...row,
+      startsAt: row.startsAt.toISOString(),
+      endsAt: row.endsAt.toISOString(),
+      publishedAt: row.publishedAt!.toISOString(),
+    }));
   }
 
   async createPublicEventRequest(
@@ -700,6 +740,10 @@ export class EventsService {
       confirmedGuestCount: row.confirmedGuestCount,
       budgetTarget: row.budgetTarget?.toString() ?? null,
       status: row.status,
+      publicationStatus: row.publicationStatus,
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+      scheduledAt: row.scheduledAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt?.toISOString() ?? null,
       source: row.source,
       specialRequirements: row.specialRequirements,
       internalNotes: row.internalNotes,

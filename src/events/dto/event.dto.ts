@@ -51,6 +51,13 @@ export class PublicEventCatalogQueryDto {
   locationId!: string;
 }
 
+/** Parámetros públicos para listar eventos editoriales vigentes. */
+export class PublicEventListQueryDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  locationId!: string;
+}
+
 /** Solicitud pública que abre un evento en estado `inquiry`. */
 export class CreatePublicEventRequestDto {
   @ApiProperty({ format: 'uuid' })

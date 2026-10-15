@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { AnnouncementsService, validateCtaUrl } from './announcements.service.js';
+import { PublicationStatus } from '../generated/prisma/enums.js';
 
 const announcement = {
   id: 'announcement-1',
@@ -18,6 +19,32 @@ const announcement = {
 };
 
 describe('AnnouncementsService', () => {
+  it('lista solo avisos publicados y vigentes', async () => {
+    const prisma = {
+      importantAnnouncement: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+    const service = new AnnouncementsService(prisma as never);
+
+    await service.listPublic({ locationId: 'location-1' });
+
+    expect(prisma.importantAnnouncement.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          publicationStatus: PublicationStatus.Published,
+          publishedAt: expect.objectContaining({ lte: expect.any(Date) }),
+          AND: expect.arrayContaining([
+            {
+              OR: [
+                { expiresAt: null },
+                { expiresAt: expect.objectContaining({ gt: expect.any(Date) }) },
+              ],
+            },
+          ]),
+        }),
+      }),
+    );
+  });
+
   it.each([
     'javascript:alert(1)',
     'data:text/html,<script>alert(1)</script>',

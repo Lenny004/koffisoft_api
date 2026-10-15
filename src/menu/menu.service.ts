@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 
 import { Prisma } from '../generated/prisma/client.js';
-import { MenuChannel } from '../generated/prisma/enums.js';
+import { MenuChannel, PublicationStatus } from '../generated/prisma/enums.js';
 import { PrismaService } from '../database/prisma.service.js';
 import {
   CreateMenuCategoryDto,
@@ -90,6 +90,10 @@ const adminItemSelect = {
   descriptionEn: true,
   publicVisible: true,
   active: true,
+  publicationStatus: true,
+  publishedAt: true,
+  scheduledAt: true,
+  expiresAt: true,
   createdAt: true,
   updatedAt: true,
   variants: {
@@ -302,6 +306,9 @@ export class MenuService {
     const itemWhere: Prisma.MenuItemWhereInput = {
       active: true,
       publicVisible: true,
+      publicationStatus: PublicationStatus.Published,
+      publishedAt: { lte: context.now },
+      OR: [{ expiresAt: null }, { expiresAt: { gt: context.now } }],
       variants: { some: variantWhere },
     };
 
@@ -360,6 +367,9 @@ export class MenuService {
         slug,
         active: true,
         publicVisible: true,
+        publicationStatus: PublicationStatus.Published,
+        publishedAt: { lte: context.now },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: context.now } }],
         category: {
           locationId: query.locationId,
           active: true,
@@ -1736,6 +1746,10 @@ export class MenuService {
       descriptionEn: row.descriptionEn,
       publicVisible: row.publicVisible,
       active: row.active,
+      publicationStatus: row.publicationStatus,
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+      scheduledAt: row.scheduledAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt?.toISOString() ?? null,
       variants: row.variants.map((variant) => this.toAdminVariant(variant)),
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),

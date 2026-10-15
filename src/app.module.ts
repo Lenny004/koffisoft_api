@@ -13,6 +13,7 @@ import { ReservationsModule } from './reservations/reservations.module.js';
 import { SiteModule } from './site/site.module.js';
 import { SeoModule } from './seo/seo.module.js';
 import { UsersModule } from './users/users.module.js';
+import { PublicationModule } from './publication/publication.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { UsersModule } from './users/users.module.js';
     SiteModule,
     SeoModule,
     UsersModule,
+    PublicationModule,
   ],
 })
 export class AppModule {}

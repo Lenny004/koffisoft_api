@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { PublicationStatus } from '../../generated/prisma/enums.js';
+
 export class PageMetaDto {
   @ApiProperty()
   page!: number;
@@ -293,6 +295,18 @@ export class AdminItemResponseDto {
 
   @ApiProperty()
   active!: boolean;
+
+  @ApiProperty({ enum: PublicationStatus })
+  publicationStatus!: PublicationStatus;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  publishedAt!: string | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  scheduledAt!: string | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  expiresAt!: string | null;
 
   @ApiProperty({ type: () => [AdminVariantSummaryDto] })
   variants!: AdminVariantSummaryDto[];

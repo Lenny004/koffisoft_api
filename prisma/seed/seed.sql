@@ -204,7 +204,8 @@ INSERT INTO permissions (id, code, description) VALUES
     ('80000000-0000-0000-0000-000000000055', 'contact.read', 'Consultar mensajes de contacto'),
     ('80000000-0000-0000-0000-000000000056', 'contact.manage', 'Gestionar mensajes y conversiones de contacto'),
     ('80000000-0000-0000-0000-000000000057', 'seo.read', 'Consultar metadatos SEO'),
-    ('80000000-0000-0000-0000-000000000058', 'seo.manage', 'Administrar metadatos SEO')
+    ('80000000-0000-0000-0000-000000000058', 'seo.manage', 'Administrar metadatos SEO'),
+    ('80000000-0000-0000-0000-000000000059', 'content.publish', 'Programar y publicar contenido editorial')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
@@ -437,6 +438,14 @@ WHERE roles.code IN ('owner', 'admin', 'manager')
   AND permissions.code IN ('seo.read', 'seo.manage')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code = 'content.publish'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
 INSERT INTO user_roles (user_id, role_id) VALUES
     ('41000000-0000-0000-0000-000000000001', '42000000-0000-0000-0000-000000000001'),
     ('41000000-0000-0000-0000-000000000001', '42000000-0000-0000-0000-000000000002'),
@@ -640,6 +649,10 @@ INSERT INTO menu_items (
     ('61000000-0000-0000-0000-000000000021', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-001', 'nopal-sorbet', 'dessert', 'Nieve de nopal', 'Nopal sorbet', 'Nieve de nopal.', 'Nopal sorbet.'),
     ('61000000-0000-0000-0000-000000000022', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-002', 'corn-bread-rompope', 'dessert', 'Pan de elote con rompope de nixtamal, vainilla de Chichicaxtle, maracuyá', 'Cornbread with nixtamal rompope, Chichicaxtle vanilla, passion fruit', 'Pan de elote con rompope de nixtamal, vainilla de Chichicaxtle y maracuyá.', 'Cornbread with nixtamal rompope, Chichicaxtle vanilla and passion fruit.'),
     ('61000000-0000-0000-0000-000000000023', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-003', 'mamey-tartlet', 'dessert', 'Tartaleta de mamey, caviar', 'Mamey tartlet, caviar', 'Tartaleta de mamey con caviar.', 'Mamey tartlet with caviar.');
+
+UPDATE menu_items
+SET publication_status = 'published', published_at = NOW()
+WHERE active = true AND public_visible = true;
 
 INSERT INTO menu_item_variants (
     id, menu_item_id, prep_station_id, sku, name_es, name_en, is_default
@@ -1180,6 +1193,10 @@ INSERT INTO events (
         'Projector table and vegetarian meal count to be confirmed.',
         '41000000-0000-0000-0000-000000000001'
     );
+
+UPDATE events
+SET publication_status = 'published', published_at = NOW()
+WHERE status IN ('confirmed', 'in_progress', 'completed');
 
 INSERT INTO event_space_bookings (
     id, event_id, venue_space_id, starts_at, ends_at, setup_starts_at,

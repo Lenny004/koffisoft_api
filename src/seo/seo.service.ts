@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../database/prisma.service.js';
+import { PublicationStatus } from '../generated/prisma/enums.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import type {
   CreateSeoMetadataDto,
@@ -158,6 +159,7 @@ export class SeoService {
 
   async listAdmin(query: SeoListQueryDto): Promise<SeoMetadataResponseDto[]> {
     const location = await this.getLocation(query.locationId);
+    const now = new Date();
     const rows = await this.seo.findMany({
       where: {
         businessId: location.businessId,
@@ -172,6 +174,9 @@ export class SeoService {
         where: {
           active: true,
           publicVisible: true,
+          publicationStatus: PublicationStatus.Published,
+          publishedAt: { lte: now },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
           category: { locationId: query.locationId, active: true },
           variants: { some: { active: true } },
         },
@@ -182,6 +187,9 @@ export class SeoService {
         where: {
           locationId: query.locationId,
           status: { in: [...PUBLIC_EVENT_STATUSES] as never[] },
+          publicationStatus: PublicationStatus.Published,
+          publishedAt: { lte: now },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
         },
         select: { id: true },
         orderBy: { startsAt: 'desc' },
@@ -190,8 +198,13 @@ export class SeoService {
         where: {
           locationId: query.locationId,
           active: true,
-          OR: [{ startsAt: null }, { startsAt: { lte: new Date() } }],
-          AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }],
+          publicationStatus: PublicationStatus.Published,
+          publishedAt: { lte: now },
+          OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+          AND: [
+            { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+            { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+          ],
         },
         select: { id: true },
         orderBy: { displayOrder: 'asc' },
@@ -324,6 +337,7 @@ export class SeoService {
   }
 
   async getSitemapXml(): Promise<string> {
+    const now = new Date();
     const locations = await this.prisma.location.findMany({
       where: { active: true },
       select: { id: true, businessId: true },
@@ -352,6 +366,9 @@ export class SeoService {
         where: {
           active: true,
           publicVisible: true,
+          publicationStatus: PublicationStatus.Published,
+          publishedAt: { lte: now },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
           category: { locationId: firstLocation.id, active: true },
           variants: { some: { active: true } },
         },
@@ -378,6 +395,9 @@ export class SeoService {
             where: {
               locationId: firstLocation.id,
               status: { in: [...PUBLIC_EVENT_STATUSES] as never[] },
+              publicationStatus: PublicationStatus.Published,
+              publishedAt: { lte: now },
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
             },
             select: { id: true, updatedAt: true },
           })
@@ -387,8 +407,13 @@ export class SeoService {
             where: {
               locationId: firstLocation.id,
               active: true,
-              OR: [{ startsAt: null }, { startsAt: { lte: new Date() } }],
-              AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }],
+              publicationStatus: PublicationStatus.Published,
+              publishedAt: { lte: now },
+              OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+              AND: [
+                { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+                { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+              ],
             },
             select: { id: true, updatedAt: true },
           })
@@ -467,6 +492,7 @@ export class SeoService {
     admin: boolean,
   ): Promise<ResolvedResource> {
     const location = await this.getLocation(locationId);
+    const now = new Date();
     const base: LocationContext = {
       ...location,
     };
@@ -488,6 +514,9 @@ export class SeoService {
           slug: resourceKey,
           active: true,
           publicVisible: true,
+          publicationStatus: PublicationStatus.Published,
+          publishedAt: { lte: now },
+          OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
           category: { locationId, active: true },
           ...(admin ? {} : { variants: { some: { active: true } } }),
         },
@@ -512,8 +541,13 @@ export class SeoService {
             ? { active: true }
             : {
                 active: true,
-                OR: [{ startsAt: null }, { startsAt: { lte: new Date() } }],
-                AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }] }],
+                publicationStatus: PublicationStatus.Published,
+                publishedAt: { lte: now },
+                OR: [{ startsAt: null }, { startsAt: { lte: now } }],
+                AND: [
+                  { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+                  { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+                ],
               }),
         },
         select: { title: true, message: true },
@@ -532,7 +566,14 @@ export class SeoService {
       where: {
         id: resourceKey,
         locationId,
-        ...(admin ? {} : { status: { in: [...PUBLIC_EVENT_STATUSES] as never[] } }),
+        ...(admin
+          ? {}
+          : {
+              status: { in: [...PUBLIC_EVENT_STATUSES] as never[] },
+              publicationStatus: PublicationStatus.Published,
+              publishedAt: { lte: now },
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+            }),
       },
       select: { title: true, specialRequirements: true },
     });

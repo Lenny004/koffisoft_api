@@ -25,6 +25,7 @@ import {
   EventListQueryDto,
   EventPackageListQueryDto,
   PublicEventCatalogQueryDto,
+  PublicEventListQueryDto,
   UpdateEventDto,
   UpdateEventPackageDto,
   UpdateEventQuoteStatusDto,
@@ -39,6 +40,7 @@ import {
   EventResponseDto,
   EventSpaceBookingResponseDto,
   PublicEventCatalogResponseDto,
+  PublicPublishedEventDto,
   PublicEventRequestResponseDto,
 } from './dto/event-response.dto.js';
 import { EventsService } from './events.service.js';
@@ -57,6 +59,14 @@ export class EventsController {
     @Query() query: PublicEventCatalogQueryDto,
   ): Promise<PublicEventCatalogResponseDto> {
     return this.service.getPublicCatalog(query.locationId);
+  }
+
+  @Get('public')
+  @Public()
+  @ApiOperation({ summary: 'Lista eventos editoriales públicos vigentes' })
+  @ApiResponse({ status: 200, type: [PublicPublishedEventDto] })
+  async publicList(@Query() query: PublicEventListQueryDto): Promise<PublicPublishedEventDto[]> {
+    return this.service.getPublicEvents(query.locationId);
   }
 
   @Post()

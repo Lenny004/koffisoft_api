@@ -77,6 +77,14 @@ enum MenuItemType {
   @@map("menu_item_type")
 }
 
+enum PublicationStatus {
+  Draft     @map("draft")
+  Scheduled @map("scheduled")
+  Published @map("published")
+
+  @@map("publication_status")
+}
+
 enum MenuChannel {
   Pos      @map("pos")
   Web      @map("web")
@@ -529,6 +537,12 @@ model ImportantAnnouncement {
   ctaUrl       String?  @map("cta_url") @db.VarChar(500)
   startsAt     DateTime? @map("starts_at") @db.Timestamptz(3)
   endsAt       DateTime? @map("ends_at") @db.Timestamptz(3)
+  publicationStatus PublicationStatus @default(Draft) @map("publication_status")
+  publishedAt       DateTime?         @map("published_at") @db.Timestamptz(3)
+  scheduledAt       DateTime?         @map("scheduled_at") @db.Timestamptz(3)
+  expiresAt         DateTime?         @map("expires_at") @db.Timestamptz(3)
+  previewTokenHash  String?           @unique(map: "important_announcements_preview_token_unique") @map("preview_token_hash") @db.Char(64)
+  previewExpiresAt  DateTime?         @map("preview_expires_at") @db.Timestamptz(3)
   displayOrder Int      @map("display_order") @default(0)
   active       Boolean  @default(true)
   createdAt    DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
@@ -537,6 +551,7 @@ model ImportantAnnouncement {
   location Location @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@index([locationId, active, displayOrder], map: "important_announcements_public_idx")
+  @@index([locationId, publicationStatus, scheduledAt], map: "important_announcements_publication_idx")
   @@map("important_announcements")
 }
 
@@ -957,6 +972,12 @@ model MenuItem {
   descriptionEs String?     @map("description_es") @db.Text
   descriptionEn String?     @map("description_en") @db.Text
   publicVisible Boolean     @map("public_visible") @default(true)
+  publicationStatus PublicationStatus @default(Draft) @map("publication_status")
+  publishedAt       DateTime?         @map("published_at") @db.Timestamptz(3)
+  scheduledAt       DateTime?         @map("scheduled_at") @db.Timestamptz(3)
+  expiresAt         DateTime?         @map("expires_at") @db.Timestamptz(3)
+  previewTokenHash  String?           @unique(map: "menu_items_preview_token_unique") @map("preview_token_hash") @db.Char(64)
+  previewExpiresAt  DateTime?         @map("preview_expires_at") @db.Timestamptz(3)
   active       Boolean      @default(true)
   createdAt    DateTime     @map("created_at") @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime     @map("updated_at") @default(now()) @db.Timestamptz(3)
@@ -965,6 +986,7 @@ model MenuItem {
   variants  MenuItemVariant[]
 
   @@unique([categoryId, slug], map: "menu_items_slug_unique")
+  @@index([publicationStatus, scheduledAt], map: "menu_items_publication_idx")
   @@map("menu_items")
 }
 
@@ -1539,6 +1561,12 @@ model Event {
   confirmedGuestCount  Int?        @map("confirmed_guest_count") @db.SmallInt
   budgetTarget         Decimal?    @map("budget_target") @db.Decimal(14, 2)
   status               EventStatus @default(Inquiry)
+  publicationStatus    PublicationStatus @default(Draft) @map("publication_status")
+  publishedAt          DateTime?         @map("published_at") @db.Timestamptz(3)
+  scheduledAt          DateTime?         @map("scheduled_at") @db.Timestamptz(3)
+  expiresAt            DateTime?         @map("expires_at") @db.Timestamptz(3)
+  previewTokenHash     String?           @unique(map: "events_preview_token_unique") @map("preview_token_hash") @db.Char(64)
+  previewExpiresAt     DateTime?         @map("preview_expires_at") @db.Timestamptz(3)
   source               String      @default("web") @db.VarChar(30)
   specialRequirements  String?     @map("special_requirements") @db.Text
   internalNotes        String?     @map("internal_notes") @db.Text
@@ -1558,6 +1586,7 @@ model Event {
 
   @@unique([locationId, eventCode], map: "events_code_unique")
   @@index([locationId, startsAt, status], map: "events_location_start_idx")
+  @@index([locationId, publicationStatus, scheduledAt], map: "events_publication_idx")
   /// Duración, montaje, invitados y fuente son CHECK de SQL.
   @@map("events")
 }

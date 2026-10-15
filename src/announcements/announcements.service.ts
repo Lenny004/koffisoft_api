@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../database/prisma.service.js';
+import { PublicationStatus } from '../generated/prisma/enums.js';
 import type {
   AnnouncementListQueryDto,
   CreateAnnouncementDto,
@@ -20,8 +21,13 @@ export class AnnouncementsService {
       where: {
         locationId: query.locationId,
         active: true,
+        publicationStatus: PublicationStatus.Published,
+        publishedAt: { lte: now },
         OR: [{ startsAt: null }, { startsAt: { lte: now } }],
-        AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: now } }] }],
+        AND: [
+          { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+        ],
       },
       orderBy: [{ displayOrder: 'asc' }, { createdAt: 'desc' }],
     });
@@ -132,6 +138,10 @@ export class AnnouncementsService {
     ctaUrl: string | null;
     startsAt: Date | null;
     endsAt: Date | null;
+    publicationStatus: PublicationStatus;
+    publishedAt: Date | null;
+    scheduledAt: Date | null;
+    expiresAt: Date | null;
     displayOrder: number;
     active: boolean;
     createdAt: Date;
@@ -146,6 +156,10 @@ export class AnnouncementsService {
       ctaUrl: row.ctaUrl,
       startsAt: row.startsAt?.toISOString() ?? null,
       endsAt: row.endsAt?.toISOString() ?? null,
+      publicationStatus: row.publicationStatus,
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+      scheduledAt: row.scheduledAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt?.toISOString() ?? null,
       displayOrder: row.displayOrder,
       active: row.active,
       createdAt: row.createdAt.toISOString(),

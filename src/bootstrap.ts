@@ -17,6 +17,7 @@ import { ReservationsModule } from './reservations/reservations.module.js';
 import { SiteModule } from './site/site.module.js';
 import { SeoModule } from './seo/seo.module.js';
 import { UsersModule } from './users/users.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 
 export async function createApplication(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
@@ -70,6 +71,7 @@ export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObjec
       SiteModule,
       SeoModule,
       UsersModule,
+      AnalyticsModule,
       InventoryModule,
     ],
   });

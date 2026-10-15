@@ -30,6 +30,8 @@
 
 <!-- section:highlights -->
 
+- **Estadísticas sin cookies:** `POST /analytics/page-view` agrega visitas por día sin IP ni identificadores; los reportes requieren `analytics.read` y alcance de sede.
+
 - **Publicacion editorial:** avisos, eventos y platos admiten borrador,
   programacion, expiracion y preview temporal; ve [docs/publicacion.md](docs/publicacion.md).
 
@@ -61,6 +63,9 @@ El alcance aprobado incluye NestJS sobre Fastify, el endpoint público `GET /hea
 Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía de [usuarios y empleados](docs/users.md), la guía del catálogo en [docs/menu.md](docs/menu.md), las guías de [reservas](docs/reservations.md), [eventos](docs/events.md), [SEO](docs/seo.md) e [inventario](docs/inventory.md), y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
 
 **Stack:** Node.js 24.13.0, pnpm 11.1.3, NestJS 12.1.2, Fastify 5.12.5, TypeScript 5.9.3, Prisma 7.10.0 y PostgreSQL.
+
+La captura y los reportes anónimos de visitas están documentados en
+[docs/analytics.md](docs/analytics.md).
 
 <!-- section:requirements -->
 

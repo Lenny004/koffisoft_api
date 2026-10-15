@@ -763,29 +763,33 @@ export class AuthService {
     metadata: RequestMetadata,
     now: Date,
   ): Promise<void> {
-    const failedLoginAttempts = user.failedLoginAttempts + 1;
-    const shouldLock = failedLoginAttempts >= this.config.loginMaxAttempts;
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: { increment: 1 },
+        lastFailedLoginAt: now,
+      },
+      select: { failedLoginAttempts: true },
+    });
+    const shouldLock = updated.failedLoginAttempts >= this.config.loginMaxAttempts;
     const lockedUntil = shouldLock
       ? new Date(now.getTime() + this.config.loginLockMinutes * 60 * 1000)
       : null;
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginAttempts,
-        lastFailedLoginAt: now,
-        ...(shouldLock ? { status: UserStatus.Locked, lockedAt: now, lockedUntil } : {}),
-      },
-    });
+    const locked = shouldLock
+      ? await this.prisma.user.updateMany({
+          where: { id: user.id, status: UserStatus.Active },
+          data: { status: UserStatus.Locked, lockedAt: now, lockedUntil },
+        })
+      : { count: 0 };
     await this.audit.record(AuthEventType.LoginFailed, metadata, {
       userId: user.id,
       details: { reason: 'invalid_credentials' },
     });
 
-    if (shouldLock) {
+    if (locked.count === 1) {
       await this.audit.record(AuthEventType.AccountLocked, metadata, {
         userId: user.id,
-        details: { failedLoginAttempts },
+        details: { failedLoginAttempts: updated.failedLoginAttempts },
       });
     }
   }

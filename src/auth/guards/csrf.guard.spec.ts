@@ -25,8 +25,8 @@ describe('CsrfGuard', () => {
     );
   });
 
-  it('permite curl sin encabezados de navegador y el origen aprobado', () => {
-    expect(guard.canActivate(context({}))).toBe(true);
+  it('rechaza una mutación sin encabezados de origen', () => {
+    expect(() => guard.canActivate(context({}))).toThrow('Falta el origen de la solicitud.');
     expect(
       guard.canActivate(
         context({ origin: 'http://localhost:5173', referer: 'http://localhost:5173/login' }),

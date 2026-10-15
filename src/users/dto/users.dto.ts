@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -33,11 +34,12 @@ function parseBoolean({ value }: { value: unknown }): unknown {
 
 /** Paginación y filtros server-side del listado de cuentas administrativas. */
 export class UserListQueryDto {
-  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @ApiPropertyOptional({ minimum: 1, maximum: 10_000, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(10_000)
   page = 1;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })
@@ -98,9 +100,10 @@ export class CreateUserDto {
   @IsUUID()
   employeeId?: string | null;
 
-  @ApiPropertyOptional({ type: () => [String], format: 'uuid' })
+  @ApiPropertyOptional({ type: () => [String], format: 'uuid', maxItems: 20 })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(20)
   @IsUUID(undefined, { each: true })
   roleIds: string[] = [];
 
@@ -140,8 +143,9 @@ export class UpdateUserDto {
 
 /** Identificadores de roles que reemplazan las asignaciones activas actuales. */
 export class AssignUserRolesDto {
-  @ApiProperty({ type: () => [String], format: 'uuid' })
+  @ApiProperty({ type: () => [String], format: 'uuid', maxItems: 20 })
   @IsArray()
+  @ArrayMaxSize(20)
   @IsUUID(undefined, { each: true })
   roleIds!: string[];
 }
@@ -278,11 +282,12 @@ export class UpdateEmployeeDto {
 
 /** Filtros server-side del directorio de empleados. */
 export class EmployeeListQueryDto {
-  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @ApiPropertyOptional({ minimum: 1, maximum: 10_000, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(10_000)
   page = 1;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })

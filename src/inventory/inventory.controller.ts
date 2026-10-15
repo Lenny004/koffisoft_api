@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 import { RequirePermissions } from '../auth/decorators/permissions.decorator.js';
@@ -100,7 +111,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Consulta un ingrediente y su saldo actual' })
   @ApiResponse({ status: 200, type: IngredientResponseDto })
   getIngredient(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: InventoryLocationQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<IngredientResponseDto> {
@@ -128,7 +139,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Actualiza datos de un ingrediente sin editar el stock' })
   @ApiResponse({ status: 200, type: IngredientResponseDto })
   updateIngredient(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateIngredientDto,
     @Req() request: AuthenticatedRequest,
     @Query() query: InventoryLocationQueryDto,
@@ -151,7 +162,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Desactiva lógicamente un ingrediente' })
   @ApiResponse({ status: 200, type: IngredientResponseDto })
   removeIngredient(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
     @Query() query: InventoryLocationQueryDto,
   ): Promise<IngredientResponseDto> {
@@ -184,7 +195,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Consulta el detalle de un proveedor' })
   @ApiResponse({ status: 200, type: SupplierResponseDto })
   getSupplier(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: InventoryLocationQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<SupplierResponseDto> {
@@ -214,7 +225,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Actualiza un proveedor' })
   @ApiResponse({ status: 200, type: SupplierResponseDto })
   updateSupplier(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSupplierDto,
     @Req() request: AuthenticatedRequest,
     @Query() query: InventoryLocationQueryDto,
@@ -237,7 +248,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Desactiva lógicamente un proveedor' })
   @ApiResponse({ status: 200, type: SupplierResponseDto })
   removeSupplier(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
     @Query() query: InventoryLocationQueryDto,
   ): Promise<SupplierResponseDto> {
@@ -270,7 +281,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Consulta una recepción con sus lotes y líneas' })
   @ApiResponse({ status: 200, type: GoodsReceiptResponseDto })
   getReceipt(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: InventoryLocationQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<GoodsReceiptResponseDto> {
@@ -350,7 +361,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Consulta una receta con sus ingredientes' })
   @ApiResponse({ status: 200, type: RecipeResponseDto })
   getRecipe(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: InventoryLocationQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<RecipeResponseDto> {
@@ -380,7 +391,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Archiva o anota una receta existente' })
   @ApiResponse({ status: 200, type: RecipeResponseDto })
   updateRecipe(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateRecipeDto,
     @Req() request: AuthenticatedRequest,
     @Query() query: InventoryLocationQueryDto,
@@ -403,7 +414,7 @@ export class InventoryController {
   @ApiOperation({ summary: 'Desactiva una receta sin borrar su historial' })
   @ApiResponse({ status: 200, type: RecipeResponseDto })
   removeRecipe(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
     @Query() query: InventoryLocationQueryDto,
   ): Promise<RecipeResponseDto> {

@@ -58,7 +58,8 @@ describe('AuthService', () => {
           failedLoginAttempts: 4,
           lockedUntil: null,
         }),
-        update: vi.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue({ failedLoginAttempts: 5 }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
     };
     const passwords = {
@@ -91,8 +92,14 @@ describe('AuthService', () => {
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          failedLoginAttempts: { increment: 1 },
+        }),
+      }),
+    );
+    expect(prisma.user.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
           status: UserStatus.Locked,
-          failedLoginAttempts: 5,
           lockedAt: expect.any(Date),
           lockedUntil: expect.any(Date),
         }),

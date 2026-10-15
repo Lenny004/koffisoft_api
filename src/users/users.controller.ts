@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -79,7 +80,7 @@ export class UsersController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta el detalle administrativo de un usuario' })
   @ApiResponse({ status: 200, type: UserResponseDto })
-  getUser(@Param('id') id: string): Promise<UserResponseDto> {
+  getUser(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponseDto> {
     return this.service.getUser(id);
   }
 
@@ -102,7 +103,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Edita los datos no sensibles de un usuario' })
   @ApiResponse({ status: 200, type: UserResponseDto })
   updateUser(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateUserDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserResponseDto> {
@@ -117,7 +118,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Activa una cuenta y limpia su bloqueo' })
   @ApiResponse({ status: 200, type: UserResponseDto })
   activateUser(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserResponseDto> {
     return this.service.activateUser(id, this.actorId(request), requestMetadata(request));
@@ -131,7 +132,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Desactiva una cuenta y revoca sus sesiones' })
   @ApiResponse({ status: 200, type: UserResponseDto })
   deactivateUser(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserResponseDto> {
     return this.service.deactivateUser(id, this.actorId(request), requestMetadata(request));
@@ -145,7 +146,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Bloquea una cuenta y revoca sus sesiones' })
   @ApiResponse({ status: 200, type: UserResponseDto })
   blockUser(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserResponseDto> {
     return this.service.blockUser(id, this.actorId(request), requestMetadata(request));
@@ -159,7 +160,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Reemplaza las asignaciones activas de roles de un usuario' })
   @ApiResponse({ status: 200, type: UserResponseDto })
   assignRoles(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignUserRolesDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserResponseDto> {
@@ -174,7 +175,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Desactiva MFA y consume los códigos de recuperación' })
   @ApiResponse({ status: 200, type: UserResponseDto })
   resetMfa(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserResponseDto> {
     return this.service.resetMfa(id, this.actorId(request), requestMetadata(request));
@@ -188,7 +189,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Exige cambio de contraseña en el siguiente acceso' })
   @ApiResponse({ status: 200, type: UserResponseDto })
   forcePasswordChange(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<UserResponseDto> {
     return this.service.forcePasswordChange(id, this.actorId(request), requestMetadata(request));
@@ -209,7 +210,7 @@ export class UsersController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta el detalle de un empleado' })
   @ApiResponse({ status: 200, type: EmployeeResponseDto })
-  getEmployee(@Param('id') id: string): Promise<EmployeeResponseDto> {
+  getEmployee(@Param('id', ParseUUIDPipe) id: string): Promise<EmployeeResponseDto> {
     return this.service.getEmployee(id);
   }
 
@@ -232,7 +233,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Edita un empleado y su vínculo opcional' })
   @ApiResponse({ status: 200, type: EmployeeResponseDto })
   updateEmployee(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEmployeeDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<EmployeeResponseDto> {
@@ -246,7 +247,7 @@ export class UsersController {
   @ApiOperation({ summary: 'Desactiva lógicamente un empleado' })
   @ApiResponse({ status: 200, type: EmployeeResponseDto })
   removeEmployee(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
   ): Promise<EmployeeResponseDto> {
     return this.service.removeEmployee(id, this.actorId(request), requestMetadata(request));

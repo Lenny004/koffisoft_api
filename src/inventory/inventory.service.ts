@@ -501,7 +501,7 @@ export class InventoryService {
       ...(query.dateFrom || query.dateTo
         ? {
             receivedAt: {
-              ...(query.dateFrom ? { gte: startOfDate(query.dateFrom) } : {}),
+              ...(query.dateFrom ? { gte: startOfOperationalDate(query.dateFrom) } : {}),
               ...(query.dateTo ? { lt: startOfNextDate(query.dateTo) } : {}),
             },
           }
@@ -561,6 +561,11 @@ export class InventoryService {
         }
         const idempotent = await this.findReceiptDetail(tx, existing.id);
         if (!idempotent) throw new NotFoundException('Recepción no encontrada.');
+        if (!receiptPayloadMatches(dto, idempotent)) {
+          throw new ConflictException(
+            'El número de recepción ya fue usado con un payload diferente.',
+          );
+        }
         return idempotent;
       }
 
@@ -684,7 +689,7 @@ export class InventoryService {
       ...(query.dateFrom || query.dateTo
         ? {
             createdAt: {
-              ...(query.dateFrom ? { gte: startOfDate(query.dateFrom) } : {}),
+              ...(query.dateFrom ? { gte: startOfOperationalDate(query.dateFrom) } : {}),
               ...(query.dateTo ? { lt: startOfNextDate(query.dateTo) } : {}),
             },
           }
@@ -720,17 +725,38 @@ export class InventoryService {
     if (!adjustmentTypes.includes(dto.movementType)) {
       throw new BadRequestException('El tipo de movimiento no es un ajuste o una merma.');
     }
+    const quantity = positiveDecimal(dto.quantity, 'La cantidad del ajuste');
+    const unitCost = nonNegativeDecimal(dto.unitCost, 'El costo unitario');
+    const sign =
+      dto.movementType === InventoryMovementType.AdjustmentIn
+        ? new Prisma.Decimal(1)
+        : new Prisma.Decimal(-1);
+    const delta = quantity.mul(sign);
     const row = await this.prisma.$transaction(async (tx) => {
       await this.lockStorageLocation(tx, dto.storageLocationId, dto.locationId);
       if (dto.operationId) {
         const previous = await tx.inventoryMovement.findUnique({
           where: { id: dto.operationId },
-          select: { id: true, storageLocationId: true, movementType: true },
+          select: {
+            id: true,
+            storageLocationId: true,
+            ingredientId: true,
+            inventoryLotId: true,
+            movementType: true,
+            quantityDelta: true,
+            unitCost: true,
+            reason: true,
+          },
         });
         if (previous) {
           if (
             previous.storageLocationId !== dto.storageLocationId ||
-            previous.movementType !== dto.movementType
+            previous.ingredientId !== dto.ingredientId ||
+            previous.inventoryLotId !== (dto.inventoryLotId ?? null) ||
+            previous.movementType !== dto.movementType ||
+            !previous.quantityDelta.equals(delta) ||
+            !previous.unitCost.equals(unitCost) ||
+            previous.reason !== dto.reason
           ) {
             throw new ConflictException('El operationId ya fue usado para otro movimiento.');
           }
@@ -765,13 +791,6 @@ export class InventoryService {
         if (!lot)
           throw new NotFoundException('Lote no encontrado para el ingrediente y la bodega.');
       }
-      const quantity = positiveDecimal(dto.quantity, 'La cantidad del ajuste');
-      const unitCost = nonNegativeDecimal(dto.unitCost, 'El costo unitario');
-      const sign =
-        dto.movementType === InventoryMovementType.AdjustmentIn
-          ? new Prisma.Decimal(1)
-          : new Prisma.Decimal(-1);
-      const delta = quantity.mul(sign);
       const lotStockBefore = dto.inventoryLotId
         ? await this.stockForLot(tx, dto.inventoryLotId)
         : null;
@@ -859,7 +878,7 @@ export class InventoryService {
         reorderLevel: row.reorderLevel,
       }));
 
-    const today = startOfDate(new Date().toISOString().slice(0, 10));
+    const today = startOfDate(todayInElSalvador());
     const until = addDays(today, query.expiryDays);
     const lots = await this.prisma.inventoryLot.findMany({
       where: {
@@ -1612,14 +1631,78 @@ function startOfDate(value: string): Date {
   return new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
 }
 
+function startOfOperationalDate(value: string): Date {
+  return new Date(`${value.slice(0, 10)}T00:00:00.000-06:00`);
+}
+
 function startOfNextDate(value: string): Date {
-  return addDays(startOfDate(value), 1);
+  return addDays(startOfOperationalDate(value), 1);
 }
 
 function addDays(value: Date, days: number): Date {
   const result = new Date(value);
   result.setUTCDate(result.getUTCDate() + days);
   return result;
+}
+
+function todayInElSalvador(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/El_Salvador',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+function receiptPayloadMatches(dto: CreateGoodsReceiptDto, row: ReceiptDetailRow): boolean {
+  const existingStorageLocationId = row.lines[0]?.inventoryLot.storageLocationId ?? '';
+  const expected = {
+    locationId: dto.locationId,
+    supplierId: dto.supplierId,
+    storageLocationId: dto.storageLocationId,
+    receiptNumber: dto.receiptNumber,
+    receivedAt: new Date(dto.receivedAt).toISOString(),
+    notes: dto.notes ?? null,
+    lines: dto.lines
+      .map((line) => ({
+        ingredientId: line.ingredientId,
+        unitId: line.unitId,
+        lotCode: line.lotCode,
+        receivedOn: line.receivedOn,
+        expiresOn: line.expiresOn ?? null,
+        quantityReceived: new Prisma.Decimal(line.quantityReceived).toString(),
+        unitCost: new Prisma.Decimal(line.unitCost).toString(),
+      }))
+      .sort((left, right) =>
+        `${left.ingredientId}:${left.lotCode}`.localeCompare(
+          `${right.ingredientId}:${right.lotCode}`,
+        ),
+      ),
+  };
+  const actual = {
+    locationId: row.locationId,
+    supplierId: row.supplierId,
+    storageLocationId: existingStorageLocationId,
+    receiptNumber: row.receiptNumber,
+    receivedAt: row.receivedAt.toISOString(),
+    notes: row.notes,
+    lines: row.lines
+      .map((line) => ({
+        ingredientId: line.ingredientId,
+        unitId: line.unitId,
+        lotCode: line.inventoryLot.lotCode,
+        receivedOn: line.inventoryLot.receivedOn.toISOString().slice(0, 10),
+        expiresOn: line.inventoryLot.expiresOn?.toISOString().slice(0, 10) ?? null,
+        quantityReceived: line.quantityReceived.toString(),
+        unitCost: line.unitCost.toString(),
+      }))
+      .sort((left, right) =>
+        `${left.ingredientId}:${left.lotCode}`.localeCompare(
+          `${right.ingredientId}:${right.lotCode}`,
+        ),
+      ),
+  };
+  return JSON.stringify(expected) === JSON.stringify(actual);
 }
 
 function validateReceiptLines(dto: CreateGoodsReceiptDto): void {

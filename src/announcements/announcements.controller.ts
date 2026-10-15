@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 import { RequirePermissions } from '../auth/decorators/permissions.decorator.js';
@@ -62,7 +73,7 @@ export class AnnouncementsController {
   @ApiOperation({ summary: 'Actualiza un aviso importante' })
   @ApiResponse({ status: 200, type: AnnouncementResponseDto })
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateAnnouncementDto,
     @Query() query: PublicAnnouncementQueryDto,
     @Req() request: AuthenticatedRequest,
@@ -79,7 +90,7 @@ export class AnnouncementsController {
   @ApiOperation({ summary: 'Desactiva un aviso importante' })
   @ApiResponse({ status: 200, type: AnnouncementResponseDto })
   remove(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: PublicAnnouncementQueryDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<AnnouncementResponseDto> {

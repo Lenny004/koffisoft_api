@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -195,9 +196,10 @@ export class CreateAdminReservationDto {
   @IsIn([ReservationStatus.PendingConfirmation, ReservationStatus.Confirmed])
   status: ReservationStatus = ReservationStatus.PendingConfirmation;
 
-  @ApiPropertyOptional({ type: () => [String], format: 'uuid' })
+  @ApiPropertyOptional({ type: () => [String], format: 'uuid', maxItems: 50 })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(50)
   @IsUUID(undefined, { each: true })
   tableIds: string[] = [];
 }
@@ -208,11 +210,12 @@ export class ReservationListQueryDto {
   @IsUUID()
   locationId!: string;
 
-  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @ApiPropertyOptional({ minimum: 1, maximum: 10_000, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(10_000)
   page = 1;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })
@@ -473,8 +476,9 @@ export class UpdateDiningTableDto {
 
 /** Reemplaza las mesas asignadas; la operación libera las anteriores en la misma transacción. */
 export class AssignReservationTablesDto {
-  @ApiProperty({ type: () => [String], format: 'uuid' })
+  @ApiProperty({ type: () => [String], format: 'uuid', maxItems: 50 })
   @IsArray()
+  @ArrayMaxSize(50)
   @IsUUID(undefined, { each: true })
   tableIds!: string[];
 }

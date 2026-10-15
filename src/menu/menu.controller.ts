@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -112,7 +113,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Consulta una categoría administrativa' })
   @ApiResponse({ status: 200, type: AdminCategoryResponseDto })
   async getCategory(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: LocationQueryDto,
   ): Promise<AdminCategoryResponseDto> {
     return this.menuService.getCategory(id, query.locationId);
@@ -134,7 +135,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Actualiza una categoría o su estado active' })
   @ApiResponse({ status: 200, type: AdminCategoryResponseDto })
   async updateCategory(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: LocationQueryDto,
     @Body() dto: UpdateMenuCategoryDto,
   ): Promise<AdminCategoryResponseDto> {
@@ -148,7 +149,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Desactiva lógicamente una categoría' })
   @ApiResponse({ status: 200, type: AdminCategoryResponseDto })
   async deleteCategory(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Query() query: LocationQueryDto,
   ): Promise<AdminCategoryResponseDto> {
     return this.menuService.deleteCategory(id, query.locationId);
@@ -181,7 +182,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un ítem y sus variantes' })
   @ApiResponse({ status: 200, type: AdminItemResponseDto })
-  async getItem(@Param('id') id: string): Promise<AdminItemResponseDto> {
+  async getItem(@Param('id', ParseUUIDPipe) id: string): Promise<AdminItemResponseDto> {
     return this.menuService.getItem(id);
   }
 
@@ -201,7 +202,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Actualiza un ítem o su estado active/publicVisible' })
   @ApiResponse({ status: 200, type: AdminItemResponseDto })
   async updateItem(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMenuItemDto,
   ): Promise<AdminItemResponseDto> {
     return this.menuService.updateItem(id, dto);
@@ -213,7 +214,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva lógicamente un ítem' })
   @ApiResponse({ status: 200, type: AdminItemResponseDto })
-  async deleteItem(@Param('id') id: string): Promise<AdminItemResponseDto> {
+  async deleteItem(@Param('id', ParseUUIDPipe) id: string): Promise<AdminItemResponseDto> {
     return this.menuService.deleteItem(id);
   }
 
@@ -224,7 +225,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Lista variantes de un ítem' })
   @ApiResponse({ status: 200, type: AdminVariantPageDto })
   async listVariants(
-    @Param('itemId') itemId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Query() query: MenuVariantListQueryDto,
   ): Promise<AdminVariantPageDto> {
     return this.menuService.listVariants(itemId, query);
@@ -237,7 +238,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Crea una variante vendible' })
   @ApiResponse({ status: 201, type: AdminVariantSummaryDto })
   async createVariant(
-    @Param('itemId') itemId: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: CreateMenuItemVariantDto,
   ): Promise<AdminVariantSummaryDto> {
     return this.menuService.createVariant(itemId, dto);
@@ -249,7 +250,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta una variante' })
   @ApiResponse({ status: 200, type: AdminVariantSummaryDto })
-  async getVariant(@Param('id') id: string): Promise<AdminVariantSummaryDto> {
+  async getVariant(@Param('id', ParseUUIDPipe) id: string): Promise<AdminVariantSummaryDto> {
     return this.menuService.getVariant(id);
   }
 
@@ -260,7 +261,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Actualiza o desactiva una variante' })
   @ApiResponse({ status: 200, type: AdminVariantSummaryDto })
   async updateVariant(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMenuItemVariantDto,
   ): Promise<AdminVariantSummaryDto> {
     return this.menuService.updateVariant(id, dto);
@@ -272,7 +273,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva lógicamente una variante' })
   @ApiResponse({ status: 200, type: AdminVariantSummaryDto })
-  async deleteVariant(@Param('id') id: string): Promise<AdminVariantSummaryDto> {
+  async deleteVariant(@Param('id', ParseUUIDPipe) id: string): Promise<AdminVariantSummaryDto> {
     return this.menuService.deleteVariant(id);
   }
 
@@ -283,7 +284,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Lista el historial de precios de una variante' })
   @ApiResponse({ status: 200, type: AdminPricePageDto })
   async listPrices(
-    @Param('variantId') variantId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
     @Query() query: MenuPriceListQueryDto,
   ): Promise<AdminPricePageDto> {
     return this.menuService.listPrices(variantId, query);
@@ -296,7 +297,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Agrega una vigencia de precio' })
   @ApiResponse({ status: 201, type: AdminPriceResponseDto })
   async createPrice(
-    @Param('variantId') variantId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
     @Body() dto: CreateMenuPriceDto,
   ): Promise<AdminPriceResponseDto> {
     return this.menuService.createPrice(variantId, dto);
@@ -308,7 +309,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un precio histórico' })
   @ApiResponse({ status: 200, type: AdminPriceResponseDto })
-  async getPrice(@Param('id') id: string): Promise<AdminPriceResponseDto> {
+  async getPrice(@Param('id', ParseUUIDPipe) id: string): Promise<AdminPriceResponseDto> {
     return this.menuService.getPrice(id);
   }
 
@@ -319,7 +320,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Corrige una vigencia de precio' })
   @ApiResponse({ status: 200, type: AdminPriceResponseDto })
   async updatePrice(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMenuPriceDto,
   ): Promise<AdminPriceResponseDto> {
     return this.menuService.updatePrice(id, dto);
@@ -331,7 +332,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva un precio histórico' })
   @ApiResponse({ status: 200, type: AdminPriceResponseDto })
-  async deletePrice(@Param('id') id: string): Promise<AdminPriceResponseDto> {
+  async deletePrice(@Param('id', ParseUUIDPipe) id: string): Promise<AdminPriceResponseDto> {
     return this.menuService.deletePrice(id);
   }
 
@@ -350,7 +351,7 @@ export class MenuController {
   @ApiParam({ name: 'variantId', format: 'uuid' })
   @ApiOperation({ summary: 'Lista alérgenos declarados para una variante' })
   @ApiResponse({ status: 200, type: [AdminMenuAllergenResponseDto] })
-  async listVariantAllergens(@Param('variantId') variantId: string) {
+  async listVariantAllergens(@Param('variantId', ParseUUIDPipe) variantId: string) {
     return this.menuService.listVariantAllergens(variantId);
   }
 
@@ -361,7 +362,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Reemplaza alérgenos de una variante' })
   @ApiResponse({ status: 200, type: [AdminMenuAllergenResponseDto] })
   async replaceVariantAllergens(
-    @Param('variantId') variantId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
     @Body() dto: ReplaceMenuAllergensDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<AdminMenuAllergenResponseDto[]> {
@@ -375,7 +376,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Lista ventanas de disponibilidad' })
   @ApiResponse({ status: 200, type: AdminAvailabilityPageDto })
   async listAvailability(
-    @Param('variantId') variantId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
     @Query() query: MenuAvailabilityListQueryDto,
   ): Promise<AdminAvailabilityPageDto> {
     return this.menuService.listAvailability(variantId, query);
@@ -388,7 +389,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Crea una ventana de disponibilidad' })
   @ApiResponse({ status: 201, type: AdminAvailabilityResponseDto })
   async createAvailability(
-    @Param('variantId') variantId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
     @Body() dto: CreateMenuAvailabilityDto,
   ): Promise<AdminAvailabilityResponseDto> {
     return this.menuService.createAvailability(variantId, dto);
@@ -400,7 +401,9 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta una ventana de disponibilidad' })
   @ApiResponse({ status: 200, type: AdminAvailabilityResponseDto })
-  async getAvailability(@Param('id') id: string): Promise<AdminAvailabilityResponseDto> {
+  async getAvailability(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<AdminAvailabilityResponseDto> {
     return this.menuService.getAvailability(id);
   }
 
@@ -411,7 +414,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Actualiza o desactiva una ventana de disponibilidad' })
   @ApiResponse({ status: 200, type: AdminAvailabilityResponseDto })
   async updateAvailability(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMenuAvailabilityDto,
   ): Promise<AdminAvailabilityResponseDto> {
     return this.menuService.updateAvailability(id, dto);
@@ -423,7 +426,9 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva una ventana de disponibilidad' })
   @ApiResponse({ status: 200, type: AdminAvailabilityResponseDto })
-  async deleteAvailability(@Param('id') id: string): Promise<AdminAvailabilityResponseDto> {
+  async deleteAvailability(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<AdminAvailabilityResponseDto> {
     return this.menuService.deleteAvailability(id);
   }
 
@@ -434,7 +439,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Lista agotados temporales' })
   @ApiResponse({ status: 200, type: AdminOutagePageDto })
   async listOutages(
-    @Param('variantId') variantId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
     @Query() query: MenuOutageListQueryDto,
   ): Promise<AdminOutagePageDto> {
     return this.menuService.listOutages(variantId, query);
@@ -447,7 +452,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Registra un agotado temporal' })
   @ApiResponse({ status: 201, type: AdminOutageResponseDto })
   async createOutage(
-    @Param('variantId') variantId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
     @Body() dto: CreateMenuItemOutageDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<AdminOutageResponseDto> {
@@ -460,7 +465,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un agotado temporal' })
   @ApiResponse({ status: 200, type: AdminOutageResponseDto })
-  async getOutage(@Param('id') id: string): Promise<AdminOutageResponseDto> {
+  async getOutage(@Param('id', ParseUUIDPipe) id: string): Promise<AdminOutageResponseDto> {
     return this.menuService.getOutage(id);
   }
 
@@ -471,7 +476,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Actualiza o desactiva un agotado temporal' })
   @ApiResponse({ status: 200, type: AdminOutageResponseDto })
   async updateOutage(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateMenuItemOutageDto,
   ): Promise<AdminOutageResponseDto> {
     return this.menuService.updateOutage(id, dto);
@@ -483,7 +488,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva un agotado temporal' })
   @ApiResponse({ status: 200, type: AdminOutageResponseDto })
-  async deleteOutage(@Param('id') id: string): Promise<AdminOutageResponseDto> {
+  async deleteOutage(@Param('id', ParseUUIDPipe) id: string): Promise<AdminOutageResponseDto> {
     return this.menuService.deleteOutage(id);
   }
 
@@ -504,7 +509,9 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un grupo de modificadores' })
   @ApiResponse({ status: 200, type: AdminModifierGroupResponseDto })
-  async getModifierGroup(@Param('id') id: string): Promise<AdminModifierGroupResponseDto> {
+  async getModifierGroup(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<AdminModifierGroupResponseDto> {
     return this.menuService.getModifierGroup(id);
   }
 
@@ -526,7 +533,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Actualiza o desactiva un grupo de modificadores' })
   @ApiResponse({ status: 200, type: AdminModifierGroupResponseDto })
   async updateModifierGroup(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateModifierGroupDto,
   ): Promise<AdminModifierGroupResponseDto> {
     return this.menuService.updateModifierGroup(id, dto);
@@ -538,7 +545,9 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva un grupo de modificadores' })
   @ApiResponse({ status: 200, type: AdminModifierGroupResponseDto })
-  async deleteModifierGroup(@Param('id') id: string): Promise<AdminModifierGroupResponseDto> {
+  async deleteModifierGroup(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<AdminModifierGroupResponseDto> {
     return this.menuService.deleteModifierGroup(id);
   }
 
@@ -549,7 +558,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Agrega un modificador a un grupo' })
   @ApiResponse({ status: 201, type: AdminModifierResponseDto })
   async createModifier(
-    @Param('groupId') groupId: string,
+    @Param('groupId', ParseUUIDPipe) groupId: string,
     @Body() dto: CreateModifierDto,
   ): Promise<AdminModifierResponseDto> {
     return this.menuService.createModifier(groupId, dto);
@@ -561,7 +570,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un modificador' })
   @ApiResponse({ status: 200, type: AdminModifierResponseDto })
-  async getModifier(@Param('id') id: string): Promise<AdminModifierResponseDto> {
+  async getModifier(@Param('id', ParseUUIDPipe) id: string): Promise<AdminModifierResponseDto> {
     return this.menuService.getModifier(id);
   }
 
@@ -572,7 +581,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Actualiza o desactiva un modificador' })
   @ApiResponse({ status: 200, type: AdminModifierResponseDto })
   async updateModifier(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateModifierDto,
   ): Promise<AdminModifierResponseDto> {
     return this.menuService.updateModifier(id, dto);
@@ -584,7 +593,7 @@ export class MenuController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva un modificador' })
   @ApiResponse({ status: 200, type: AdminModifierResponseDto })
-  async deleteModifier(@Param('id') id: string): Promise<AdminModifierResponseDto> {
+  async deleteModifier(@Param('id', ParseUUIDPipe) id: string): Promise<AdminModifierResponseDto> {
     return this.menuService.deleteModifier(id);
   }
 
@@ -595,7 +604,7 @@ export class MenuController {
   @ApiOperation({ summary: 'Reemplaza y reordena grupos permitidos para una variante' })
   @ApiResponse({ status: 200, type: [AdminModifierGroupResponseDto] })
   async replaceVariantModifierGroups(
-    @Param('variantId') variantId: string,
+    @Param('variantId', ParseUUIDPipe) variantId: string,
     @Body() dto: ReplaceModifierGroupsDto,
   ): Promise<AdminModifierGroupResponseDto[]> {
     return this.menuService.replaceVariantModifierGroups(variantId, dto);

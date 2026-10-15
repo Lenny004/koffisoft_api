@@ -140,6 +140,113 @@ describe('InventoryService', () => {
     expect(tx.storageLocation.findFirst).toHaveBeenCalledOnce();
   });
 
+  it('rechaza una recepción repetida con payload diferente', async () => {
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(0),
+      storageLocation: { findFirst: vi.fn().mockResolvedValue({ id: storageLocationId }) },
+      goodsReceipt: {
+        findUnique: vi
+          .fn()
+          .mockResolvedValueOnce({ id: receiptId, supplierId })
+          .mockResolvedValueOnce({
+            id: receiptId,
+            locationId,
+            supplierId,
+            receiptNumber: 'GR-TEST-001',
+            receivedAt: new Date('2026-10-12T12:00:00.000Z'),
+            notes: null,
+            lines: [
+              {
+                ingredientId,
+                unitId: '66000000-0000-0000-0000-000000000002',
+                quantityReceived: new Prisma.Decimal('1000'),
+                unitCost: new Prisma.Decimal('0.028'),
+                inventoryLot: {
+                  lotCode: 'LOT-TEST',
+                  storageLocationId,
+                  receivedOn: new Date('2026-10-12T00:00:00.000Z'),
+                  expiresOn: null,
+                },
+              },
+            ],
+          }),
+      },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+    };
+    const service = new InventoryService(prisma as never);
+
+    await expect(
+      service.createReceipt(
+        {
+          locationId,
+          supplierId,
+          receiptNumber: 'GR-TEST-001',
+          receivedAt: '2026-10-12T12:00:00.000Z',
+          storageLocationId,
+          lines: [
+            {
+              ingredientId,
+              unitId: '66000000-0000-0000-0000-000000000002',
+              lotCode: 'LOT-TEST',
+              receivedOn: '2026-10-12',
+              quantityReceived: '1001',
+              unitCost: '0.028',
+            },
+          ],
+        },
+        '41000000-0000-0000-0000-000000000001',
+        metadata(),
+      ),
+    ).rejects.toThrow('payload diferente');
+  });
+
+  it('rechaza reutilizar operationId con payload diferente', async () => {
+    const operationId = '6d000000-0000-0000-0000-000000000001';
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(0),
+      storageLocation: { findFirst: vi.fn().mockResolvedValue({ id: storageLocationId }) },
+      inventoryMovement: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: operationId,
+          storageLocationId,
+          ingredientId,
+          inventoryLotId: null,
+          movementType: InventoryMovementType.Waste,
+          quantityDelta: new Prisma.Decimal('-1'),
+          unitCost: new Prisma.Decimal('0'),
+          reason: 'Motivo original',
+        }),
+      },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+    };
+    const service = new InventoryService(prisma as never);
+
+    await expect(
+      service.createAdjustment(
+        {
+          operationId,
+          locationId,
+          storageLocationId,
+          ingredientId,
+          movementType: InventoryMovementType.Waste,
+          quantity: '2',
+          unitCost: '0',
+          reason: 'Motivo diferente',
+        },
+        '41000000-0000-0000-0000-000000000001',
+        metadata(),
+      ),
+    ).rejects.toThrow('operationId ya fue usado');
+  });
+
   it('rechaza un ajuste de salida que dejaría stock negativo', async () => {
     const tx = {
       $executeRaw: vi.fn().mockResolvedValue(0),

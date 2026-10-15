@@ -68,12 +68,15 @@ creación o actualización del ingrediente.
 
 Una recepción crea atómicamente la cabecera, sus lotes, líneas y movimientos de
 entrada. `locationId + receiptNumber` es la clave idempotente: repetir la misma
-recepción devuelve el documento existente y no duplica stock. Un número usado
-con otro proveedor produce conflicto.
+recepción devuelve el documento existente y no duplica stock. Si cambia el
+payload de una recepción repetida, la API responde conflicto en vez de aceptar
+una operación ambigua.
 
-Los ajustes y mermas son append-only. El cliente puede enviar `operationId`, un
-UUID que se usa como `InventoryMovement.id`, para repetir una solicitud sin
-crear otro movimiento. Los movimientos de salida se rechazan si el saldo
+Los ajustes y mermas son append-only. El panel administrativo siempre envía
+`operationId`, un UUID que se usa como `InventoryMovement.id`, para repetir una
+solicitud sin crear otro movimiento; si el payload no coincide, la API responde
+conflicto. Otros clientes pueden omitirlo si no requieren idempotencia.
+Los movimientos de salida se rechazan si el saldo
 calculado quedaría negativo. En insumos con `trackLots`, una salida debe indicar
 el lote; además, se valida el saldo de ese lote dentro del mismo bloqueo y nunca
 puede quedar negativo aunque el saldo agregado de la bodega siga siendo
@@ -81,8 +84,10 @@ suficiente. La operación bloquea la bodega durante la transacción para
 serializar entradas y salidas del módulo.
 
 Los filtros de movimientos incluyen bodega, ingrediente, tipo y rango de
-fechas. Los listados usan `page`, `pageSize` y metadatos `totalPages` y nunca
-descargan el historial completo al cliente.
+fechas. Las fechas `YYYY-MM-DD` se interpretan como días operativos de
+`America/El_Salvador`, y los listados usan `page`, `pageSize` y metadatos
+`totalPages`; la API limita `pageSize` a 100 y nunca descarga el historial
+completo al cliente.
 
 ### Recetas
 

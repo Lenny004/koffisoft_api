@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
@@ -40,11 +41,12 @@ export class InventoryPageQueryDto {
   @IsUUID()
   locationId!: string;
 
-  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @ApiPropertyOptional({ minimum: 1, maximum: 10_000, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(10_000)
   page = 1;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })
@@ -263,9 +265,10 @@ export class CreateIngredientDto {
   @IsBoolean()
   active = true;
 
-  @ApiPropertyOptional({ type: () => [IngredientSupplierInputDto] })
+  @ApiPropertyOptional({ type: () => [IngredientSupplierInputDto], maxItems: 50 })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => IngredientSupplierInputDto)
   supplierLinks?: IngredientSupplierInputDto[];
@@ -324,9 +327,10 @@ export class UpdateIngredientDto {
   @IsBoolean()
   active?: boolean;
 
-  @ApiPropertyOptional({ type: () => [IngredientSupplierInputDto] })
+  @ApiPropertyOptional({ type: () => [IngredientSupplierInputDto], maxItems: 50 })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => IngredientSupplierInputDto)
   supplierLinks?: IngredientSupplierInputDto[];
@@ -447,9 +451,10 @@ export class CreateGoodsReceiptDto {
   @Transform(trimValue)
   notes?: string | null;
 
-  @ApiProperty({ type: () => [GoodsReceiptLineInputDto] })
+  @ApiProperty({ type: () => [GoodsReceiptLineInputDto], maxItems: 100 })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => GoodsReceiptLineInputDto)
   lines!: GoodsReceiptLineInputDto[];
@@ -623,9 +628,10 @@ export class CreateRecipeDto {
   @Transform(trimValue)
   notes?: string | null;
 
-  @ApiProperty({ type: () => [RecipeLineInputDto] })
+  @ApiProperty({ type: () => [RecipeLineInputDto], maxItems: 100 })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => RecipeLineInputDto)
   lines!: RecipeLineInputDto[];

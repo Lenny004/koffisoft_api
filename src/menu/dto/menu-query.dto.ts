@@ -51,11 +51,12 @@ export class PublicMenuQueryDto extends LocationQueryDto {
 
 /** Paginación y búsqueda de listados administrativos. */
 export class AdminListQueryDto {
-  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @ApiPropertyOptional({ minimum: 1, maximum: 10_000, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(10_000)
   page = 1;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })

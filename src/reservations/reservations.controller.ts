@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Req,
+} from '@nestjs/common';
 import { ApiOperation, ApiParam, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 import { RequirePermissions } from '../auth/decorators/permissions.decorator.js';
@@ -69,7 +81,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta el detalle administrativo de una reserva' })
   @ApiResponse({ status: 200, type: ReservationResponseDto })
-  async get(@Param('id') id: string): Promise<ReservationResponseDto> {
+  async get(@Param('id', ParseUUIDPipe) id: string): Promise<ReservationResponseDto> {
     return this.service.getReservation(id);
   }
 
@@ -91,7 +103,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Confirma una reserva' })
   @ApiResponse({ status: 200, type: ReservationResponseDto })
-  async confirm(@Param('id') id: string): Promise<ReservationResponseDto> {
+  async confirm(@Param('id', ParseUUIDPipe) id: string): Promise<ReservationResponseDto> {
     return this.service.transitionReservation(id, ReservationStatus.Confirmed);
   }
 
@@ -101,7 +113,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Marca una reserva como sentada' })
   @ApiResponse({ status: 200, type: ReservationResponseDto })
-  async seat(@Param('id') id: string): Promise<ReservationResponseDto> {
+  async seat(@Param('id', ParseUUIDPipe) id: string): Promise<ReservationResponseDto> {
     return this.service.transitionReservation(id, ReservationStatus.Seated);
   }
 
@@ -111,7 +123,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Completa una reserva' })
   @ApiResponse({ status: 200, type: ReservationResponseDto })
-  async complete(@Param('id') id: string): Promise<ReservationResponseDto> {
+  async complete(@Param('id', ParseUUIDPipe) id: string): Promise<ReservationResponseDto> {
     return this.service.transitionReservation(id, ReservationStatus.Completed);
   }
 
@@ -121,7 +133,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Cancela una reserva y libera sus mesas' })
   @ApiResponse({ status: 200, type: ReservationResponseDto })
-  async cancel(@Param('id') id: string): Promise<ReservationResponseDto> {
+  async cancel(@Param('id', ParseUUIDPipe) id: string): Promise<ReservationResponseDto> {
     return this.service.transitionReservation(id, ReservationStatus.Cancelled);
   }
 
@@ -131,7 +143,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Marca una reserva como no-show y libera sus mesas' })
   @ApiResponse({ status: 200, type: ReservationResponseDto })
-  async noShow(@Param('id') id: string): Promise<ReservationResponseDto> {
+  async noShow(@Param('id', ParseUUIDPipe) id: string): Promise<ReservationResponseDto> {
     return this.service.transitionReservation(id, ReservationStatus.NoShow);
   }
 
@@ -142,7 +154,7 @@ export class ReservationsController {
   @ApiOperation({ summary: 'Asigna o reasigna mesas sin traslapes' })
   @ApiResponse({ status: 200, type: ReservationResponseDto })
   async assignTables(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AssignReservationTablesDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<ReservationResponseDto> {
@@ -164,7 +176,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un espacio' })
   @ApiResponse({ status: 200, type: VenueSpaceResponseDto })
-  async getSpace(@Param('id') id: string): Promise<VenueSpaceResponseDto> {
+  async getSpace(@Param('id', ParseUUIDPipe) id: string): Promise<VenueSpaceResponseDto> {
     return this.service.getSpace(id);
   }
 
@@ -184,7 +196,7 @@ export class ReservationsController {
   @ApiOperation({ summary: 'Actualiza un espacio' })
   @ApiResponse({ status: 200, type: VenueSpaceResponseDto })
   async updateSpace(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateVenueSpaceDto,
   ): Promise<VenueSpaceResponseDto> {
     return this.service.updateSpace(id, dto);
@@ -196,7 +208,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva lógicamente un espacio' })
   @ApiResponse({ status: 200, type: VenueSpaceResponseDto })
-  async deleteSpace(@Param('id') id: string): Promise<VenueSpaceResponseDto> {
+  async deleteSpace(@Param('id', ParseUUIDPipe) id: string): Promise<VenueSpaceResponseDto> {
     return this.service.deleteSpace(id);
   }
 
@@ -215,7 +227,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta una mesa' })
   @ApiResponse({ status: 200, type: DiningTableResponseDto })
-  async getTable(@Param('id') id: string): Promise<DiningTableResponseDto> {
+  async getTable(@Param('id', ParseUUIDPipe) id: string): Promise<DiningTableResponseDto> {
     return this.service.getTable(id);
   }
 
@@ -235,7 +247,7 @@ export class ReservationsController {
   @ApiOperation({ summary: 'Actualiza una mesa' })
   @ApiResponse({ status: 200, type: DiningTableResponseDto })
   async updateTable(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateDiningTableDto,
   ): Promise<DiningTableResponseDto> {
     return this.service.updateTable(id, dto);
@@ -247,7 +259,7 @@ export class ReservationsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva lógicamente una mesa' })
   @ApiResponse({ status: 200, type: DiningTableResponseDto })
-  async deleteTable(@Param('id') id: string): Promise<DiningTableResponseDto> {
+  async deleteTable(@Param('id', ParseUUIDPipe) id: string): Promise<DiningTableResponseDto> {
     return this.service.deleteTable(id);
   }
 }

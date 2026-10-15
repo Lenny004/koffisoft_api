@@ -30,6 +30,8 @@
 
 <!-- section:highlights -->
 
+- **Sitio editable por sede:** `GET /site` público y `/site/admin` protegido actualizan horarios, contacto, hero, Nosotros y redes con auditoría.
+
 ## 🌟 Aspectos destacados
 
 - **Sesiones server-side:** las sesiones usan cookies HttpOnly, rotación de token, expiraciones y revocación.

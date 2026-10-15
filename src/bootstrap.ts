@@ -13,6 +13,7 @@ import { AppModule } from './app.module.js';
 import { InventoryModule } from './inventory/inventory.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { ReservationsModule } from './reservations/reservations.module.js';
+import { SiteModule } from './site/site.module.js';
 import { UsersModule } from './users/users.module.js';
 
 export async function createApplication(): Promise<NestFastifyApplication> {
@@ -63,6 +64,7 @@ export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObjec
       ReservationsModule,
       EventsModule,
       AnnouncementsModule,
+      SiteModule,
       UsersModule,
       InventoryModule,
     ],

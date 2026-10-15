@@ -411,9 +411,35 @@ model Business {
 
   locations Location[]
   roles     Role[]
+  siteProfile BusinessSiteProfile?
 
   /// La fecha de actualización real la mantiene el trigger SQL set_updated_at.
   @@map("businesses")
+}
+
+/// Contenido editorial compartido por las sedes de un negocio.
+model BusinessSiteProfile {
+  id                  String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  businessId          String   @unique(map: "business_site_profiles_business_id_key") @map("business_id") @db.Uuid
+  heroEyebrow         String   @map("hero_eyebrow") @db.VarChar(120)
+  heroTitle           String   @map("hero_title") @db.VarChar(160)
+  heroDescription     String   @map("hero_description") @db.Text
+  heroImageUrl        String?  @map("hero_image_url") @db.VarChar(500)
+  aboutTitle          String   @map("about_title") @db.VarChar(160)
+  aboutDescription    String   @map("about_description") @db.Text
+  aboutMission        String   @map("about_mission") @db.Text
+  aboutVision         String   @map("about_vision") @db.Text
+  aboutTeam           Json     @map("about_team") @db.JsonB
+  socialFacebookUrl   String?  @map("social_facebook_url") @db.VarChar(500)
+  socialInstagramUrl  String?  @map("social_instagram_url") @db.VarChar(500)
+  socialTikTokUrl     String?  @map("social_tiktok_url") @db.VarChar(500)
+  createdAt           DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  /// La fecha de actualización real la mantiene el trigger SQL set_updated_at.
+  @@map("business_site_profiles")
 }
 
 /// Sede operativa y zona horaria de los servicios.

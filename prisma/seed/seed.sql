@@ -29,6 +29,26 @@ INSERT INTO businesses (
     false
 );
 
+INSERT INTO business_site_profiles (
+    id, business_id, hero_eyebrow, hero_title, hero_description,
+    about_title, about_description, about_mission, about_vision, about_team,
+    social_facebook_url, social_instagram_url, social_tiktok_url
+) VALUES (
+    '11000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    'Carta de la casa',
+    'Descubre los favoritos del café y la cocina de montaña',
+    'Platos, bebidas y postres publicados por la sede. Precios y disponibilidad de hoy, para elegir con calma.',
+    'Nosotros',
+    'Koffi-Soft nace como un punto de encuentro para disfrutar la montaña con los cinco sentidos.',
+    'Crear pausas memorables alrededor del café, la cocina y el paisaje de montaña, con una atención cercana para cada visita.',
+    'Ser un punto de encuentro reconocido en la Ruta Panorámica por su calidez, sus sabores y el respeto por el entorno.',
+    '[{"name":"Equipo de hospitalidad","role":"Atención y experiencia","description":"Contenido editorial de desarrollo pendiente de confirmación."},{"name":"Equipo de cocina","role":"Café y cocina","description":"Contenido editorial de desarrollo pendiente de confirmación."},{"name":"Equipo de montaña","role":"Experiencias y eventos","description":"Contenido editorial de desarrollo pendiente de confirmación."}]'::jsonb,
+    'https://www.facebook.com',
+    'https://www.instagram.com',
+    'https://www.tiktok.com'
+);
+
 INSERT INTO locations (
     id, business_id, code, name, address_line, municipality, department,
     phone, email, latitude, longitude
@@ -178,7 +198,10 @@ INSERT INTO permissions (id, code, description) VALUES
     ('80000000-0000-0000-0000-000000000049', 'important_announcements.read', 'Consultar avisos importantes'),
     ('80000000-0000-0000-0000-000000000050', 'important_announcements.manage', 'Administrar avisos importantes'),
     ('80000000-0000-0000-0000-000000000051', 'users.manage', 'Administrar cuentas y empleados'),
-    ('80000000-0000-0000-0000-000000000052', 'suppliers.manage', 'Administrar proveedores');
+    ('80000000-0000-0000-0000-000000000052', 'suppliers.manage', 'Administrar proveedores'),
+    ('80000000-0000-0000-0000-000000000053', 'site_content.read', 'Consultar contenido del sitio'),
+    ('80000000-0000-0000-0000-000000000054', 'site_content.manage', 'Administrar contenido del sitio')
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000001'),
@@ -385,7 +408,14 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000038'),
     ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000041'),
     ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000046'),
-    ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000048');
+    ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000048'),
+    ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000053'),
+    ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000054'),
+    ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000053'),
+    ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000054'),
+    ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000053'),
+    ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000054')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id) VALUES
     ('41000000-0000-0000-0000-000000000001', '42000000-0000-0000-0000-000000000001'),

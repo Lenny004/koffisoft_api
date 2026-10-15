@@ -412,6 +412,7 @@ model Business {
   locations Location[]
   roles     Role[]
   siteProfile BusinessSiteProfile?
+  seoMetadata SeoMetadata[]
 
   /// La fecha de actualización real la mantiene el trigger SQL set_updated_at.
   @@map("businesses")
@@ -440,6 +441,30 @@ model BusinessSiteProfile {
 
   /// La fecha de actualización real la mantiene el trigger SQL set_updated_at.
   @@map("business_site_profiles")
+}
+
+/// Metadatos SEO editables por recurso, con alcance de negocio o sede.
+model SeoMetadata {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  businessId      String?  @map("business_id") @db.Uuid
+  locationId      String?  @map("location_id") @db.Uuid
+  resourceType    String   @map("resource_type") @db.VarChar(30)
+  resourceKey     String   @map("resource_key") @db.VarChar(160)
+  metaTitle       String   @map("meta_title") @db.VarChar(70)
+  metaDescription String   @map("meta_description") @db.VarChar(160)
+  ogImageUrl      String?  @map("og_image_url") @db.VarChar(500)
+  canonicalUrl    String?  @map("canonical_url") @db.VarChar(500)
+  noindex         Boolean  @default(false)
+  createdAt       DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  location Location? @relation(fields: [locationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([businessId, resourceType], map: "seo_metadata_business_type_idx")
+  @@index([locationId, resourceType], map: "seo_metadata_location_type_idx")
+  /// La unicidad con NULL se garantiza con un índice de expresiones en SQL.
+  @@map("seo_metadata")
 }
 
 /// Sede operativa y zona horaria de los servicios.
@@ -487,6 +512,7 @@ model Location {
   dteSequences          DteSequence[]
   dteDocuments          DteDocument[]
   contactMessages       ContactMessage[]
+  seoMetadata            SeoMetadata[]
 
   @@unique([businessId, code], map: "locations_code_unique")
   /// Los límites de latitud y longitud son CHECK exclusivos de SQL.

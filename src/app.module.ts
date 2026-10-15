@@ -11,6 +11,7 @@ import { InventoryModule } from './inventory/inventory.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { ReservationsModule } from './reservations/reservations.module.js';
 import { SiteModule } from './site/site.module.js';
+import { SeoModule } from './seo/seo.module.js';
 import { UsersModule } from './users/users.module.js';
 
 @Module({
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module.js';
     EventsModule,
     AnnouncementsModule,
     SiteModule,
+    SeoModule,
     UsersModule,
   ],
 })

@@ -7,6 +7,7 @@ export interface AppConfig {
   readonly host: string;
   readonly port: number;
   readonly corsOrigins: readonly string[];
+  readonly publicSiteUrl: string;
   readonly cookieSecure: boolean;
   readonly cookieName: string;
   readonly mfaEncryptionKey: Buffer;
@@ -77,6 +78,22 @@ function parseOrigins(value: string | undefined, nodeEnv: string): readonly stri
   return origins.map((origin) => new URL(origin).origin);
 }
 
+function parsePublicSiteUrl(value: string | undefined): string {
+  const candidate = (value ?? 'http://localhost:5173').trim().replace(/\/$/u, '');
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    throw new Error('PUBLIC_SITE_URL debe ser una URL HTTP(S) valida.');
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+    throw new Error('PUBLIC_SITE_URL debe usar HTTP(S) sin credenciales.');
+  }
+
+  return parsed.origin + parsed.pathname.replace(/\/$/u, '');
+}
+
 function parseMfaKey(value: string | undefined, nodeEnv: string): Buffer {
   if (!value) {
     throw new Error(
@@ -85,7 +102,7 @@ function parseMfaKey(value: string | undefined, nodeEnv: string): Buffer {
   }
 
   if (!BASE64_RE.test(value)) {
-    throw new Error('MFA_ENCRYPTION_KEY debe ser Base64 vÃ¡lido.');
+    throw new Error('MFA_ENCRYPTION_KEY debe ser Base64 valido.');
   }
 
   const key = Buffer.from(value, 'base64');
@@ -142,6 +159,7 @@ export function loadAppConfig(environment: Environment = process.env): AppConfig
     host: environment.HOST ?? '0.0.0.0',
     port: parsePositiveNumber(environment.PORT, 'PORT', 3000),
     corsOrigins: parseOrigins(environment.CORS_ORIGIN, nodeEnv),
+    publicSiteUrl: parsePublicSiteUrl(environment.PUBLIC_SITE_URL),
     cookieSecure,
     cookieName: parseCookieName(environment.SESSION_COOKIE_NAME, cookieSecure),
     mfaEncryptionKey: parseMfaKey(environment.MFA_ENCRYPTION_KEY, nodeEnv),

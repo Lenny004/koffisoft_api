@@ -8,6 +8,7 @@ function environment(overrides: Record<string, string | undefined> = {}) {
   return {
     NODE_ENV: 'development',
     CORS_ORIGIN: 'http://localhost:5173',
+    PUBLIC_SITE_URL: 'http://localhost:5173',
     COOKIE_SECURE: 'false',
     MFA_ENCRYPTION_KEY: key,
     ...overrides,
@@ -44,5 +45,14 @@ describe('loadAppConfig', () => {
 
     expect(config.cookieName).toBe('__Host-koffisoft_session');
     expect(config.corsOrigins).toEqual(['https://admin.example', 'https://web.example']);
+  });
+
+  it('rechaza una URL publica insegura o con credenciales', () => {
+    expect(() => loadAppConfig(environment({ PUBLIC_SITE_URL: 'javascript:alert(1)' }))).toThrow(
+      'PUBLIC_SITE_URL',
+    );
+    expect(() =>
+      loadAppConfig(environment({ PUBLIC_SITE_URL: 'https://user:pass@example.com' })),
+    ).toThrow('PUBLIC_SITE_URL');
   });
 });

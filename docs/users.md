@@ -54,7 +54,10 @@ de la transacción.
   `includeInactive`.
 - Crear, editar, activar, bloquear, desactivar, restablecer MFA y forzar cambio
   de contraseña requieren `users.manage`.
-- La asignación de roles requiere `roles.manage`.
+- La asignación de roles requiere `roles.manage`, se limita al negocio de los
+  roles activos del actor y no permite conceder un rol superior al suyo
+  (`owner` > `admin` > `manager`). El alta de usuario exige ese mismo permiso
+  cuando incluye `roleIds`.
 - Los listados de usuarios y empleados requieren `users.read`.
 
 El seed conserva `users.read`, `roles.read`, `roles.manage` y
@@ -68,6 +71,10 @@ El seed conserva `users.read`, `roles.read`, `roles.manage` y
   activo con rol administrativo.
 - Desactivar o bloquear revoca las sesiones activas del usuario en la misma
   transacción y registra el hecho de seguridad mínimo correspondiente.
+- Desactivar un empleado desactiva también la cuenta vinculada y revoca sus
+  sesiones en la misma transacción. Reactivar el empleado no reactiva la
+  cuenta automáticamente; la cuenta requiere una activación administrativa
+  explícita.
 - `must_change_password` permite representar de forma explícita el flujo de
   cambio obligatorio. El login y `GET /auth/me` lo informan; el guard restringe
   el resto de rutas hasta que `POST /auth/password` lo limpia.

@@ -9,7 +9,9 @@ no se guarda en una columna editable: se calcula como la suma de
 
 Las rutas son administrativas y pasan por los guards globales de sesión, MFA,
 CSRF y permisos. Las mutaciones también registran un `AuditLog` con datos
-operativos mínimos.
+operativos mínimos. El actor solo puede consultar o mutar sedes del negocio
+al que pertenecen sus roles activos; una sede fuera de alcance responde como
+no encontrada.
 
 | Permiso             | Uso                                                                           |
 | ------------------- | ----------------------------------------------------------------------------- |
@@ -46,10 +48,10 @@ contiene factores de conversión.
 ### Proveedores
 
 - `GET /suppliers/admin?locationId=...&page=1&pageSize=20&search=...`
-- `GET /suppliers/admin/:id`
+- `GET /suppliers/admin/:id?locationId=...`
 - `POST /suppliers/admin`
-- `PATCH /suppliers/admin/:id`
-- `DELETE /suppliers/admin/:id`
+- `PATCH /suppliers/admin/:id?locationId=...`
+- `DELETE /suppliers/admin/:id?locationId=...`
 
 El borrado es lógico (`active=false`) para preservar relaciones históricas.
 Los vínculos proveedor-ingrediente se pueden reemplazar dentro del payload de
@@ -57,10 +59,10 @@ creación o actualización del ingrediente.
 
 ### Recepciones y movimientos
 
-- `GET /inventory/admin/receipts`
-- `GET /inventory/admin/receipts/:id`
+- `GET /inventory/admin/receipts?locationId=...&page=1&pageSize=20`
+- `GET /inventory/admin/receipts/:id?locationId=...`
 - `POST /inventory/admin/receipts`
-- `GET /inventory/admin/movements`
+- `GET /inventory/admin/movements?locationId=...&page=1&pageSize=20`
 - `POST /inventory/admin/movements/adjustments`
 - `GET /inventory/admin/alerts?locationId=...&expiryDays=30`
 
@@ -72,8 +74,11 @@ con otro proveedor produce conflicto.
 Los ajustes y mermas son append-only. El cliente puede enviar `operationId`, un
 UUID que se usa como `InventoryMovement.id`, para repetir una solicitud sin
 crear otro movimiento. Los movimientos de salida se rechazan si el saldo
-calculado quedaría negativo. La operación bloquea la bodega durante la
-transacción para serializar entradas y salidas del módulo.
+calculado quedaría negativo. En insumos con `trackLots`, una salida debe indicar
+el lote; además, se valida el saldo de ese lote dentro del mismo bloqueo y nunca
+puede quedar negativo aunque el saldo agregado de la bodega siga siendo
+suficiente. La operación bloquea la bodega durante la transacción para
+serializar entradas y salidas del módulo.
 
 Los filtros de movimientos incluyen bodega, ingrediente, tipo y rango de
 fechas. Los listados usan `page`, `pageSize` y metadatos `totalPages` y nunca
@@ -82,10 +87,10 @@ descargan el historial completo al cliente.
 ### Recetas
 
 - `GET /inventory/admin/recipes`
-- `GET /inventory/admin/recipes/:id`
+- `GET /inventory/admin/recipes/:id?locationId=...`
 - `POST /inventory/admin/recipes`
-- `PATCH /inventory/admin/recipes/:id`
-- `DELETE /inventory/admin/recipes/:id`
+- `PATCH /inventory/admin/recipes/:id?locationId=...`
+- `DELETE /inventory/admin/recipes/:id?locationId=...`
 
 Las recetas apuntan a `MenuItemVariant`, no al producto abstracto. Cada receta
 es una versión con vigencia y líneas de ingrediente. Para cambiar cantidades o

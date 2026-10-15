@@ -46,7 +46,7 @@ function parsePositiveNumber(value: string | undefined, name: string, fallback: 
   return parsed;
 }
 
-function parseOrigins(value: string | undefined): readonly string[] {
+function parseOrigins(value: string | undefined, nodeEnv: string): readonly string[] {
   const origins = (value ?? 'http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
@@ -64,7 +64,11 @@ function parseOrigins(value: string | undefined): readonly string[] {
       throw new Error(`CORS_ORIGIN contiene un origen inválido: ${origin}.`);
     }
 
-    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.pathname !== '/') {
+    if (
+      !['http:', 'https:'].includes(parsed.protocol) ||
+      (nodeEnv === 'production' && parsed.protocol !== 'https:') ||
+      parsed.pathname !== '/'
+    ) {
       throw new Error(`CORS_ORIGIN debe usar un origen HTTP(S) sin ruta: ${origin}.`);
     }
   }
@@ -119,6 +123,9 @@ function parseCookieName(value: string | undefined, secure: boolean): string {
 export function loadAppConfig(environment: Environment = process.env): AppConfig {
   const nodeEnv = environment.NODE_ENV ?? 'development';
   const cookieSecure = parseBoolean(environment.COOKIE_SECURE, 'COOKIE_SECURE', false);
+  if (nodeEnv === 'production' && !cookieSecure) {
+    throw new Error('COOKIE_SECURE=true es obligatorio en producción.');
+  }
   const mfaKeyVersion = parsePositiveNumber(environment.MFA_KEY_VERSION, 'MFA_KEY_VERSION', 1);
 
   if (!Number.isInteger(mfaKeyVersion) || mfaKeyVersion > 32_767) {
@@ -129,7 +136,7 @@ export function loadAppConfig(environment: Environment = process.env): AppConfig
     nodeEnv,
     host: environment.HOST ?? '0.0.0.0',
     port: parsePositiveNumber(environment.PORT, 'PORT', 3000),
-    corsOrigins: parseOrigins(environment.CORS_ORIGIN),
+    corsOrigins: parseOrigins(environment.CORS_ORIGIN, nodeEnv),
     cookieSecure,
     cookieName: parseCookieName(environment.SESSION_COOKIE_NAME, cookieSecure),
     mfaEncryptionKey: parseMfaKey(environment.MFA_ENCRYPTION_KEY, nodeEnv),

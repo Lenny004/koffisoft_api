@@ -193,8 +193,11 @@ export class InventoryService {
     };
   }
 
-  async getSupplier(id: string): Promise<SupplierResponseDto> {
-    const row = await this.prisma.supplier.findUnique({ where: { id }, include: supplierInclude });
+  async getSupplier(id: string, locationId: string): Promise<SupplierResponseDto> {
+    const row = await this.prisma.supplier.findFirst({
+      where: { id, locationId },
+      include: supplierInclude,
+    });
     if (!row) throw new NotFoundException('Proveedor no encontrado.');
     return this.toSupplier(row);
   }
@@ -233,17 +236,21 @@ export class InventoryService {
 
   async updateSupplier(
     id: string,
+    locationId: string,
     dto: UpdateSupplierDto,
     actorUserId: string,
     metadata: RequestMetadata,
   ): Promise<SupplierResponseDto> {
     const row = await this.prisma.$transaction(async (tx) => {
-      const current = await tx.supplier.findUnique({ where: { id }, include: supplierInclude });
+      const current = await tx.supplier.findFirst({
+        where: { id, locationId },
+        include: supplierInclude,
+      });
       if (!current) throw new NotFoundException('Proveedor no encontrado.');
       const nextCode = dto.supplierCode ?? current.supplierCode;
-      await this.assertSupplierCodeAvailable(tx, current.locationId, nextCode, id);
-      const updated = await tx.supplier.update({
-        where: { id },
+      await this.assertSupplierCodeAvailable(tx, locationId, nextCode, id);
+      const result = await tx.supplier.updateMany({
+        where: { id, locationId },
         data: {
           ...(dto.supplierCode === undefined ? {} : { supplierCode: dto.supplierCode }),
           ...(dto.name === undefined ? {} : { name: dto.name }),
@@ -254,6 +261,10 @@ export class InventoryService {
           ...(dto.active === undefined ? {} : { active: dto.active }),
           updatedAt: new Date(),
         },
+      });
+      if (result.count !== 1) throw new NotFoundException('Proveedor no encontrado.');
+      const updated = await tx.supplier.findFirstOrThrow({
+        where: { id, locationId },
         include: supplierInclude,
       });
       await this.writeAudit(tx, actorUserId, metadata, {
@@ -270,15 +281,23 @@ export class InventoryService {
 
   async removeSupplier(
     id: string,
+    locationId: string,
     actorUserId: string,
     metadata: RequestMetadata,
   ): Promise<SupplierResponseDto> {
     const row = await this.prisma.$transaction(async (tx) => {
-      const current = await tx.supplier.findUnique({ where: { id }, include: supplierInclude });
+      const current = await tx.supplier.findFirst({
+        where: { id, locationId },
+        include: supplierInclude,
+      });
       if (!current) throw new NotFoundException('Proveedor no encontrado.');
-      const updated = await tx.supplier.update({
-        where: { id },
+      const result = await tx.supplier.updateMany({
+        where: { id, locationId },
         data: { active: false, updatedAt: new Date() },
+      });
+      if (result.count !== 1) throw new NotFoundException('Proveedor no encontrado.');
+      const updated = await tx.supplier.findFirstOrThrow({
+        where: { id, locationId },
         include: supplierInclude,
       });
       await this.writeAudit(tx, actorUserId, metadata, {
@@ -513,8 +532,8 @@ export class InventoryService {
     };
   }
 
-  async getReceipt(id: string): Promise<GoodsReceiptResponseDto> {
-    const row = await this.findReceiptDetail(this.prisma, id);
+  async getReceipt(id: string, locationId: string): Promise<GoodsReceiptResponseDto> {
+    const row = await this.findReceiptDetail(this.prisma, id, locationId);
     if (!row) throw new NotFoundException('Recepción no encontrada.');
     return this.toReceipt(row);
   }
@@ -723,10 +742,16 @@ export class InventoryService {
       const storage = await this.requireStorageLocation(tx, dto.storageLocationId, dto.locationId);
       const ingredient = await tx.ingredient.findUnique({
         where: { id: dto.ingredientId },
-        select: { id: true, active: true },
+        select: { id: true, active: true, trackLots: true },
       });
       if (!ingredient || !ingredient.active)
         throw new NotFoundException('Ingrediente no encontrado o inactivo.');
+      const isOutgoing = dto.movementType !== InventoryMovementType.AdjustmentIn;
+      if (ingredient.trackLots && isOutgoing && !dto.inventoryLotId) {
+        throw new BadRequestException(
+          'Debe seleccionar un lote para una salida de un insumo trazable.',
+        );
+      }
       if (dto.inventoryLotId) {
         const lot = await tx.inventoryLot.findFirst({
           where: {
@@ -747,6 +772,13 @@ export class InventoryService {
           ? new Prisma.Decimal(1)
           : new Prisma.Decimal(-1);
       const delta = quantity.mul(sign);
+      const lotStockBefore = dto.inventoryLotId
+        ? await this.stockForLot(tx, dto.inventoryLotId)
+        : null;
+      const lotStockAfter = lotStockBefore?.add(delta) ?? null;
+      if (lotStockAfter?.isNegative()) {
+        throw new ConflictException('La operación dejaría el stock del lote por debajo de cero.');
+      }
       const stockBefore = await this.stockForIngredient(
         tx,
         dto.storageLocationId,
@@ -886,8 +918,14 @@ export class InventoryService {
     };
   }
 
-  async getRecipe(id: string): Promise<RecipeResponseDto> {
-    const row = await this.prisma.recipe.findUnique({ where: { id }, include: recipeInclude });
+  async getRecipe(id: string, locationId: string): Promise<RecipeResponseDto> {
+    const row = await this.prisma.recipe.findFirst({
+      where: {
+        id,
+        menuItemVariant: { menuItem: { category: { locationId } } },
+      },
+      include: recipeInclude,
+    });
     if (!row) throw new NotFoundException('Receta no encontrada.');
     return this.toRecipe(row);
   }
@@ -974,12 +1012,19 @@ export class InventoryService {
 
   async updateRecipe(
     id: string,
+    locationId: string,
     dto: UpdateRecipeDto,
     actorUserId: string,
     metadata: RequestMetadata,
   ): Promise<RecipeResponseDto> {
     const row = await this.prisma.$transaction(async (tx) => {
-      const current = await tx.recipe.findUnique({ where: { id }, include: recipeInclude });
+      const current = await tx.recipe.findFirst({
+        where: {
+          id,
+          menuItemVariant: { menuItem: { category: { locationId } } },
+        },
+        include: recipeInclude,
+      });
       if (!current) throw new NotFoundException('Receta no encontrada.');
       if (dto.active === true && !current.active) {
         await this.assertRecipeIntervalAvailable(
@@ -990,11 +1035,21 @@ export class InventoryService {
           id,
         );
       }
-      const updated = await tx.recipe.update({
-        where: { id },
+      const result = await tx.recipe.updateMany({
+        where: {
+          id,
+          menuItemVariant: { menuItem: { category: { locationId } } },
+        },
         data: {
           ...(dto.notes === undefined ? {} : { notes: dto.notes || null }),
           ...(dto.active === undefined ? {} : { active: dto.active }),
+        },
+      });
+      if (result.count !== 1) throw new NotFoundException('Receta no encontrada.');
+      const updated = await tx.recipe.findFirstOrThrow({
+        where: {
+          id,
+          menuItemVariant: { menuItem: { category: { locationId } } },
         },
         include: recipeInclude,
       });
@@ -1241,6 +1296,17 @@ export class InventoryService {
     return result._sum.quantityDelta ?? new Prisma.Decimal(0);
   }
 
+  private async stockForLot(
+    client: Prisma.TransactionClient,
+    inventoryLotId: string,
+  ): Promise<Prisma.Decimal> {
+    const result = await client.inventoryMovement.aggregate({
+      where: { inventoryLotId },
+      _sum: { quantityDelta: true },
+    });
+    return result._sum.quantityDelta ?? new Prisma.Decimal(0);
+  }
+
   private async lotStockById(
     client: DbClient,
     lotIds: string[],
@@ -1261,7 +1327,17 @@ export class InventoryService {
     );
   }
 
-  private async findReceiptDetail(client: DbClient, id: string): Promise<ReceiptDetailRow | null> {
+  private async findReceiptDetail(
+    client: DbClient,
+    id: string,
+    locationId?: string,
+  ): Promise<ReceiptDetailRow | null> {
+    if (locationId) {
+      return client.goodsReceipt.findFirst({
+        where: { id, locationId },
+        include: receiptDetailInclude,
+      });
+    }
     return client.goodsReceipt.findUnique({ where: { id }, include: receiptDetailInclude });
   }
 

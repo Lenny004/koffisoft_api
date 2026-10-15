@@ -48,8 +48,11 @@ export class UsersController {
   @RequirePermissions('roles.read')
   @ApiOperation({ summary: 'Lista los roles y sus permisos activos' })
   @ApiResponse({ status: 200, type: [RoleResponseDto] })
-  listRoles(@Query() query: RoleListQueryDto): Promise<RoleResponseDto[]> {
-    return this.service.listRoles(query);
+  listRoles(
+    @Query() query: RoleListQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<RoleResponseDto[]> {
+    return this.service.listRoles(query, this.actorId(request));
   }
 
   @Get('users/admin/permissions')

@@ -11,6 +11,7 @@ import {
 
 import {
   AuthEventType,
+  EmployeeStatus,
   JobCode,
   MfaFactorStatus,
   MfaFactorType,
@@ -55,6 +56,7 @@ interface LoginUser {
   readonly id: string;
   readonly passwordHash: string;
   readonly status: UserStatus;
+  readonly employee: { readonly status: EmployeeStatus } | null;
   readonly failedLoginAttempts: number;
   readonly lockedUntil: Date | null;
 }
@@ -109,6 +111,7 @@ export class AuthService {
         passwordChangedAt: true,
         mustChangePassword: true,
         emailVerifiedAt: true,
+        employee: { select: { status: true } },
         roles: {
           where: { active: true },
           select: {
@@ -145,6 +148,9 @@ export class AuthService {
     });
 
     if (!user) {
+      return null;
+    }
+    if (user.employee && user.employee.status !== EmployeeStatus.Active) {
       return null;
     }
 
@@ -201,6 +207,7 @@ export class AuthService {
         status: true,
         failedLoginAttempts: true,
         lockedUntil: true,
+        employee: { select: { status: true } },
       },
     });
 
@@ -219,8 +226,10 @@ export class AuthService {
       user?.status === UserStatus.Locked && !!user.lockedUntil && user.lockedUntil > now;
     const active =
       user?.status === UserStatus.Active || (user?.status === UserStatus.Locked && !locked);
+    const employeeActive =
+      !!user && (!user.employee || user.employee.status === EmployeeStatus.Active);
 
-    if (!user || !passwordValid || !active || locked) {
+    if (!user || !passwordValid || !active || !employeeActive || locked) {
       if (user && active && !locked && !passwordValid) {
         await this.registerLoginFailure(user, metadata, now);
       } else {

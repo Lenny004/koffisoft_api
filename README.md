@@ -39,8 +39,8 @@
 - **Catálogo de menú:** la carta web y la administración de categorías, ítems, variantes, precios, alérgenos, disponibilidad y modificadores viven en la API.
 - **Reservas y eventos:** disponibilidad pública, creación administrativa, mesas, espacios, solicitudes de eventos, paquetes y cotizaciones versionadas usan los modelos reales del dominio.
 - **Avisos importantes:** publicación pública por sede y CRUD administrativo con ventanas de vigencia.
-- **Administración de acceso:** CRUD de usuarios y empleados, asignación de roles, MFA, bloqueo y auditoría de cambios sensibles.
-- **Inventario P1:** ingredientes, proveedores, recepciones, lotes, movimientos, alertas de saldo/vencimiento y recetas versionadas.
+- **Administración de acceso:** CRUD de usuarios y empleados, asignación de roles con autoridad y alcance de negocio, MFA, bloqueo y auditoría de cambios sensibles.
+- **Inventario P1:** ingredientes, proveedores, recepciones, lotes, movimientos, alertas de saldo/vencimiento y recetas versionadas con alcance por sede e invariantes de stock.
 
 <!-- section:overview -->
 
@@ -130,25 +130,25 @@ El módulo administrativo de inventario, proveedores, recepciones, movimientos y
 
 La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los uses como secretos de producción.
 
-| Variable                   | Descripción                                                             | Ejemplo                                        | Requerida |
-| -------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- | --------- |
-| `NODE_ENV`                 | Entorno de ejecución y activación de Swagger fuera de producción.       | `development`                                  | No        |
-| `HOST`                     | Interfaz donde escucha el servidor.                                     | `0.0.0.0`                                      | No        |
-| `PORT`                     | Puerto HTTP de la API.                                                  | `3000`                                         | No        |
-| `DATABASE_URL`             | URL de PostgreSQL usada por la aplicación y las migraciones.            | `postgresql://localhost:5432/koffisoft_local`  | No        |
-| `SHADOW_DATABASE_URL`      | URL opcional de una base separada para `migrate dev` y `migrate diff`.  | `postgresql://localhost:5432/koffisoft_shadow` | No        |
-| `DATABASE_CONNECT_ON_BOOT` | Indica si Prisma conecta durante el arranque.                           | `false`                                        | No        |
-| `CORS_ORIGIN`              | Lista exacta, separada por comas, de orígenes HTTP(S) permitidos.       | `http://localhost:5173`                        | No        |
-| `COOKIE_SECURE`            | Activa `Secure` y el prefijo `__Host-` aplicable a la cookie de sesión. | `false`                                        | No        |
-| `SESSION_COOKIE_NAME`      | Nombre base de la cookie de sesión.                                     | `koffisoft_session`                            | No        |
-| `MFA_ENCRYPTION_KEY`       | Llave Base64 de exactamente 32 bytes para cifrar secretos TOTP.         | `REPLACE_WITH_BASE64_32_BYTE_KEY`              | Sí        |
-| `MFA_KEY_VERSION`          | Versión de la llave usada para cifrar factores MFA.                     | `1`                                            | No        |
-| `MFA_REQUIRED_ROLES`       | Roles que deben tener TOTP activo, separados por comas.                 | `owner,admin,manager`                          | No        |
-| `SESSION_IDLE_MINUTES`     | Minutos de inactividad antes de expirar una sesión.                     | `30`                                           | No        |
-| `SESSION_ABSOLUTE_HOURS`   | Límite absoluto de vida de una sesión en horas.                         | `8`                                            | No        |
-| `AUTH_LOGIN_MAX_ATTEMPTS`  | Intentos fallidos antes del bloqueo temporal.                           | `5`                                            | No        |
-| `AUTH_LOGIN_LOCK_MINUTES`  | Duración del bloqueo temporal en minutos.                               | `15`                                           | No        |
-| `TEST_DATABASE_URL`        | URL de la base aislada que habilita las pruebas e2e de auth.            | `postgresql://localhost:5432/koffisoft_test`   | No        |
+| Variable                   | Descripción                                                               | Ejemplo                                        | Requerida |
+| -------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- | --------- |
+| `NODE_ENV`                 | Entorno de ejecución y activación de Swagger fuera de producción.         | `development`                                  | No        |
+| `HOST`                     | Interfaz donde escucha el servidor.                                       | `0.0.0.0`                                      | No        |
+| `PORT`                     | Puerto HTTP de la API.                                                    | `3000`                                         | No        |
+| `DATABASE_URL`             | URL de PostgreSQL usada por la aplicación y las migraciones.              | `postgresql://localhost:5432/koffisoft_local`  | No        |
+| `SHADOW_DATABASE_URL`      | URL opcional de una base separada para `migrate dev` y `migrate diff`.    | `postgresql://localhost:5432/koffisoft_shadow` | No        |
+| `DATABASE_CONNECT_ON_BOOT` | Indica si Prisma conecta durante el arranque.                             | `false`                                        | No        |
+| `CORS_ORIGIN`              | Lista exacta de orígenes permitidos; en producción todos deben ser HTTPS. | `http://localhost:5173`                        | No        |
+| `COOKIE_SECURE`            | Activa `Secure`; debe ser `true` en producción y habilita `__Host-`.      | `false`                                        | No        |
+| `SESSION_COOKIE_NAME`      | Nombre base de la cookie de sesión.                                       | `koffisoft_session`                            | No        |
+| `MFA_ENCRYPTION_KEY`       | Llave Base64 de exactamente 32 bytes para cifrar secretos TOTP.           | `REPLACE_WITH_BASE64_32_BYTE_KEY`              | Sí        |
+| `MFA_KEY_VERSION`          | Versión de la llave usada para cifrar factores MFA.                       | `1`                                            | No        |
+| `MFA_REQUIRED_ROLES`       | Roles que deben tener TOTP activo, separados por comas.                   | `owner,admin,manager`                          | No        |
+| `SESSION_IDLE_MINUTES`     | Minutos de inactividad antes de expirar una sesión.                       | `30`                                           | No        |
+| `SESSION_ABSOLUTE_HOURS`   | Límite absoluto de vida de una sesión en horas.                           | `8`                                            | No        |
+| `AUTH_LOGIN_MAX_ATTEMPTS`  | Intentos fallidos antes del bloqueo temporal.                             | `5`                                            | No        |
+| `AUTH_LOGIN_LOCK_MINUTES`  | Duración del bloqueo temporal en minutos.                                 | `15`                                           | No        |
+| `TEST_DATABASE_URL`        | URL de la base aislada que habilita las pruebas e2e de auth.              | `postgresql://localhost:5432/koffisoft_test`   | No        |
 
 `DATABASE_URL` tiene un respaldo local para generar y validar Prisma, pero debe configurarse para migrar o consultar una base. `SHADOW_DATABASE_URL` nunca debe apuntar a la misma base que `DATABASE_URL`.
 
@@ -229,7 +229,7 @@ pnpm auth:create-user -- --email=TU_CORREO_LOCAL --password=TU_CONTRASEÑA_LOCAL
 pnpm test
 ```
 
-Las pruebas unitarias cubren Argon2id, AES-256-GCM, TOTP, guards de permisos, CSRF, disponibilidad y transiciones de reservas, solapamientos de espacios, totales exactos de cotizaciones, menú e idempotencia/stock del inventario; también se verifica el endpoint `GET /health/live` sin PostgreSQL. Las pruebas e2e usan `Fastify.inject` y se omiten si no existe `TEST_DATABASE_URL`; al habilitarlas requieren una base de pruebas aislada con el schema y seed aplicados.
+Las pruebas unitarias cubren Argon2id, AES-256-GCM, TOTP, guards de permisos, CSRF, configuración HTTPS de producción, alcance de sedes y negocios, autoridad de roles, avisos, rotación atómica de sesiones, cascada empleado-cuenta, disponibilidad y transiciones de reservas, solapamientos de espacios, totales exactos de cotizaciones, menú e idempotencia/stock por lote del inventario; también se verifica el endpoint `GET /health/live` sin PostgreSQL. Las pruebas e2e usan `Fastify.inject` y se omiten si no existe `TEST_DATABASE_URL`; al habilitarlas requieren una base de pruebas aislada con el schema y seed aplicados.
 
 La verificación completa del repositorio es:
 

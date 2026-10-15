@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@
 import { ApiOperation, ApiParam, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 
 import { RequirePermissions } from '../auth/decorators/permissions.decorator.js';
+import { AccessScopeService } from '../auth/security/access-scope.service.js';
 import { requestMetadata, type AuthenticatedRequest } from '../auth/auth.types.js';
 import {
   CreateGoodsReceiptDto,
@@ -43,7 +44,10 @@ import { InventoryService } from './inventory.service.js';
 @ApiTags('Inventario')
 @Controller()
 export class InventoryController {
-  constructor(private readonly service: InventoryService) {}
+  constructor(
+    private readonly service: InventoryService,
+    private readonly scope: AccessScopeService,
+  ) {}
 
   @Get('inventory/admin/catalog/units')
   @ApiSecurity('sessionCookie')
@@ -70,8 +74,11 @@ export class InventoryController {
   @ApiResponse({ status: 200, type: [StorageLocationResponseDto] })
   listStorageLocations(
     @Query() query: StorageLocationListQueryDto,
+    @Req() request: AuthenticatedRequest,
   ): Promise<StorageLocationResponseDto[]> {
-    return this.service.listStorageLocations(query);
+    return this.withLocation(request, query.locationId, () =>
+      this.service.listStorageLocations(query),
+    );
   }
 
   @Get('inventory/admin/items')
@@ -79,8 +86,11 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista ingredientes con saldo calculado por movimientos' })
   @ApiResponse({ status: 200, type: IngredientPageDto })
-  listIngredients(@Query() query: IngredientListQueryDto): Promise<IngredientPageDto> {
-    return this.service.listIngredients(query);
+  listIngredients(
+    @Query() query: IngredientListQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<IngredientPageDto> {
+    return this.withLocation(request, query.locationId, () => this.service.listIngredients(query));
   }
 
   @Get('inventory/admin/items/:id')
@@ -92,8 +102,11 @@ export class InventoryController {
   getIngredient(
     @Param('id') id: string,
     @Query() query: InventoryLocationQueryDto,
+    @Req() request: AuthenticatedRequest,
   ): Promise<IngredientResponseDto> {
-    return this.service.getIngredient(id, query.locationId);
+    return this.withLocation(request, query.locationId, () =>
+      this.service.getIngredient(id, query.locationId),
+    );
   }
 
   @Post('inventory/admin/items')
@@ -120,12 +133,14 @@ export class InventoryController {
     @Req() request: AuthenticatedRequest,
     @Query() query: InventoryLocationQueryDto,
   ): Promise<IngredientResponseDto> {
-    return this.service.updateIngredient(
-      id,
-      dto,
-      query.locationId,
-      this.actorId(request),
-      requestMetadata(request),
+    return this.withLocation(request, query.locationId, () =>
+      this.service.updateIngredient(
+        id,
+        dto,
+        query.locationId,
+        this.actorId(request),
+        requestMetadata(request),
+      ),
     );
   }
 
@@ -140,11 +155,13 @@ export class InventoryController {
     @Req() request: AuthenticatedRequest,
     @Query() query: InventoryLocationQueryDto,
   ): Promise<IngredientResponseDto> {
-    return this.service.removeIngredient(
-      id,
-      query.locationId,
-      this.actorId(request),
-      requestMetadata(request),
+    return this.withLocation(request, query.locationId, () =>
+      this.service.removeIngredient(
+        id,
+        query.locationId,
+        this.actorId(request),
+        requestMetadata(request),
+      ),
     );
   }
 
@@ -153,8 +170,11 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista proveedores con filtros y paginación' })
   @ApiResponse({ status: 200, type: SupplierPageDto })
-  listSuppliers(@Query() query: SupplierListQueryDto): Promise<SupplierPageDto> {
-    return this.service.listSuppliers(query);
+  listSuppliers(
+    @Query() query: SupplierListQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<SupplierPageDto> {
+    return this.withLocation(request, query.locationId, () => this.service.listSuppliers(query));
   }
 
   @Get('suppliers/admin/:id')
@@ -163,8 +183,14 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta el detalle de un proveedor' })
   @ApiResponse({ status: 200, type: SupplierResponseDto })
-  getSupplier(@Param('id') id: string): Promise<SupplierResponseDto> {
-    return this.service.getSupplier(id);
+  getSupplier(
+    @Param('id') id: string,
+    @Query() query: InventoryLocationQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<SupplierResponseDto> {
+    return this.withLocation(request, query.locationId, () =>
+      this.service.getSupplier(id, query.locationId),
+    );
   }
 
   @Post('suppliers/admin')
@@ -176,7 +202,9 @@ export class InventoryController {
     @Body() dto: CreateSupplierDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<SupplierResponseDto> {
-    return this.service.createSupplier(dto, this.actorId(request), requestMetadata(request));
+    return this.withLocation(request, dto.locationId, () =>
+      this.service.createSupplier(dto, this.actorId(request), requestMetadata(request)),
+    );
   }
 
   @Patch('suppliers/admin/:id')
@@ -189,8 +217,17 @@ export class InventoryController {
     @Param('id') id: string,
     @Body() dto: UpdateSupplierDto,
     @Req() request: AuthenticatedRequest,
+    @Query() query: InventoryLocationQueryDto,
   ): Promise<SupplierResponseDto> {
-    return this.service.updateSupplier(id, dto, this.actorId(request), requestMetadata(request));
+    return this.withLocation(request, query.locationId, () =>
+      this.service.updateSupplier(
+        id,
+        query.locationId,
+        dto,
+        this.actorId(request),
+        requestMetadata(request),
+      ),
+    );
   }
 
   @Delete('suppliers/admin/:id')
@@ -202,8 +239,16 @@ export class InventoryController {
   removeSupplier(
     @Param('id') id: string,
     @Req() request: AuthenticatedRequest,
+    @Query() query: InventoryLocationQueryDto,
   ): Promise<SupplierResponseDto> {
-    return this.service.removeSupplier(id, this.actorId(request), requestMetadata(request));
+    return this.withLocation(request, query.locationId, () =>
+      this.service.removeSupplier(
+        id,
+        query.locationId,
+        this.actorId(request),
+        requestMetadata(request),
+      ),
+    );
   }
 
   @Get('inventory/admin/receipts')
@@ -211,8 +256,11 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista recepciones con filtros y paginación' })
   @ApiResponse({ status: 200, type: GoodsReceiptPageDto })
-  listReceipts(@Query() query: GoodsReceiptListQueryDto): Promise<GoodsReceiptPageDto> {
-    return this.service.listReceipts(query);
+  listReceipts(
+    @Query() query: GoodsReceiptListQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<GoodsReceiptPageDto> {
+    return this.withLocation(request, query.locationId, () => this.service.listReceipts(query));
   }
 
   @Get('inventory/admin/receipts/:id')
@@ -221,8 +269,14 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta una recepción con sus lotes y líneas' })
   @ApiResponse({ status: 200, type: GoodsReceiptResponseDto })
-  getReceipt(@Param('id') id: string): Promise<GoodsReceiptResponseDto> {
-    return this.service.getReceipt(id);
+  getReceipt(
+    @Param('id') id: string,
+    @Query() query: InventoryLocationQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<GoodsReceiptResponseDto> {
+    return this.withLocation(request, query.locationId, () =>
+      this.service.getReceipt(id, query.locationId),
+    );
   }
 
   @Post('inventory/admin/receipts')
@@ -234,7 +288,9 @@ export class InventoryController {
     @Body() dto: CreateGoodsReceiptDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<GoodsReceiptResponseDto> {
-    return this.service.createReceipt(dto, this.actorId(request), requestMetadata(request));
+    return this.withLocation(request, dto.locationId, () =>
+      this.service.createReceipt(dto, this.actorId(request), requestMetadata(request)),
+    );
   }
 
   @Get('inventory/admin/movements')
@@ -242,8 +298,11 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Consulta el historial de movimientos con paginación' })
   @ApiResponse({ status: 200, type: InventoryMovementPageDto })
-  listMovements(@Query() query: InventoryMovementListQueryDto): Promise<InventoryMovementPageDto> {
-    return this.service.listMovements(query);
+  listMovements(
+    @Query() query: InventoryMovementListQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<InventoryMovementPageDto> {
+    return this.withLocation(request, query.locationId, () => this.service.listMovements(query));
   }
 
   @Post('inventory/admin/movements/adjustments')
@@ -255,7 +314,9 @@ export class InventoryController {
     @Body() dto: CreateInventoryAdjustmentDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<InventoryMovementResponseDto> {
-    return this.service.createAdjustment(dto, this.actorId(request), requestMetadata(request));
+    return this.withLocation(request, dto.locationId, () =>
+      this.service.createAdjustment(dto, this.actorId(request), requestMetadata(request)),
+    );
   }
 
   @Get('inventory/admin/alerts')
@@ -263,8 +324,11 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista alertas de stock bajo y vencimientos próximos' })
   @ApiResponse({ status: 200, type: InventoryAlertsResponseDto })
-  listAlerts(@Query() query: InventoryAlertQueryDto): Promise<InventoryAlertsResponseDto> {
-    return this.service.listAlerts(query);
+  listAlerts(
+    @Query() query: InventoryAlertQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<InventoryAlertsResponseDto> {
+    return this.withLocation(request, query.locationId, () => this.service.listAlerts(query));
   }
 
   @Get('inventory/admin/recipes')
@@ -272,8 +336,11 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista recetas por variante del menú' })
   @ApiResponse({ status: 200, type: RecipePageDto })
-  listRecipes(@Query() query: RecipeListQueryDto): Promise<RecipePageDto> {
-    return this.service.listRecipes(query);
+  listRecipes(
+    @Query() query: RecipeListQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<RecipePageDto> {
+    return this.withLocation(request, query.locationId, () => this.service.listRecipes(query));
   }
 
   @Get('inventory/admin/recipes/:id')
@@ -282,8 +349,14 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta una receta con sus ingredientes' })
   @ApiResponse({ status: 200, type: RecipeResponseDto })
-  getRecipe(@Param('id') id: string): Promise<RecipeResponseDto> {
-    return this.service.getRecipe(id);
+  getRecipe(
+    @Param('id') id: string,
+    @Query() query: InventoryLocationQueryDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<RecipeResponseDto> {
+    return this.withLocation(request, query.locationId, () =>
+      this.service.getRecipe(id, query.locationId),
+    );
   }
 
   @Post('inventory/admin/recipes')
@@ -295,7 +368,9 @@ export class InventoryController {
     @Body() dto: CreateRecipeDto,
     @Req() request: AuthenticatedRequest,
   ): Promise<RecipeResponseDto> {
-    return this.service.createRecipe(dto, this.actorId(request), requestMetadata(request));
+    return this.withLocation(request, dto.locationId, () =>
+      this.service.createRecipe(dto, this.actorId(request), requestMetadata(request)),
+    );
   }
 
   @Patch('inventory/admin/recipes/:id')
@@ -308,8 +383,17 @@ export class InventoryController {
     @Param('id') id: string,
     @Body() dto: UpdateRecipeDto,
     @Req() request: AuthenticatedRequest,
+    @Query() query: InventoryLocationQueryDto,
   ): Promise<RecipeResponseDto> {
-    return this.service.updateRecipe(id, dto, this.actorId(request), requestMetadata(request));
+    return this.withLocation(request, query.locationId, () =>
+      this.service.updateRecipe(
+        id,
+        query.locationId,
+        dto,
+        this.actorId(request),
+        requestMetadata(request),
+      ),
+    );
   }
 
   @Delete('inventory/admin/recipes/:id')
@@ -321,12 +405,16 @@ export class InventoryController {
   removeRecipe(
     @Param('id') id: string,
     @Req() request: AuthenticatedRequest,
+    @Query() query: InventoryLocationQueryDto,
   ): Promise<RecipeResponseDto> {
-    return this.service.updateRecipe(
-      id,
-      { active: false },
-      this.actorId(request),
-      requestMetadata(request),
+    return this.withLocation(request, query.locationId, () =>
+      this.service.updateRecipe(
+        id,
+        query.locationId,
+        { active: false },
+        this.actorId(request),
+        requestMetadata(request),
+      ),
     );
   }
 
@@ -335,5 +423,14 @@ export class InventoryController {
       throw new Error('La ruta administrativa requiere una sesión autenticada.');
     }
     return request.auth.userId;
+  }
+
+  private async withLocation<T>(
+    request: AuthenticatedRequest,
+    locationId: string,
+    operation: () => Promise<T>,
+  ): Promise<T> {
+    await this.scope.assertLocationAccess(this.actorId(request), locationId);
+    return operation();
   }
 }

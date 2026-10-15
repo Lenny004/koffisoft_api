@@ -38,6 +38,7 @@ import type {
 } from './dto/users-response.dto.js';
 
 const ADMIN_ROLE_CODES = ['owner', 'admin'] as const;
+const ROLE_RANK: Record<string, number> = { manager: 1, admin: 2, owner: 3 };
 
 const userSelect = {
   id: true,
@@ -171,8 +172,11 @@ export class UsersService {
     const roleIds = this.uniqueIds(dto.roleIds);
     const row = await this.prisma.$transaction(async (tx) => {
       await this.assertUserIdentityAvailable(tx, dto.username, dto.email);
-      await this.requireEmployeeForLink(tx, dto.employeeId);
-      await this.requireActiveRoles(tx, roleIds);
+      await this.requireEmployeeForLink(tx, dto.employeeId, undefined, actorUserId);
+      if (roleIds.length > 0) {
+        await this.assertRoleAssignmentAuthority(tx, actorUserId, roleIds);
+      }
+      await this.requireActiveRoles(tx, roleIds, actorUserId);
       const created = await tx.user.create({
         data: {
           username: dto.username,
@@ -218,7 +222,7 @@ export class UsersService {
         );
       }
       if (dto.employeeId !== undefined) {
-        await this.requireEmployeeForLink(tx, dto.employeeId, id);
+        await this.requireEmployeeForLink(tx, dto.employeeId, id, actorUserId);
       }
       const updated = await tx.user.update({
         where: { id },
@@ -278,7 +282,8 @@ export class UsersService {
       await this.lockAdminInvariant(tx);
       const current = await tx.user.findUnique({ where: { id }, select: userSelect });
       if (!current) throw new NotFoundException('Usuario no encontrado.');
-      const roles = await this.requireActiveRoles(tx, roleIds);
+      await this.assertRoleAssignmentAuthority(tx, actorUserId, roleIds);
+      const roles = await this.requireActiveRoles(tx, roleIds, actorUserId);
       const currentAdminRoles = current.roles.filter(
         ({ role }) => role.active && this.isAdminRole(role.code),
       );
@@ -385,10 +390,15 @@ export class UsersService {
     return this.toUserResponse(row);
   }
 
-  async listRoles(query: RoleListQueryDto): Promise<RoleResponseDto[]> {
+  async listRoles(query: RoleListQueryDto, actorUserId: string): Promise<RoleResponseDto[]> {
+    const authorizedBusinesses = await this.actorBusinessIds(this.prisma, actorUserId);
     const rows = await this.prisma.role.findMany({
       where: {
-        ...(query.businessId ? { businessId: query.businessId } : {}),
+        businessId: query.businessId
+          ? authorizedBusinesses.includes(query.businessId)
+            ? query.businessId
+            : { in: [] }
+          : { in: authorizedBusinesses },
         ...(query.includeInactive ? {} : { active: true }),
       },
       orderBy: [{ name: 'asc' }, { code: 'asc' }],
@@ -530,6 +540,9 @@ export class UsersService {
         },
         select: employeeSelect,
       });
+      if (updated.status === EmployeeStatus.Inactive && updated.user) {
+        await this.deactivateLinkedUser(tx, updated.user.id, metadata, 'employee_inactive');
+      }
       await this.writeAudit(tx, actorUserId, metadata, {
         action: 'employee.updated',
         entityType: 'employee',
@@ -558,6 +571,9 @@ export class UsersService {
         },
         select: employeeSelect,
       });
+      if (updated.status === EmployeeStatus.Inactive && updated.user) {
+        await this.deactivateLinkedUser(tx, updated.user.id, metadata, 'employee_inactive');
+      }
       await this.writeAudit(tx, actorUserId, metadata, {
         action: 'employee.deactivated',
         entityType: 'employee',
@@ -637,6 +653,36 @@ export class UsersService {
     return this.toUserResponse(row);
   }
 
+  /** Mantiene la cuenta laboralmente desactivada y corta sus sesiones en la misma transacción. */
+  private async deactivateLinkedUser(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    metadata: RequestMetadata,
+    reason: string,
+  ): Promise<void> {
+    const now = new Date();
+    await tx.user.update({
+      where: { id: userId },
+      data: { status: UserStatus.Inactive, lockedAt: null, lockedUntil: null },
+    });
+    const revoked = await tx.userSession.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: now, revokedReason: reason },
+    });
+    if (revoked.count > 0) {
+      await tx.authEvent.create({
+        data: {
+          userId,
+          eventType: AuthEventType.SessionRevoked,
+          details: { reason, count: revoked.count },
+          ipAddress: metadata.ipAddress,
+          userAgent: metadata.userAgent,
+          requestId: metadata.requestId,
+        },
+      });
+    }
+  }
+
   private async requireUser(id: string): Promise<UserRow> {
     const user = await this.prisma.user.findUnique({ where: { id }, select: userSelect });
     if (!user) throw new NotFoundException('Usuario no encontrado.');
@@ -675,23 +721,36 @@ export class UsersService {
     tx: Prisma.TransactionClient,
     employeeId: string | null | undefined,
     userId?: string,
+    actorUserId?: string,
   ): Promise<void> {
     if (employeeId === undefined || employeeId === null) return;
     const employee = await tx.employee.findUnique({
       where: { id: employeeId },
-      select: { id: true, user: { select: { id: true } } },
+      select: {
+        id: true,
+        user: { select: { id: true } },
+        location: { select: { businessId: true } },
+      },
     });
     if (!employee) throw new NotFoundException('Empleado no encontrado.');
     if (employee.user && employee.user.id !== userId) {
       throw new ConflictException('El empleado ya está vinculado a otro usuario.');
     }
+    if (actorUserId) {
+      await this.assertBusinessAccess(tx, actorUserId, employee.location.businessId);
+    }
   }
 
-  private async requireActiveRoles(tx: Prisma.TransactionClient, roleIds: string[]) {
+  private async requireActiveRoles(
+    tx: Prisma.TransactionClient,
+    roleIds: string[],
+    actorUserId: string,
+  ) {
     if (roleIds.length === 0) return [] as Array<{ id: string; code: string }>;
+    const businesses = await this.actorBusinessIds(tx, actorUserId);
     const roles = await tx.role.findMany({
-      where: { id: { in: roleIds }, active: true },
-      select: { id: true, code: true },
+      where: { id: { in: roleIds }, active: true, businessId: { in: businesses } },
+      select: { id: true, code: true, businessId: true },
     });
     if (roles.length !== roleIds.length) {
       throw new BadRequestException(
@@ -699,6 +758,75 @@ export class UsersService {
       );
     }
     return roles;
+  }
+
+  private async assertRoleAssignmentAuthority(
+    tx: Prisma.TransactionClient,
+    actorUserId: string,
+    roleIds: string[],
+  ): Promise<void> {
+    const requested = await tx.role.findMany({
+      where: { id: { in: roleIds }, active: true },
+      select: { id: true, code: true, businessId: true },
+    });
+    const actorRoles = await tx.userRole.findMany({
+      where: { userId: actorUserId, active: true, role: { active: true } },
+      select: {
+        role: {
+          select: {
+            businessId: true,
+            code: true,
+            rolePermissions: {
+              where: { active: true, permission: { active: true } },
+              select: { permission: { select: { code: true } } },
+            },
+          },
+        },
+      },
+    });
+    const hasRoleManagement = actorRoles.some(({ role }) =>
+      role.rolePermissions.some(({ permission }) => permission.code === 'roles.manage'),
+    );
+    if (roleIds.length === 0 && !hasRoleManagement) {
+      throw new ForbiddenException('Necesita roles.manage para asignar roles.');
+    }
+    for (const role of requested) {
+      const sameBusinessRoles = actorRoles
+        .map(({ role: actorRole }) => actorRole)
+        .filter(({ businessId }) => businessId === role.businessId);
+      const canManageRoles = sameBusinessRoles.some(({ rolePermissions }) =>
+        rolePermissions.some(({ permission }) => permission.code === 'roles.manage'),
+      );
+      if (!canManageRoles) {
+        throw new ForbiddenException('Necesita roles.manage para asignar roles.');
+      }
+      const actorRank = Math.max(0, ...sameBusinessRoles.map(({ code }) => ROLE_RANK[code] ?? 0));
+      if ((ROLE_RANK[role.code] ?? 0) > actorRank) {
+        throw new ForbiddenException('No puede conceder un rol superior al suyo.');
+      }
+    }
+  }
+
+  private async assertBusinessAccess(
+    tx: PrismaService | Prisma.TransactionClient,
+    actorUserId: string,
+    businessId: string,
+  ): Promise<void> {
+    const businesses = await this.actorBusinessIds(tx, actorUserId);
+    if (!businesses.includes(businessId)) {
+      throw new NotFoundException('El registro no pertenece a un negocio autorizado.');
+    }
+  }
+
+  private async actorBusinessIds(
+    tx: PrismaService | Prisma.TransactionClient,
+    actorUserId: string,
+  ): Promise<string[]> {
+    const actor = await tx.userRole.findMany({
+      where: { userId: actorUserId, active: true, role: { active: true } },
+      select: { role: { select: { businessId: true } } },
+    });
+    return [...new Set(actor.map(({ role }) => role.businessId))];
   }
 
   private async requireUserForEmployeeLink(

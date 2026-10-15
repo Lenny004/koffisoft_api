@@ -7,7 +7,11 @@ Este documento describe la Fase 1 de autenticación y autorización de `koffisof
 - Las contraseñas y los códigos de recuperación se almacenan con Argon2id. La configuración inicial es `memoryCost=19456 KiB`, `timeCost=2` y `parallelism=1`. El servicio verifica hashes con la biblioteca nativa y usa `needsRehash` para actualizar hashes válidos cuando cambie la política. Para un correo inexistente consume un hash Argon2id antes de responder.
 - El error de login es genérico (`Credenciales inválidas.`), sin indicar si el correo existe, está bloqueado o tiene una contraseña incorrecta. Después de `AUTH_LOGIN_MAX_ATTEMPTS` fallos se actualizan `failed_login_attempts`, `locked_at` y `locked_until` en `users`.
 - Cada sesión comienza con 32 bytes aleatorios (`256 bits`) codificados como Base64URL. Solo el SHA-256 del token queda en `user_sessions`; el valor de la cookie nunca se audita ni se registra. La sesión tiene expiración absoluta y por inactividad.
-- La cookie es HttpOnly, `Path=/`, `SameSite=Lax` y usa `Secure` según `COOKIE_SECURE`. Con `COOKIE_SECURE=true`, la configuración añade el prefijo `__Host-` si el nombre no lo tenía. `Lax` mantiene protección CSRF para mutaciones y evita romper el uso normal del panel cuando el frontend y la API tienen orígenes distintos pero pertenecen al mismo sitio; la lista exacta de orígenes y la comprobación CSRF agregan una defensa independiente.
+- La cookie es HttpOnly, `Path=/`, `SameSite=Lax` y usa `Secure`. En
+  producción `COOKIE_SECURE=true` es obligatorio y la configuración añade el
+  prefijo `__Host-` si el nombre no lo tenía. En producción todos los valores
+  de `CORS_ORIGIN` también deben usar `https:`; HTTP queda limitado al entorno
+  local de desarrollo.
 - Login, verificación MFA y las operaciones de recuperación tienen límites de `@nestjs/throttler`. El almacenamiento predeterminado es local al proceso; un despliegue con varias réplicas debe sustituirlo por un almacenamiento distribuido antes de considerarlo un límite global.
 - TOTP usa los valores interoperables de las aplicaciones autenticadoras: SHA-1, seis dígitos y pasos de 30 segundos. La API acepta el paso actual y uno anterior o siguiente, pero solo puede consumir una vez cada `timeStep`; la actualización condicional de `last_used_time_step` evita carreras y replay.
 - El secreto TOTP se genera en la API, se cifra con AES-256-GCM (`iv` de 12 bytes y tag de 16 bytes) y se guarda en `user_mfa_factors`. La URI `otpauth://` se devuelve únicamente durante el alta para que el frontend cree el QR. No se guarda la URI ni se escribe el secreto en logs o auditoría.
@@ -144,7 +148,8 @@ Las sesiones usan:
 - `SESSION_ABSOLUTE_HOURS`: límite absoluto desde la creación.
 - `SESSION_COOKIE_NAME`: nombre base; con cookie segura se normaliza a `__Host-<nombre>`.
 - `COOKIE_SECURE`: `false` solo para HTTP local; `true` detrás de HTTPS.
-- `CORS_ORIGIN`: lista separada por comas de orígenes HTTP(S) exactos, sin `*` ni rutas.
+- `CORS_ORIGIN`: lista separada por comas de orígenes exactos, sin `*` ni
+  rutas; en producción todos deben ser HTTPS.
 
 ## Pruebas
 

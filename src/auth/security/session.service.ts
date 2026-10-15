@@ -1,9 +1,10 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-import { Inject, Injectable } from '@nestjs/common';
+import { ConflictException, Inject, Injectable } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
 
 import { AuthEventType } from '../../generated/prisma/enums.js';
+import { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../../database/prisma.service.js';
 import { APP_CONFIG, type AppConfig } from '../../config/app-config.js';
 import type { RequestMetadata } from '../auth.types.js';
@@ -52,18 +53,15 @@ export class SessionService {
     const expiresAt =
       absoluteExpiresAt ??
       new Date(now.getTime() + this.config.sessionAbsoluteHours * 60 * 60 * 1000);
-    const record = await this.prisma.userSession.create({
-      data: {
-        userId,
-        sessionTokenHash: this.hashToken(token),
-        createdAt: now,
-        expiresAt,
-        lastUsedAt: now,
-        ipAddress: metadata.ipAddress,
-        userAgent: metadata.userAgent,
-        mfaVerified,
-      },
-    });
+    const record = await this.createSessionRecord(
+      this.prisma,
+      userId,
+      token,
+      mfaVerified,
+      metadata,
+      now,
+      expiresAt,
+    );
 
     await this.audit.record(AuthEventType.SessionCreated, metadata, {
       userId,
@@ -80,8 +78,48 @@ export class SessionService {
     metadata: RequestMetadata,
     reason: string,
   ): Promise<CreatedSession> {
-    await this.revokeSession(current.id, reason, metadata, current.userId);
-    return this.createSession(current.userId, mfaVerified, metadata, new Date(), current.expiresAt);
+    const now = new Date();
+    const rotated = await this.prisma.$transaction(async (tx) => {
+      const revoked = await tx.userSession.updateMany({
+        where: {
+          id: current.id,
+          userId: current.userId,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: {
+          revokedAt: now,
+          revokedReason: reason.slice(0, 120),
+        },
+      });
+      if (revoked.count !== 1) {
+        throw new ConflictException('La sesión ya no está activa.');
+      }
+
+      const token = randomBytes(32).toString('base64url');
+      const record = await this.createSessionRecord(
+        tx,
+        current.userId,
+        token,
+        mfaVerified,
+        metadata,
+        now,
+        current.expiresAt,
+      );
+      return { token, record };
+    });
+
+    await this.audit.record(AuthEventType.SessionRevoked, metadata, {
+      userId: current.userId,
+      sessionId: current.id,
+      details: { reason },
+    });
+    await this.audit.record(AuthEventType.SessionCreated, metadata, {
+      userId: current.userId,
+      sessionId: rotated.record.id,
+      details: { mfaVerified },
+    });
+    return rotated;
   }
 
   async findValidSession(
@@ -227,5 +265,28 @@ export class SessionService {
 
   getToken(request: { cookies?: Record<string, string | undefined> }): string | undefined {
     return request.cookies?.[this.config.cookieName];
+  }
+
+  private async createSessionRecord(
+    client: PrismaService | Prisma.TransactionClient,
+    userId: string,
+    token: string,
+    mfaVerified: boolean,
+    metadata: RequestMetadata,
+    now: Date,
+    expiresAt: Date,
+  ): Promise<SessionRecord> {
+    return client.userSession.create({
+      data: {
+        userId,
+        sessionTokenHash: this.hashToken(token),
+        createdAt: now,
+        expiresAt,
+        lastUsedAt: now,
+        ipAddress: metadata.ipAddress,
+        userAgent: metadata.userAgent,
+        mfaVerified,
+      },
+    });
   }
 }

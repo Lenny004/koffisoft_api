@@ -5,6 +5,7 @@ import {
   EventSpaceBookingStatus,
   EventStatus,
   EventType,
+  PublicationStatus,
   QuoteStatus,
 } from '../../generated/prisma/enums.js';
 import { PageMetaDto } from '../../reservations/dto/reservation-response.dto.js';
@@ -70,6 +71,38 @@ export class PublicEventCatalogResponseDto {
 
   @ApiProperty({ type: () => [PublicEventPackageDto] })
   packages!: PublicEventPackageDto[];
+}
+
+export class PublicPublishedEventDto {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty({ format: 'uuid' })
+  locationId!: string;
+
+  @ApiProperty()
+  eventCode!: string;
+
+  @ApiProperty({ enum: EventType })
+  eventType!: EventType;
+
+  @ApiProperty()
+  title!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  startsAt!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  endsAt!: string;
+
+  @ApiProperty()
+  estimatedGuestCount!: number;
+
+  @ApiProperty({ enum: PublicationStatus })
+  publicationStatus!: PublicationStatus;
+
+  @ApiProperty({ format: 'date-time' })
+  publishedAt!: string;
 }
 
 export class PublicEventRequestResponseDto {
@@ -195,6 +228,18 @@ export class EventResponseDto {
 
   @ApiProperty({ enum: EventStatus })
   status!: EventStatus;
+
+  @ApiProperty({ enum: PublicationStatus })
+  publicationStatus!: PublicationStatus;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  publishedAt!: string | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  scheduledAt!: string | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  expiresAt!: string | null;
 
   @ApiProperty()
   source!: string;

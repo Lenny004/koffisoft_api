@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { AuditService } from './security/audit.service.js';
+import { AccessScopeService } from './security/access-scope.service.js';
 import { MfaCryptoService } from './security/mfa-crypto.service.js';
 import { PasswordService } from './security/password.service.js';
 import { SessionService } from './security/session.service.js';
@@ -25,6 +26,7 @@ import { SessionGuard } from './guards/session.guard.js';
   controllers: [AuthController],
   providers: [
     AuthService,
+    AccessScopeService,
     AuditService,
     MfaCryptoService,
     PasswordService,
@@ -47,6 +49,13 @@ import { SessionGuard } from './guards/session.guard.js';
       useClass: PermissionGuard,
     },
   ],
-  exports: [AuthService, PasswordService, MfaCryptoService, TotpService, SessionService],
+  exports: [
+    AuthService,
+    AccessScopeService,
+    PasswordService,
+    MfaCryptoService,
+    TotpService,
+    SessionService,
+  ],
 })
 export class AuthModule {}

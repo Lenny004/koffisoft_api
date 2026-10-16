@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { resolve } from 'node:path';
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
@@ -7,6 +8,7 @@ export interface AppConfig {
   readonly host: string;
   readonly port: number;
   readonly corsOrigins: readonly string[];
+  readonly publicSiteUrl: string;
   readonly cookieSecure: boolean;
   readonly cookieName: string;
   readonly mfaEncryptionKey: Buffer;
@@ -16,9 +18,19 @@ export interface AppConfig {
   readonly sessionAbsoluteHours: number;
   readonly loginMaxAttempts: number;
   readonly loginLockMinutes: number;
+  readonly databaseUrl: string;
+  readonly backupsEnabled: boolean;
+  readonly backupStorageRoot: string;
+  readonly uploadsDirectory: string;
+  readonly pgDumpPath: string;
+  readonly tarPath: string;
+  readonly backupRetentionDays: number;
+  readonly backupMaxSizeBytes: number;
+  readonly backupScheduleMinutes: number;
 }
 
 type Environment = Record<string, string | undefined>;
+const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
 
 function parseBoolean(value: string | undefined, name: string, fallback: boolean): boolean {
   if (value === undefined) {
@@ -46,7 +58,35 @@ function parsePositiveNumber(value: string | undefined, name: string, fallback: 
   return parsed;
 }
 
-function parseOrigins(value: string | undefined): readonly string[] {
+function parseNonNegativeNumber(value: string | undefined, name: string, fallback: number): number {
+  const parsed = value === undefined ? fallback : Number(value);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${name} debe ser un número mayor o igual que cero.`);
+  }
+
+  return parsed;
+}
+
+function parsePath(value: string | undefined, name: string, fallback: string): string {
+  const candidate = (value ?? fallback).trim();
+  if (!candidate || candidate.includes('\0')) {
+    throw new Error(`${name} debe ser una ruta no vacía.`);
+  }
+
+  return resolve(candidate);
+}
+
+function parseCommand(value: string | undefined, name: string, fallback: string): string {
+  const candidate = (value ?? fallback).trim();
+  if (!candidate || candidate.includes('\0')) {
+    throw new Error(`${name} debe ser un comando no vacío.`);
+  }
+
+  return candidate;
+}
+
+function parseOrigins(value: string | undefined, nodeEnv: string): readonly string[] {
   const origins = (value ?? 'http://localhost:5173')
     .split(',')
     .map((origin) => origin.trim())
@@ -64,7 +104,11 @@ function parseOrigins(value: string | undefined): readonly string[] {
       throw new Error(`CORS_ORIGIN contiene un origen inválido: ${origin}.`);
     }
 
-    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.pathname !== '/') {
+    if (
+      !['http:', 'https:'].includes(parsed.protocol) ||
+      (nodeEnv === 'production' && parsed.protocol !== 'https:') ||
+      parsed.pathname !== '/'
+    ) {
       throw new Error(`CORS_ORIGIN debe usar un origen HTTP(S) sin ruta: ${origin}.`);
     }
   }
@@ -72,11 +116,31 @@ function parseOrigins(value: string | undefined): readonly string[] {
   return origins.map((origin) => new URL(origin).origin);
 }
 
+function parsePublicSiteUrl(value: string | undefined): string {
+  const candidate = (value ?? 'http://localhost:5173').trim().replace(/\/$/u, '');
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    throw new Error('PUBLIC_SITE_URL debe ser una URL HTTP(S) valida.');
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol) || parsed.username || parsed.password) {
+    throw new Error('PUBLIC_SITE_URL debe usar HTTP(S) sin credenciales.');
+  }
+
+  return parsed.origin + parsed.pathname.replace(/\/$/u, '');
+}
+
 function parseMfaKey(value: string | undefined, nodeEnv: string): Buffer {
   if (!value) {
     throw new Error(
       `Falta MFA_ENCRYPTION_KEY. Define una llave base64 de exactamente 32 bytes antes de arrancar (${nodeEnv}).`,
     );
+  }
+
+  if (!BASE64_RE.test(value)) {
+    throw new Error('MFA_ENCRYPTION_KEY debe ser Base64 valido.');
   }
 
   const key = Buffer.from(value, 'base64');
@@ -119,6 +183,9 @@ function parseCookieName(value: string | undefined, secure: boolean): string {
 export function loadAppConfig(environment: Environment = process.env): AppConfig {
   const nodeEnv = environment.NODE_ENV ?? 'development';
   const cookieSecure = parseBoolean(environment.COOKIE_SECURE, 'COOKIE_SECURE', false);
+  if (nodeEnv === 'production' && !cookieSecure) {
+    throw new Error('COOKIE_SECURE=true es obligatorio en producción.');
+  }
   const mfaKeyVersion = parsePositiveNumber(environment.MFA_KEY_VERSION, 'MFA_KEY_VERSION', 1);
 
   if (!Number.isInteger(mfaKeyVersion) || mfaKeyVersion > 32_767) {
@@ -129,7 +196,8 @@ export function loadAppConfig(environment: Environment = process.env): AppConfig
     nodeEnv,
     host: environment.HOST ?? '0.0.0.0',
     port: parsePositiveNumber(environment.PORT, 'PORT', 3000),
-    corsOrigins: parseOrigins(environment.CORS_ORIGIN),
+    corsOrigins: parseOrigins(environment.CORS_ORIGIN, nodeEnv),
+    publicSiteUrl: parsePublicSiteUrl(environment.PUBLIC_SITE_URL),
     cookieSecure,
     cookieName: parseCookieName(environment.SESSION_COOKIE_NAME, cookieSecure),
     mfaEncryptionKey: parseMfaKey(environment.MFA_ENCRYPTION_KEY, nodeEnv),
@@ -154,6 +222,31 @@ export function loadAppConfig(environment: Environment = process.env): AppConfig
       environment.AUTH_LOGIN_LOCK_MINUTES,
       'AUTH_LOGIN_LOCK_MINUTES',
       15,
+    ),
+    databaseUrl: environment.DATABASE_URL ?? 'postgresql://localhost:5432/koffisoft_local',
+    backupsEnabled: parseBoolean(environment.BACKUP_ENABLED, 'BACKUP_ENABLED', false),
+    backupStorageRoot: parsePath(
+      environment.BACKUP_STORAGE_ROOT,
+      'BACKUP_STORAGE_ROOT',
+      './var/backups',
+    ),
+    uploadsDirectory: parsePath(environment.UPLOADS_DIRECTORY, 'UPLOADS_DIRECTORY', './uploads'),
+    pgDumpPath: parseCommand(environment.PG_DUMP_PATH, 'PG_DUMP_PATH', 'pg_dump'),
+    tarPath: parseCommand(environment.TAR_PATH, 'TAR_PATH', 'tar'),
+    backupRetentionDays: parsePositiveNumber(
+      environment.BACKUP_RETENTION_DAYS,
+      'BACKUP_RETENTION_DAYS',
+      30,
+    ),
+    backupMaxSizeBytes: parsePositiveNumber(
+      environment.BACKUP_MAX_SIZE_BYTES,
+      'BACKUP_MAX_SIZE_BYTES',
+      50 * 1024 * 1024 * 1024,
+    ),
+    backupScheduleMinutes: parseNonNegativeNumber(
+      environment.BACKUP_SCHEDULE_MINUTES,
+      'BACKUP_SCHEDULE_MINUTES',
+      0,
     ),
   };
 }

@@ -302,4 +302,31 @@ describe('ReservationsService', () => {
     ).rejects.toThrow('ya están asignadas');
     expect(tx.reservationTable.createMany).not.toHaveBeenCalled();
   });
+
+  it('propaga errores de negocio al asignar mesas', async () => {
+    const tx = {
+      reservation: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: reservationId,
+          locationId,
+          partySize: 2,
+          startsAt: new Date('2026-10-24T00:30:00.000Z'),
+          endsAt: new Date('2026-10-24T02:30:00.000Z'),
+        }),
+      },
+      diningTable: { findMany: vi.fn().mockResolvedValue([]) },
+    };
+    const prisma = {
+      $transaction: vi.fn(async (callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+      reservation: { findUnique: vi.fn() },
+    };
+    const service = new ReservationsService(prisma as never);
+
+    await expect(service.assignTables(reservationId, { tableIds: [tableId] })).rejects.toThrow(
+      'no pertenecen a la sede',
+    );
+    expect(prisma.reservation.findUnique).not.toHaveBeenCalled();
+  });
 });

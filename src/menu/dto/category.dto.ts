@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
@@ -139,9 +140,10 @@ export class ReorderCategoryItemDto {
 
 /** Reemplaza el orden explícito de varias categorías en una sola transacción. */
 export class ReorderMenuCategoriesDto {
-  @ApiProperty({ type: () => [ReorderCategoryItemDto] })
+  @ApiProperty({ type: () => [ReorderCategoryItemDto], maxItems: 100 })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => ReorderCategoryItemDto)
   categories!: ReorderCategoryItemDto[];

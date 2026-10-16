@@ -12,6 +12,7 @@ import {
   EventQuoteLineType,
   EventSpaceBookingStatus,
   EventStatus,
+  PublicationStatus,
   QuoteStatus,
 } from '../generated/prisma/enums.js';
 import {
@@ -39,6 +40,7 @@ import {
   EventSpaceBookingResponseDto,
   PublicEventCatalogResponseDto,
   PublicEventRequestResponseDto,
+  PublicPublishedEventDto,
   PublicEventSpaceDto,
 } from './dto/event-response.dto.js';
 
@@ -105,6 +107,44 @@ export class EventsService {
         maxGuestCount: pkg.maxGuestCount,
       })),
     };
+  }
+
+  async getPublicEvents(locationId: string): Promise<PublicPublishedEventDto[]> {
+    const location = await this.prisma.location.findFirst({
+      where: { id: locationId, active: true },
+      select: { id: true },
+    });
+    if (!location) throw new NotFoundException('Sede no encontrada.');
+
+    const now = new Date();
+    const rows = await this.prisma.event.findMany({
+      where: {
+        locationId,
+        status: { not: EventStatus.Cancelled },
+        publicationStatus: PublicationStatus.Published,
+        publishedAt: { lte: now },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
+      orderBy: [{ startsAt: 'asc' }, { title: 'asc' }],
+      select: {
+        id: true,
+        locationId: true,
+        eventCode: true,
+        eventType: true,
+        title: true,
+        startsAt: true,
+        endsAt: true,
+        estimatedGuestCount: true,
+        publicationStatus: true,
+        publishedAt: true,
+      },
+    });
+    return rows.map((row) => ({
+      ...row,
+      startsAt: row.startsAt.toISOString(),
+      endsAt: row.endsAt.toISOString(),
+      publishedAt: row.publishedAt!.toISOString(),
+    }));
   }
 
   async createPublicEventRequest(
@@ -215,19 +255,20 @@ export class EventsService {
   async updateEvent(id: string, dto: UpdateEventDto): Promise<EventResponseDto> {
     const current = await this.prisma.event.findUnique({
       where: { id },
-      select: { startsAt: true, endsAt: true, setupStartsAt: true },
+      select: {
+        startsAt: true,
+        endsAt: true,
+        setupStartsAt: true,
+        estimatedGuestCount: true,
+        confirmedGuestCount: true,
+      },
     });
     if (!current) throw new NotFoundException('Evento no encontrado.');
     const startsAt = dto.startsAt ? new Date(dto.startsAt) : current.startsAt;
     const endsAt = dto.endsAt ? new Date(dto.endsAt) : current.endsAt;
-    const currentEvent = await this.prisma.event.findUnique({
-      where: { id },
-      select: { estimatedGuestCount: true, confirmedGuestCount: true },
-    });
-    if (!currentEvent) throw new NotFoundException('Evento no encontrado.');
     validateGuestRange(
-      dto.estimatedGuestCount ?? currentEvent.estimatedGuestCount,
-      dto.confirmedGuestCount ?? currentEvent.confirmedGuestCount ?? undefined,
+      dto.estimatedGuestCount ?? current.estimatedGuestCount,
+      dto.confirmedGuestCount ?? current.confirmedGuestCount ?? undefined,
     );
     validateNonNegativeDecimal(dto.budgetTarget, 'El presupuesto');
     validateInterval(
@@ -699,6 +740,10 @@ export class EventsService {
       confirmedGuestCount: row.confirmedGuestCount,
       budgetTarget: row.budgetTarget?.toString() ?? null,
       status: row.status,
+      publicationStatus: row.publicationStatus,
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+      scheduledAt: row.scheduledAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt?.toISOString() ?? null,
       source: row.source,
       specialRequirements: row.specialRequirements,
       internalNotes: row.internalNotes,

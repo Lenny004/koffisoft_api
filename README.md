@@ -30,6 +30,17 @@
 
 <!-- section:highlights -->
 
+- **Estadísticas sin cookies:** `POST /analytics/page-view` agrega visitas por día sin IP ni identificadores; los reportes requieren `analytics.read` y alcance de sede.
+
+- **Publicacion editorial:** avisos, eventos y platos admiten borrador,
+  programacion, expiracion y preview temporal; ve [docs/publicacion.md](docs/publicacion.md).
+
+- **Bandeja de contacto:** recibe mensajes publicos con honeypot, limite por IP,
+  deduplicacion, estados, conversiones y auditoria por sede.
+- **Sitio editable por sede:** `GET /site` público y `/site/admin` protegido actualizan horarios, contacto, hero, Nosotros y redes con auditoría.
+- **SEO editorial:** `GET /seo`, administración protegida y feeds `sitemap.xml`/`robots.txt` se generan desde contenido publicado.
+- **Respaldos operativos:** jobs de `pg_dump`, uploads o respaldo completo con checksum, retención y descarga autenticada; ve [docs/backups.md](docs/backups.md).
+
 ## 🌟 Aspectos destacados
 
 - **Sesiones server-side:** las sesiones usan cookies HttpOnly, rotación de token, expiraciones y revocación.
@@ -39,6 +50,8 @@
 - **Catálogo de menú:** la carta web y la administración de categorías, ítems, variantes, precios, alérgenos, disponibilidad y modificadores viven en la API.
 - **Reservas y eventos:** disponibilidad pública, creación administrativa, mesas, espacios, solicitudes de eventos, paquetes y cotizaciones versionadas usan los modelos reales del dominio.
 - **Avisos importantes:** publicación pública por sede y CRUD administrativo con ventanas de vigencia.
+- **Administración de acceso:** CRUD de usuarios y empleados, asignación de roles con autoridad y alcance de negocio, MFA, bloqueo y auditoría de cambios sensibles.
+- **Inventario P1:** ingredientes, proveedores, recepciones, lotes, movimientos, alertas de saldo/vencimiento y recetas versionadas con alcance por sede e invariantes de stock.
 
 <!-- section:overview -->
 
@@ -48,9 +61,12 @@
 
 El alcance aprobado incluye NestJS sobre Fastify, el endpoint público `GET /health/live`, la carta pública `GET /menu`, reservas de mesa, eventos privados y el módulo de autenticación y autorización de la Fase 1. Los contratos compartidos y los trabajos de correo, QR y PDF quedan sujetos a sus fases y planes aprobados. El repositorio legacy se usa como referencia de solo lectura y no se copian sus credenciales, hashes, datos ni código.
 
-Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía del catálogo en [docs/menu.md](docs/menu.md), las guías de [reservas](docs/reservations.md) y [eventos](docs/events.md), y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
+Consulta la guía de autenticación en [docs/auth.md](docs/auth.md), la guía de [usuarios y empleados](docs/users.md), la guía del catálogo en [docs/menu.md](docs/menu.md), las guías de [reservas](docs/reservations.md), [eventos](docs/events.md), [SEO](docs/seo.md), [inventario](docs/inventory.md) y [respaldos](docs/backups.md), y el diseño de la base de datos en [docs/database/database-design.md](docs/database/database-design.md).
 
 **Stack:** Node.js 24.13.0, pnpm 11.1.3, NestJS 12.1.2, Fastify 5.12.5, TypeScript 5.9.3, Prisma 7.10.0 y PostgreSQL.
+
+La captura y los reportes anónimos de visitas están documentados en
+[docs/analytics.md](docs/analytics.md).
 
 <!-- section:requirements -->
 
@@ -110,6 +126,8 @@ El módulo de autenticación expone estos endpoints; los cuerpos, estados, cooki
 - `POST /auth/mfa/recovery-codes`
 - `POST /auth/password`
 
+La administración de usuarios, empleados, roles y permisos está documentada en [docs/users.md](docs/users.md) y usa las rutas protegidas bajo `/users/admin` y `/employees/admin`.
+
 El módulo de menú expone la carta pública y las rutas administrativas documentadas en [docs/menu.md](docs/menu.md). Una consulta mínima de la carta es:
 
 ```bash
@@ -118,35 +136,55 @@ curl "http://localhost:3000/menu?locationId=TU_LOCATION_ID"
 
 Las consultas públicas de disponibilidad y el catálogo de eventos están documentados en [docs/reservations.md](docs/reservations.md) y [docs/events.md](docs/events.md).
 
+SEO público y administración editorial se documentan en [docs/seo.md](docs/seo.md). Los feeds son `GET /sitemap.xml` y `GET /robots.txt`.
+
+El módulo administrativo de inventario, proveedores, recepciones, movimientos y recetas está documentado en [docs/inventory.md](docs/inventory.md).
+
+El módulo de respaldos administrativos usa `POST`, `GET`, `GET /download` y
+`DELETE` bajo `/backups/admin`; los permisos, variables del VPS y retención se
+detallan en [docs/backups.md](docs/backups.md).
+
 <!-- section:configuration -->
 
 ## ⚙️ Configuración
 
 La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los uses como secretos de producción.
 
-| Variable                   | Descripción                                                             | Ejemplo                                        | Requerida |
-| -------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------- | --------- |
-| `NODE_ENV`                 | Entorno de ejecución y activación de Swagger fuera de producción.       | `development`                                  | No        |
-| `HOST`                     | Interfaz donde escucha el servidor.                                     | `0.0.0.0`                                      | No        |
-| `PORT`                     | Puerto HTTP de la API.                                                  | `3000`                                         | No        |
-| `DATABASE_URL`             | URL de PostgreSQL usada por la aplicación y las migraciones.            | `postgresql://localhost:5432/koffisoft_local`  | No        |
-| `SHADOW_DATABASE_URL`      | URL opcional de una base separada para `migrate dev` y `migrate diff`.  | `postgresql://localhost:5432/koffisoft_shadow` | No        |
-| `DATABASE_CONNECT_ON_BOOT` | Indica si Prisma conecta durante el arranque.                           | `false`                                        | No        |
-| `CORS_ORIGIN`              | Lista exacta, separada por comas, de orígenes HTTP(S) permitidos.       | `http://localhost:5173`                        | No        |
-| `COOKIE_SECURE`            | Activa `Secure` y el prefijo `__Host-` aplicable a la cookie de sesión. | `false`                                        | No        |
-| `SESSION_COOKIE_NAME`      | Nombre base de la cookie de sesión.                                     | `koffisoft_session`                            | No        |
-| `MFA_ENCRYPTION_KEY`       | Llave Base64 de exactamente 32 bytes para cifrar secretos TOTP.         | `REPLACE_WITH_BASE64_32_BYTE_KEY`              | Sí        |
-| `MFA_KEY_VERSION`          | Versión de la llave usada para cifrar factores MFA.                     | `1`                                            | No        |
-| `MFA_REQUIRED_ROLES`       | Roles que deben tener TOTP activo, separados por comas.                 | `owner,admin,manager`                          | No        |
-| `SESSION_IDLE_MINUTES`     | Minutos de inactividad antes de expirar una sesión.                     | `30`                                           | No        |
-| `SESSION_ABSOLUTE_HOURS`   | Límite absoluto de vida de una sesión en horas.                         | `8`                                            | No        |
-| `AUTH_LOGIN_MAX_ATTEMPTS`  | Intentos fallidos antes del bloqueo temporal.                           | `5`                                            | No        |
-| `AUTH_LOGIN_LOCK_MINUTES`  | Duración del bloqueo temporal en minutos.                               | `15`                                           | No        |
-| `TEST_DATABASE_URL`        | URL de la base aislada que habilita las pruebas e2e de auth.            | `postgresql://localhost:5432/koffisoft_test`   | No        |
+| Variable                   | Descripción                                                               | Ejemplo                                        | Requerida |
+| -------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- | --------- |
+| `NODE_ENV`                 | Entorno de ejecución y activación de Swagger fuera de producción.         | `development`                                  | No        |
+| `HOST`                     | Interfaz donde escucha el servidor.                                       | `0.0.0.0`                                      | No        |
+| `PORT`                     | Puerto HTTP de la API.                                                    | `3000`                                         | No        |
+| `DATABASE_URL`             | URL de PostgreSQL usada por la aplicación y las migraciones.              | `postgresql://localhost:5432/koffisoft_local`  | No        |
+| `SHADOW_DATABASE_URL`      | URL opcional de una base separada para `migrate dev` y `migrate diff`.    | `postgresql://localhost:5432/koffisoft_shadow` | No        |
+| `DATABASE_CONNECT_ON_BOOT` | Indica si Prisma conecta durante el arranque.                             | `false`                                        | No        |
+| `CORS_ORIGIN`              | Lista exacta de orígenes permitidos; en producción todos deben ser HTTPS. | `http://localhost:5173`                        | No        |
+| `PUBLIC_SITE_URL`          | Origen público para canonical, Open Graph, sitemap y robots.              | `http://localhost:5173`                        | No        |
+| `COOKIE_SECURE`            | Activa `Secure`; debe ser `true` en producción y habilita `__Host-`.      | `false`                                        | No        |
+| `SESSION_COOKIE_NAME`      | Nombre base de la cookie de sesión.                                       | `koffisoft_session`                            | No        |
+| `MFA_ENCRYPTION_KEY`       | Llave Base64 de exactamente 32 bytes para cifrar secretos TOTP.           | `REPLACE_WITH_BASE64_32_BYTE_KEY`              | Sí        |
+| `MFA_KEY_VERSION`          | Versión de la llave usada para cifrar factores MFA.                       | `1`                                            | No        |
+| `MFA_REQUIRED_ROLES`       | Roles que deben tener TOTP activo, separados por comas.                   | `owner,admin,manager`                          | No        |
+| `SESSION_IDLE_MINUTES`     | Minutos de inactividad antes de expirar una sesión.                       | `30`                                           | No        |
+| `SESSION_ABSOLUTE_HOURS`   | Límite absoluto de vida de una sesión en horas.                           | `8`                                            | No        |
+| `AUTH_LOGIN_MAX_ATTEMPTS`  | Intentos fallidos antes del bloqueo temporal.                             | `5`                                            | No        |
+| `AUTH_LOGIN_LOCK_MINUTES`  | Duración del bloqueo temporal en minutos.                                 | `15`                                           | No        |
+| `TEST_DATABASE_URL`        | URL de la base aislada que habilita las pruebas e2e de auth.              | `postgresql://localhost:5432/koffisoft_test`   | No        |
+| `BACKUP_ENABLED`           | Habilita generación manual y scheduler de respaldos.                      | `false`                                        | No        |
+| `BACKUP_STORAGE_ROOT`      | Directorio privado donde se guardan artefactos fuera de PostgreSQL.       | `./var/backups`                                | No        |
+| `UPLOADS_DIRECTORY`        | Carpeta de uploads/imagenes que se empaqueta.                             | `./uploads`                                    | No        |
+| `PG_DUMP_PATH`             | Comando o ruta absoluta de `pg_dump`.                                     | `pg_dump`                                      | No        |
+| `TAR_PATH`                 | Comando o ruta absoluta de `tar`.                                         | `tar`                                          | No        |
+| `BACKUP_RETENTION_DAYS`    | Días de retención antes de marcar y limpiar un job.                       | `30`                                           | No        |
+| `BACKUP_MAX_SIZE_BYTES`    | Tamaño máximo permitido por artefacto.                                    | `53687091200`                                  | No        |
+| `BACKUP_SCHEDULE_MINUTES`  | Intervalo del scheduler; `0` lo desactiva.                                | `0`                                            | No        |
 
 `DATABASE_URL` tiene un respaldo local para generar y validar Prisma, pero debe configurarse para migrar o consultar una base. `SHADOW_DATABASE_URL` nunca debe apuntar a la misma base que `DATABASE_URL`.
 
 <!-- section:structure -->
+
+El modulo `src/publication/` comparte estados editoriales, permisos, preview
+de un solo uso y transiciones automaticas para los tres tipos de contenido.
 
 ## 🗂️ Estructura del proyecto
 
@@ -154,7 +192,7 @@ La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los u
 .
 ├── .agents/skills/             # Recetas para agentes de código
 ├── .github/workflows/          # Verificación continua
-├── docs/                       # Auth, menú, base de datos y reglas de documentación
+├── docs/                       # Auth, menú, SEO, base de datos y reglas de documentación
 ├── prisma/                     # Schema, migraciones y seed SQL
 ├── scripts/                    # Utilidades de usuario y exportación OpenAPI
 ├── src/                        # Monolito modular NestJS
@@ -168,7 +206,11 @@ La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los u
 │   ├── reservations/           # Disponibilidad, reservas, espacios y mesas
 │   ├── events/                 # Eventos privados, paquetes y cotizaciones
 │   ├── announcements/          # Avisos públicos y administración editorial
-│   └── jobs/                   # Frontera reservada para trabajos futuros
+│   ├── users/                  # Usuarios, empleados, roles y permisos
+│   ├── inventory/              # Ingredientes, proveedores, movimientos y recetas
+│   ├── seo/                    # SEO editorial, sitemap, robots y defaults
+│   ├── backups/                # pg_dump, uploads, checksum, retención y stream autenticado
+│   └── jobs/                   # Frontera de trabajos adicionales
 ├── .env.example                # Variables de entorno de ejemplo
 ├── AGENTS.md                   # Reglas para agentes de código
 ├── LICENSE                     # Licencia MIT
@@ -221,7 +263,7 @@ pnpm auth:create-user -- --email=TU_CORREO_LOCAL --password=TU_CONTRASEÑA_LOCAL
 pnpm test
 ```
 
-Las pruebas unitarias cubren Argon2id, AES-256-GCM, TOTP, guards de permisos, CSRF, disponibilidad y transiciones de reservas, solapamientos de espacios, totales exactos de cotizaciones y las reglas del servicio de menú; también se verifica el endpoint `GET /health/live` sin PostgreSQL. `src/auth/auth.e2e.spec.ts`, `src/menu/menu.e2e.spec.ts`, `src/reservations/reservations.e2e.spec.ts` y `src/events/events.e2e.spec.ts` usan `Fastify.inject` y se omiten si no existe `TEST_DATABASE_URL`; al habilitarlas requieren una base de pruebas aislada con el schema y seed aplicados.
+Las pruebas unitarias cubren Argon2id, AES-256-GCM, TOTP, guards de permisos, CSRF, configuración HTTPS de producción, alcance de sedes y negocios, autoridad de roles, avisos, SEO y URLs seguras, rotación atómica de sesiones, cascada empleado-cuenta, disponibilidad y transiciones de reservas, solapamientos de espacios, totales exactos de cotizaciones, menú e idempotencia/stock por lote del inventario; también se verifica el endpoint `GET /health/live` sin PostgreSQL. Las pruebas e2e usan `Fastify.inject` y se omiten si no existe `TEST_DATABASE_URL`; al habilitarlas requieren una base de pruebas aislada con el schema y seed aplicados.
 
 La verificación completa del repositorio es:
 
@@ -242,6 +284,10 @@ pnpm build
 - [x] Módulo de menú: carta pública y administración del catálogo existente.
 - [x] Módulos de reservas y eventos: disponibilidad, mesas, espacios, paquetes y cotizaciones.
 - [x] Avisos importantes: publicación vigente y CRUD protegido por permisos.
+- [x] Bloque 2: SEO editorial por recurso, metatags públicos y feeds de descubrimiento.
+- [x] Usuarios, empleados, roles y permisos: CRUD administrativo, MFA, bloqueo y auditoría.
+- [x] Inventario P1: ingredientes, proveedores, recepciones, movimientos, alertas y recetas.
+- [x] Bloque 6: respaldos descargables de base de datos y uploads con checksum, retención y auditoría.
 - [ ] Publicar la versión aprobada de `@koffisoft/contracts` en la fase de contratos.
 - [ ] Completar endpoints de negocio únicamente después de aprobar su contrato y análisis del legacy.
 - [ ] Implementar trabajos de correo, QR y PDF dentro de la frontera jobs/outbox cuando una fase posterior los autorice.

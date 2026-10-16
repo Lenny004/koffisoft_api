@@ -10,6 +10,9 @@ export class LoginResponseDto {
   @ApiProperty({ example: false })
   requiresMfaSetup!: boolean;
 
+  @ApiProperty({ example: false })
+  mustChangePassword!: boolean;
+
   @ApiProperty({ example: '2026-10-04T18:00:00.000Z' })
   expiresAt!: string;
 }

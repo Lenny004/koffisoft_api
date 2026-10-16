@@ -29,6 +29,26 @@ INSERT INTO businesses (
     false
 );
 
+INSERT INTO business_site_profiles (
+    id, business_id, hero_eyebrow, hero_title, hero_description,
+    about_title, about_description, about_mission, about_vision, about_team,
+    social_facebook_url, social_instagram_url, social_tiktok_url
+) VALUES (
+    '11000000-0000-0000-0000-000000000001',
+    '10000000-0000-0000-0000-000000000001',
+    'Carta de la casa',
+    'Descubre los favoritos del café y la cocina de montaña',
+    'Platos, bebidas y postres publicados por la sede. Precios y disponibilidad de hoy, para elegir con calma.',
+    'Nosotros',
+    'Koffi-Soft nace como un punto de encuentro para disfrutar la montaña con los cinco sentidos.',
+    'Crear pausas memorables alrededor del café, la cocina y el paisaje de montaña, con una atención cercana para cada visita.',
+    'Ser un punto de encuentro reconocido en la Ruta Panorámica por su calidez, sus sabores y el respeto por el entorno.',
+    '[{"name":"Equipo de hospitalidad","role":"Atención y experiencia","description":"Contenido editorial de desarrollo pendiente de confirmación."},{"name":"Equipo de cocina","role":"Café y cocina","description":"Contenido editorial de desarrollo pendiente de confirmación."},{"name":"Equipo de montaña","role":"Experiencias y eventos","description":"Contenido editorial de desarrollo pendiente de confirmación."}]'::jsonb,
+    'https://www.facebook.com',
+    'https://www.instagram.com',
+    'https://www.tiktok.com'
+);
+
 INSERT INTO locations (
     id, business_id, code, name, address_line, municipality, department,
     phone, email, latitude, longitude
@@ -176,7 +196,22 @@ INSERT INTO permissions (id, code, description) VALUES
     ('80000000-0000-0000-0000-000000000047', 'dte.issue', 'Emitir documentos DTE'),
     ('80000000-0000-0000-0000-000000000048', 'reports.read', 'Consultar reportes'),
     ('80000000-0000-0000-0000-000000000049', 'important_announcements.read', 'Consultar avisos importantes'),
-    ('80000000-0000-0000-0000-000000000050', 'important_announcements.manage', 'Administrar avisos importantes');
+    ('80000000-0000-0000-0000-000000000050', 'important_announcements.manage', 'Administrar avisos importantes'),
+    ('80000000-0000-0000-0000-000000000051', 'users.manage', 'Administrar cuentas y empleados'),
+    ('80000000-0000-0000-0000-000000000052', 'suppliers.manage', 'Administrar proveedores'),
+    ('80000000-0000-0000-0000-000000000053', 'site_content.read', 'Consultar contenido del sitio'),
+    ('80000000-0000-0000-0000-000000000054', 'site_content.manage', 'Administrar contenido del sitio'),
+    ('80000000-0000-0000-0000-000000000055', 'contact.read', 'Consultar mensajes de contacto'),
+    ('80000000-0000-0000-0000-000000000056', 'contact.manage', 'Gestionar mensajes y conversiones de contacto'),
+    ('80000000-0000-0000-0000-000000000057', 'seo.read', 'Consultar metadatos SEO'),
+    ('80000000-0000-0000-0000-000000000058', 'seo.manage', 'Administrar metadatos SEO'),
+    ('80000000-0000-0000-0000-000000000059', 'content.publish', 'Programar y publicar contenido editorial'),
+    ('80000000-0000-0000-0000-000000000060', 'analytics.read', 'Consultar estadisticas anonimas'),
+    ('80000000-0000-0000-0000-000000000061', 'backups.read', 'Consultar respaldos'),
+    ('80000000-0000-0000-0000-000000000062', 'backups.create', 'Generar respaldos'),
+    ('80000000-0000-0000-0000-000000000063', 'backups.download', 'Descargar respaldos'),
+    ('80000000-0000-0000-0000-000000000064', 'backups.delete', 'Eliminar respaldos')
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000001'),
@@ -229,6 +264,8 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000048'),
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000049'),
     ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000050'),
+    ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000051'),
+    ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000052'),
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000001'),
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000002'),
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000003'),
@@ -277,6 +314,8 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000046'),
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000047'),
     ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000048'),
+    ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000051'),
+    ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000052'),
     ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000001'),
     ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000003'),
     ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000004'),
@@ -319,6 +358,7 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000046'),
     ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000047'),
     ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000048'),
+    ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000052'),
     ('42000000-0000-0000-0000-000000000004', '80000000-0000-0000-0000-000000000004'),
     ('42000000-0000-0000-0000-000000000004', '80000000-0000-0000-0000-000000000014'),
     ('42000000-0000-0000-0000-000000000004', '80000000-0000-0000-0000-000000000020'),
@@ -378,7 +418,54 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
     ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000038'),
     ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000041'),
     ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000046'),
-    ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000048');
+    ('42000000-0000-0000-0000-000000000009', '80000000-0000-0000-0000-000000000048'),
+    ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000053'),
+    ('42000000-0000-0000-0000-000000000001', '80000000-0000-0000-0000-000000000054'),
+    ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000053'),
+    ('42000000-0000-0000-0000-000000000002', '80000000-0000-0000-0000-000000000054'),
+    ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000053'),
+    ('42000000-0000-0000-0000-000000000003', '80000000-0000-0000-0000-000000000054')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code IN ('contact.read', 'contact.manage')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code IN ('seo.read', 'seo.manage')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code = 'content.publish'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code = 'analytics.read'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin')
+  AND permissions.code IN ('backups.read', 'backups.create', 'backups.download', 'backups.delete')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 INSERT INTO user_roles (user_id, role_id) VALUES
     ('41000000-0000-0000-0000-000000000001', '42000000-0000-0000-0000-000000000001'),
@@ -583,6 +670,10 @@ INSERT INTO menu_items (
     ('61000000-0000-0000-0000-000000000021', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-001', 'nopal-sorbet', 'dessert', 'Nieve de nopal', 'Nopal sorbet', 'Nieve de nopal.', 'Nopal sorbet.'),
     ('61000000-0000-0000-0000-000000000022', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-002', 'corn-bread-rompope', 'dessert', 'Pan de elote con rompope de nixtamal, vainilla de Chichicaxtle, maracuyá', 'Cornbread with nixtamal rompope, Chichicaxtle vanilla, passion fruit', 'Pan de elote con rompope de nixtamal, vainilla de Chichicaxtle y maracuyá.', 'Cornbread with nixtamal rompope, Chichicaxtle vanilla and passion fruit.'),
     ('61000000-0000-0000-0000-000000000023', '60000000-0000-0000-0000-000000000006', 'DESSERT-TASTE-003', 'mamey-tartlet', 'dessert', 'Tartaleta de mamey, caviar', 'Mamey tartlet, caviar', 'Tartaleta de mamey con caviar.', 'Mamey tartlet with caviar.');
+
+UPDATE menu_items
+SET publication_status = 'published', published_at = NOW()
+WHERE active = true AND public_visible = true;
 
 INSERT INTO menu_item_variants (
     id, menu_item_id, prep_station_id, sku, name_es, name_en, is_default
@@ -1123,6 +1214,10 @@ INSERT INTO events (
         'Projector table and vegetarian meal count to be confirmed.',
         '41000000-0000-0000-0000-000000000001'
     );
+
+UPDATE events
+SET publication_status = 'published', published_at = NOW()
+WHERE status IN ('confirmed', 'in_progress', 'completed');
 
 INSERT INTO event_space_bookings (
     id, event_id, venue_space_id, starts_at, ends_at, setup_starts_at,

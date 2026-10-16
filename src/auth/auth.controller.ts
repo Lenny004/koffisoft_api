@@ -13,10 +13,14 @@ import { ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger
 import { Throttle } from '@nestjs/throttler';
 import type { FastifyReply } from 'fastify';
 
-import type { AuthenticatedRequest } from './auth.types.js';
+import type { AuthContext, AuthenticatedRequest } from './auth.types.js';
 import { AuthService } from './auth.service.js';
 import { requestMetadata } from './auth.types.js';
-import { AllowMfaEnrollment, AllowMfaPending } from './decorators/auth-flow.decorator.js';
+import {
+  AllowMfaEnrollment,
+  AllowMfaPending,
+  AllowPasswordChange,
+} from './decorators/auth-flow.decorator.js';
 import { Public } from './decorators/public.decorator.js';
 import { LoginResponseDto, MeResponseDto } from './dto/auth-response.dto.js';
 import {
@@ -71,6 +75,7 @@ export class AuthController {
       authenticated: true,
       requiresMfa: result.requiresMfa,
       requiresMfaSetup: result.requiresMfaSetup,
+      mustChangePassword: result.mustChangePassword,
       expiresAt: result.session.record.expiresAt.toISOString(),
     };
   }
@@ -97,6 +102,7 @@ export class AuthController {
       authenticated: true,
       requiresMfa: result.requiresMfa,
       requiresMfaSetup: result.requiresMfaSetup,
+      mustChangePassword: result.mustChangePassword,
       expiresAt: result.session.record.expiresAt.toISOString(),
     };
   }
@@ -185,11 +191,12 @@ export class AuthController {
   }
 
   @Get('me')
+  @AllowPasswordChange()
   @ApiSecurity('sessionCookie')
   @ApiOperation({ summary: 'Devuelve el usuario, roles, permisos y estado MFA' })
   @ApiResponse({ status: 200, type: MeResponseDto })
   async me(@Req() request: AuthenticatedRequest): Promise<MeResponseDto> {
-    return this.authService.me(this.requiredContext(request)) as unknown as MeResponseDto;
+    return this.authService.me(this.requiredContext(request));
   }
 
   @Post('mfa/totp/setup')
@@ -266,6 +273,7 @@ export class AuthController {
   }
 
   @Post('password')
+  @AllowPasswordChange()
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
   @ApiOperation({ summary: 'Cambia la contraseña y revoca las demás sesiones' })
@@ -284,7 +292,7 @@ export class AuthController {
     return { ok: true };
   }
 
-  private requiredContext(request: AuthenticatedRequest) {
+  private requiredContext(request: AuthenticatedRequest): AuthContext {
     if (!request.auth) {
       throw new UnauthorizedException('Autenticación requerida.');
     }

@@ -22,8 +22,23 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return;
     }
 
-    const statusCode = exception instanceof HttpException ? exception.getStatus() : 500;
-    const raw = exception instanceof HttpException ? exception.getResponse() : undefined;
+    const prismaCode = this.prismaCode(exception);
+    const statusCode =
+      exception instanceof HttpException
+        ? exception.getStatus()
+        : prismaCode === 'P2025'
+          ? 404
+          : prismaCode === 'P2002'
+            ? 409
+            : 500;
+    const raw =
+      exception instanceof HttpException
+        ? exception.getResponse()
+        : prismaCode === 'P2025'
+          ? 'El recurso no existe.'
+          : prismaCode === 'P2002'
+            ? 'El recurso ya existe.'
+            : undefined;
     const response = this.normalize(statusCode, raw, request.url);
     reply.status(statusCode).send(response);
   }
@@ -71,5 +86,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (statusCode === 409) return 'Conflict';
     if (statusCode === 429) return 'Too Many Requests';
     return 'HTTP Error';
+  }
+
+  private prismaCode(exception: unknown): string | undefined {
+    if (!exception || typeof exception !== 'object' || !('code' in exception)) return undefined;
+    const code = (exception as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
   }
 }

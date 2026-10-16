@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
+import { PublicationStatus } from '../../generated/prisma/enums.js';
+
 export class AnnouncementResponseDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
@@ -24,6 +26,18 @@ export class AnnouncementResponseDto {
 
   @ApiPropertyOptional({ format: 'date-time', nullable: true })
   endsAt!: string | null;
+
+  @ApiProperty({ enum: PublicationStatus })
+  publicationStatus!: PublicationStatus;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  publishedAt!: string | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  scheduledAt!: string | null;
+
+  @ApiPropertyOptional({ format: 'date-time', nullable: true })
+  expiresAt!: string | null;
 
   @ApiProperty()
   displayOrder!: number;

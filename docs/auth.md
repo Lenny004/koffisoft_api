@@ -1,19 +1,23 @@
 # Autenticación y autorización
 
-Este documento describe la Fase 1 de autenticación y autorización de `koffisoft_api`. La API usa sesiones server-side, cookies HttpOnly, TOTP, códigos de recuperación, roles y permisos. El módulo usa las tablas ya existentes; no agrega ni modifica migraciones.
+Este documento describe la Fase 1 de autenticación y autorización de `koffisoft_api`. La API usa sesiones server-side, cookies HttpOnly, TOTP, códigos de recuperación, roles y permisos. El módulo usa la migración `20261012150000_users_admin` para los campos de administración de usuarios y empleados.
 
 ## Decisiones de seguridad
 
 - Las contraseñas y los códigos de recuperación se almacenan con Argon2id. La configuración inicial es `memoryCost=19456 KiB`, `timeCost=2` y `parallelism=1`. El servicio verifica hashes con la biblioteca nativa y usa `needsRehash` para actualizar hashes válidos cuando cambie la política. Para un correo inexistente consume un hash Argon2id antes de responder.
-- El error de login es genérico (`Credenciales inválidas.`), sin indicar si el correo existe, está bloqueado o tiene una contraseña incorrecta. Después de `AUTH_LOGIN_MAX_ATTEMPTS` fallos se actualizan `failed_login_attempts`, `locked_at` y `locked_until` en `users`.
+- El error de login es genérico (`Credenciales inválidas.`), sin indicar si el correo existe, está bloqueado o tiene una contraseña incorrecta. El incremento de `failed_login_attempts` es atómico; después de `AUTH_LOGIN_MAX_ATTEMPTS` fallos se actualizan `locked_at` y `locked_until` en `users`.
 - Cada sesión comienza con 32 bytes aleatorios (`256 bits`) codificados como Base64URL. Solo el SHA-256 del token queda en `user_sessions`; el valor de la cookie nunca se audita ni se registra. La sesión tiene expiración absoluta y por inactividad.
-- La cookie es HttpOnly, `Path=/`, `SameSite=Lax` y usa `Secure` según `COOKIE_SECURE`. Con `COOKIE_SECURE=true`, la configuración añade el prefijo `__Host-` si el nombre no lo tenía. `Lax` mantiene protección CSRF para mutaciones y evita romper el uso normal del panel cuando el frontend y la API tienen orígenes distintos pero pertenecen al mismo sitio; la lista exacta de orígenes y la comprobación CSRF agregan una defensa independiente.
+- La cookie es HttpOnly, `Path=/`, `SameSite=Lax` y usa `Secure`. En
+  producción `COOKIE_SECURE=true` es obligatorio y la configuración añade el
+  prefijo `__Host-` si el nombre no lo tenía. En producción todos los valores
+  de `CORS_ORIGIN` también deben usar `https:`; HTTP queda limitado al entorno
+  local de desarrollo.
 - Login, verificación MFA y las operaciones de recuperación tienen límites de `@nestjs/throttler`. El almacenamiento predeterminado es local al proceso; un despliegue con varias réplicas debe sustituirlo por un almacenamiento distribuido antes de considerarlo un límite global.
 - TOTP usa los valores interoperables de las aplicaciones autenticadoras: SHA-1, seis dígitos y pasos de 30 segundos. La API acepta el paso actual y uno anterior o siguiente, pero solo puede consumir una vez cada `timeStep`; la actualización condicional de `last_used_time_step` evita carreras y replay.
 - El secreto TOTP se genera en la API, se cifra con AES-256-GCM (`iv` de 12 bytes y tag de 16 bytes) y se guarda en `user_mfa_factors`. La URI `otpauth://` se devuelve únicamente durante el alta para que el frontend cree el QR. No se guarda la URI ni se escribe el secreto en logs o auditoría.
 - El alta genera diez códigos de recuperación aleatorios. El usuario los recibe una sola vez y en la base solo quedan hashes Argon2id y `used_at`. Regenerarlos invalida los anteriores.
 - Los roles de `MFA_REQUIRED_ROLES` (`owner,admin,manager` por defecto) no pueden usar el resto de la API mientras no tengan un factor activo. Solo pueden completar `mfa/totp/setup` y `mfa/totp/confirm`. Una sesión pendiente de MFA solo puede completar TOTP o recuperación.
-- Las mutaciones con una cookie de sesión deben traer `Origin` o `Referer` cuyo origen coincida exactamente con `CORS_ORIGIN`. Sin cookie se permite un cliente no navegador como `curl` sin esos encabezados para iniciar sesión; con cookie, la ausencia de ambos encabezados se rechaza. CORS solo habilita credenciales para los orígenes configurados.
+- Todas las mutaciones deben traer `Origin` o `Referer` cuyo origen coincida exactamente con `CORS_ORIGIN`, incluso el inicio de sesión sin cookie. CORS solo habilita credenciales para los orígenes configurados.
 - `auth_events` registra resultados de login, bloqueos, MFA, recuperación, sesiones, cambios de contraseña y alta/baja de factores con IP, agente y request id. El esquema no tiene un tipo `logout` separado: logout y revocaciones se registran como `session_revoked` con una razón no sensible.
 
 ## Flujo de login y MFA
@@ -111,7 +115,7 @@ Todos los cuerpos se validan con `ValidationPipe` global, `whitelist=true`, `for
 
 ### Contraseña
 
-- `POST /auth/password`: exige `{ currentPassword, newPassword }`, requiere una sesión plenamente autenticada, guarda el nuevo hash, actualiza `password_changed_at`, revoca otras sesiones y rota la actual.
+- `POST /auth/password`: exige `{ currentPassword, newPassword }`, requiere una sesión plenamente autenticada, guarda el nuevo hash, actualiza `password_changed_at`, limpia `must_change_password`, revoca otras sesiones y rota la actual.
 - No hay restablecimiento público por correo. El panel muestra «Olvidé mi contraseña» para explicar ese límite. El envío de correo queda para la fase de jobs/outbox.
 
 ### Primer uso
@@ -132,7 +136,7 @@ getUser() {
 }
 ```
 
-`@Public()` excluye una ruta del guard de sesión. Los códigos de auth y administración de acceso del seed inicial son `auth.sessions.read`, `auth.sessions.revoke`, `auth.mfa.manage`, `auth.password.change`, `users.read`, `users.create`, `users.update`, `users.disable`, `roles.read`, `roles.manage`, `permissions.read`, `permissions.manage` y `audit_logs.read`; el seed también contiene los códigos de negocio correspondientes a las fases posteriores. Las rutas de autoservicio de esta fase validan la propiedad de la sesión y no inventan un endpoint administrativo de usuarios.
+`@Public()` excluye una ruta del guard de sesión. Los códigos de auth y administración de acceso del seed inicial son `auth.sessions.read`, `auth.sessions.revoke`, `auth.mfa.manage`, `auth.password.change`, `users.read`, `users.manage`, `roles.read`, `roles.manage`, `permissions.read`, `permissions.manage` y `audit_logs.read`; el seed también contiene los códigos de negocio correspondientes a las fases posteriores. Las rutas administrativas de usuarios están documentadas en [docs/users.md](users.md).
 
 ## Configuración y rotación de llave
 
@@ -144,7 +148,8 @@ Las sesiones usan:
 - `SESSION_ABSOLUTE_HOURS`: límite absoluto desde la creación.
 - `SESSION_COOKIE_NAME`: nombre base; con cookie segura se normaliza a `__Host-<nombre>`.
 - `COOKIE_SECURE`: `false` solo para HTTP local; `true` detrás de HTTPS.
-- `CORS_ORIGIN`: lista separada por comas de orígenes HTTP(S) exactos, sin `*` ni rutas.
+- `CORS_ORIGIN`: lista separada por comas de orígenes exactos, sin `*` ni
+  rutas; en producción todos deben ser HTTPS.
 
 ## Pruebas
 

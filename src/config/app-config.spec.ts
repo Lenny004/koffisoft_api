@@ -1,0 +1,83 @@
+import { describe, expect, it } from 'vitest';
+
+import { loadAppConfig } from './app-config.js';
+
+const key = Buffer.alloc(32, 7).toString('base64');
+
+function environment(overrides: Record<string, string | undefined> = {}) {
+  return {
+    NODE_ENV: 'development',
+    CORS_ORIGIN: 'http://localhost:5173',
+    PUBLIC_SITE_URL: 'http://localhost:5173',
+    COOKIE_SECURE: 'false',
+    MFA_ENCRYPTION_KEY: key,
+    ...overrides,
+  };
+}
+
+describe('loadAppConfig', () => {
+  it('rechaza cookies no seguras en producción', () => {
+    expect(() =>
+      loadAppConfig(environment({ NODE_ENV: 'production', CORS_ORIGIN: 'https://admin.example' })),
+    ).toThrow('COOKIE_SECURE=true');
+  });
+
+  it('rechaza CORS HTTP en producción aunque la cookie sea segura', () => {
+    expect(() =>
+      loadAppConfig(environment({ NODE_ENV: 'production', COOKIE_SECURE: 'true' })),
+    ).toThrow('CORS_ORIGIN');
+  });
+
+  it('rechaza una llave MFA con formato Base64 inválido', () => {
+    expect(() =>
+      loadAppConfig(environment({ MFA_ENCRYPTION_KEY: `${key.slice(0, -1)}!` })),
+    ).toThrow('MFA_ENCRYPTION_KEY');
+  });
+
+  it('normaliza la cookie segura a __Host- y acepta solo orígenes HTTPS', () => {
+    const config = loadAppConfig(
+      environment({
+        NODE_ENV: 'production',
+        COOKIE_SECURE: 'true',
+        CORS_ORIGIN: 'https://admin.example,https://web.example',
+      }),
+    );
+
+    expect(config.cookieName).toBe('__Host-koffisoft_session');
+    expect(config.corsOrigins).toEqual(['https://admin.example', 'https://web.example']);
+  });
+
+  it('rechaza una URL publica insegura o con credenciales', () => {
+    expect(() => loadAppConfig(environment({ PUBLIC_SITE_URL: 'javascript:alert(1)' }))).toThrow(
+      'PUBLIC_SITE_URL',
+    );
+    expect(() =>
+      loadAppConfig(environment({ PUBLIC_SITE_URL: 'https://user:pass@example.com' })),
+    ).toThrow('PUBLIC_SITE_URL');
+  });
+
+  it('carga la configuración de almacenamiento y retención de respaldos', () => {
+    const config = loadAppConfig(
+      environment({
+        BACKUP_ENABLED: 'true',
+        BACKUP_STORAGE_ROOT: './private-backups',
+        UPLOADS_DIRECTORY: './uploads',
+        BACKUP_RETENTION_DAYS: '14',
+        BACKUP_MAX_SIZE_BYTES: '1048576',
+        BACKUP_SCHEDULE_MINUTES: '60',
+      }),
+    );
+
+    expect(config.backupsEnabled).toBe(true);
+    expect(config.backupRetentionDays).toBe(14);
+    expect(config.backupMaxSizeBytes).toBe(1_048_576);
+    expect(config.backupScheduleMinutes).toBe(60);
+    expect(config.pgDumpPath).toBe('pg_dump');
+  });
+
+  it('rechaza una retención no positiva', () => {
+    expect(() => loadAppConfig(environment({ BACKUP_RETENTION_DAYS: '0' }))).toThrow(
+      'BACKUP_RETENTION_DAYS',
+    );
+  });
+});

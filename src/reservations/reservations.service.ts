@@ -351,6 +351,7 @@ export class ReservationsService {
       });
     } catch (error) {
       this.rethrowPrismaConflict(error);
+      throw error;
     }
 
     return this.getReservation(id);
@@ -578,7 +579,7 @@ export class ReservationsService {
     return rows.map((space) => {
       const eventBlocked = space.eventBookings.some((booking) => {
         if (
-          booking.bookingStatus === 'Held' &&
+          booking.bookingStatus === EventSpaceBookingStatus.Held &&
           booking.holdExpiresAt &&
           booking.holdExpiresAt <= new Date()
         ) {

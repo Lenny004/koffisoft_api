@@ -11,14 +11,17 @@ import {
 
 import {
   AuthEventType,
+  EmployeeStatus,
   JobCode,
   MfaFactorStatus,
   MfaFactorType,
   UserStatus,
 } from '../generated/prisma/enums.js';
+import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import type { AccessSnapshot, AuthContext, RequestMetadata } from './auth.types.js';
+import type { MeResponseDto } from './dto/auth-response.dto.js';
 import { ChangePasswordDto } from './dto/password.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { MfaCodeDto, MfaSetupDto, PasswordAndMfaCodeDto, RecoveryCodeDto } from './dto/mfa.dto.js';
@@ -33,6 +36,7 @@ export interface LoginResult {
   readonly session: CreatedSession;
   readonly requiresMfa: boolean;
   readonly requiresMfaSetup: boolean;
+  readonly mustChangePassword: boolean;
 }
 
 export interface MfaSessionResult {
@@ -54,6 +58,7 @@ interface LoginUser {
   readonly id: string;
   readonly passwordHash: string;
   readonly status: UserStatus;
+  readonly employee: { readonly status: EmployeeStatus } | null;
   readonly failedLoginAttempts: number;
   readonly lockedUntil: Date | null;
 }
@@ -63,7 +68,26 @@ interface RecoveryCodeMaterial {
   readonly hash: string;
 }
 
+interface ActiveMfaFactor {
+  readonly id: string;
+  readonly secretCiphertext: Uint8Array<ArrayBufferLike>;
+  readonly secretIv: Uint8Array<ArrayBufferLike>;
+  readonly secretAuthTag: Uint8Array<ArrayBufferLike>;
+  readonly keyVersion: number;
+}
+
 const GENERIC_LOGIN_ERROR = 'Credenciales inválidas.';
+
+const INITIAL_SETUP_LOCK_KEY = 71_001_001;
+const RECOVERY_CODE_COUNT = 10;
+
+interface InitialOwnerData {
+  readonly email: string;
+  readonly firstName: string;
+  readonly lastName: string;
+  readonly passwordHash: string;
+  readonly now: Date;
+}
 
 interface UsernameLookup {
   user: {
@@ -106,7 +130,9 @@ export class AuthService {
         email: true,
         status: true,
         passwordChangedAt: true,
+        mustChangePassword: true,
         emailVerifiedAt: true,
+        employee: { select: { status: true } },
         roles: {
           where: { active: true },
           select: {
@@ -145,6 +171,9 @@ export class AuthService {
     if (!user) {
       return null;
     }
+    if (user.employee && user.employee.status !== EmployeeStatus.Active) {
+      return null;
+    }
 
     const activeRoles = user.roles.filter(({ role }) => role.active);
     const roles = activeRoles.map(({ role }) => role.code);
@@ -176,6 +205,7 @@ export class AuthService {
         email: user.email,
         status: user.status,
         passwordChangedAt: user.passwordChangedAt,
+        mustChangePassword: user.mustChangePassword,
         emailVerifiedAt: user.emailVerifiedAt,
       },
       roles,
@@ -198,6 +228,7 @@ export class AuthService {
         status: true,
         failedLoginAttempts: true,
         lockedUntil: true,
+        employee: { select: { status: true } },
       },
     });
 
@@ -213,11 +244,13 @@ export class AuthService {
 
     const now = new Date();
     const locked =
-      user?.status === UserStatus.Locked && !!user.lockedUntil && user.lockedUntil > now;
+      user?.status === UserStatus.Locked && (user.lockedUntil === null || user.lockedUntil > now);
     const active =
       user?.status === UserStatus.Active || (user?.status === UserStatus.Locked && !locked);
+    const employeeActive =
+      !!user && (!user.employee || user.employee.status === EmployeeStatus.Active);
 
-    if (!user || !passwordValid || !active || locked) {
+    if (!user || !passwordValid || !active || !employeeActive || locked) {
       if (user && active && !locked && !passwordValid) {
         await this.registerLoginFailure(user, metadata, now);
       } else {
@@ -273,7 +306,12 @@ export class AuthService {
       details: { mfaPending: requiresMfa, mfaSetupRequired: requiresMfaSetup },
     });
 
-    return { session, requiresMfa, requiresMfaSetup };
+    return {
+      session,
+      requiresMfa,
+      requiresMfaSetup,
+      mustChangePassword: access.user.mustChangePassword,
+    };
   }
 
   /** true solo mientras no exista la fila única de system_setups. */
@@ -300,80 +338,9 @@ export class AuthService {
     const passwordHash = await this.passwords.hash(dto.password);
     const now = new Date();
 
-    const userId = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(71001001)`;
-      const existing = await tx.systemSetup.findUnique({
-        where: { id: 1 },
-        select: { id: true },
-      });
-      if (existing) {
-        throw new ConflictException('El sistema ya fue configurado.');
-      }
-
-      const ownerRole = await tx.role.findFirst({
-        where: { code: 'owner', active: true },
-        select: { id: true },
-      });
-      if (!ownerRole) {
-        throw new ConflictException('Falta el rol owner. Aplica la semilla antes del primer uso.');
-      }
-
-      const emailTaken = await tx.user.findFirst({
-        where: { email: { equals: email, mode: 'insensitive' } },
-        select: { id: true },
-      });
-      if (emailTaken) {
-        throw new ConflictException('Ese correo ya está registrado.');
-      }
-
-      const location = await tx.location.findFirst({
-        where: { active: true },
-        orderBy: { createdAt: 'asc' },
-        select: { id: true },
-      });
-      const username = await this.availableUsername(
-        tx as unknown as UsernameLookup,
-        firstName,
-        lastName,
-        email,
-      );
-      const employeeId = location
-        ? (
-            await tx.employee.create({
-              data: {
-                locationId: location.id,
-                employeeCode: `OWN-${randomBytes(3).toString('hex')}`,
-                firstName,
-                lastName,
-                jobCode: JobCode.Manager,
-                email,
-                hireDate: now,
-              },
-              select: { id: true },
-            })
-          ).id
-        : undefined;
-
-      const user = await tx.user.create({
-        data: {
-          employeeId,
-          username,
-          email,
-          passwordHash,
-          status: UserStatus.Active,
-          passwordChangedAt: now,
-          emailVerifiedAt: now,
-          roles: { create: { roleId: ownerRole.id, active: true } },
-        },
-        select: { id: true },
-      });
-
-      await tx.systemSetup.create({
-        data: { id: 1, ownerUserId: user.id, completedAt: now },
-      });
-
-      return user.id;
-    });
+    const userId = await this.prisma.$transaction((tx) =>
+      this.createInitialOwner(tx, { email, firstName, lastName, passwordHash, now }),
+    );
 
     if (existingToken) {
       await this.sessions.revokeToken(existingToken, 'login_rotation', metadata);
@@ -398,7 +365,12 @@ export class AuthService {
       details: { initialSetup: true, mfaSetupRequired: requiresMfaSetup },
     });
 
-    return { session, requiresMfa, requiresMfaSetup };
+    return {
+      session,
+      requiresMfa,
+      requiresMfaSetup,
+      mustChangePassword: access.user.mustChangePassword,
+    };
   }
 
   async verifyMfa(
@@ -693,6 +665,7 @@ export class AuthService {
       data: {
         passwordHash: await this.passwords.hash(dto.newPassword),
         passwordChangedAt: new Date(),
+        mustChangePassword: false,
       },
     });
 
@@ -721,7 +694,7 @@ export class AuthService {
     return this.sessions.revokeAll(context.userId, metadata, 'logout_all');
   }
 
-  me(context: AuthContext): Record<string, unknown> {
+  me(context: AuthContext): MeResponseDto {
     return {
       user: context.user,
       roles: [...context.roles],
@@ -740,29 +713,33 @@ export class AuthService {
     metadata: RequestMetadata,
     now: Date,
   ): Promise<void> {
-    const failedLoginAttempts = user.failedLoginAttempts + 1;
-    const shouldLock = failedLoginAttempts >= this.config.loginMaxAttempts;
+    const updated = await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        failedLoginAttempts: { increment: 1 },
+        lastFailedLoginAt: now,
+      },
+      select: { failedLoginAttempts: true },
+    });
+    const shouldLock = updated.failedLoginAttempts >= this.config.loginMaxAttempts;
     const lockedUntil = shouldLock
       ? new Date(now.getTime() + this.config.loginLockMinutes * 60 * 1000)
       : null;
-
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginAttempts,
-        lastFailedLoginAt: now,
-        ...(shouldLock ? { status: UserStatus.Locked, lockedAt: now, lockedUntil } : {}),
-      },
-    });
+    const locked = shouldLock
+      ? await this.prisma.user.updateMany({
+          where: { id: user.id, status: UserStatus.Active },
+          data: { status: UserStatus.Locked, lockedAt: now, lockedUntil },
+        })
+      : { count: 0 };
     await this.audit.record(AuthEventType.LoginFailed, metadata, {
       userId: user.id,
       details: { reason: 'invalid_credentials' },
     });
 
-    if (shouldLock) {
+    if (locked.count === 1) {
       await this.audit.record(AuthEventType.AccountLocked, metadata, {
         userId: user.id,
-        details: { failedLoginAttempts },
+        details: { failedLoginAttempts: updated.failedLoginAttempts },
       });
     }
   }
@@ -774,12 +751,19 @@ export class AuthService {
     });
   }
 
-  private async getActiveFactor(userId: string) {
+  private async getActiveFactor(userId: string): Promise<ActiveMfaFactor | null> {
     return this.prisma.userMfaFactor.findFirst({
       where: {
         userId,
         factorType: MfaFactorType.Totp,
         status: MfaFactorStatus.Active,
+      },
+      select: {
+        id: true,
+        secretCiphertext: true,
+        secretIv: true,
+        secretAuthTag: true,
+        keyVersion: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -844,7 +828,7 @@ export class AuthService {
 
   private async buildRecoveryCodes(): Promise<RecoveryCodeMaterial[]> {
     const codes: RecoveryCodeMaterial[] = [];
-    for (let index = 0; index < 10; index += 1) {
+    for (let index = 0; index < RECOVERY_CODE_COUNT; index += 1) {
       const plain = randomBytes(10).toString('hex').toUpperCase();
       codes.push({ plain, hash: await this.passwords.hash(plain) });
     }
@@ -884,6 +868,84 @@ export class AuthService {
     }
 
     throw new ConflictException('No se pudo reservar un nombre de usuario único.');
+  }
+
+  private async createInitialOwner(
+    tx: Prisma.TransactionClient,
+    data: InitialOwnerData,
+  ): Promise<string> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${INITIAL_SETUP_LOCK_KEY})`;
+    const existing = await tx.systemSetup.findUnique({
+      where: { id: 1 },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new ConflictException('El sistema ya fue configurado.');
+    }
+
+    const ownerRole = await tx.role.findFirst({
+      where: { code: 'owner', active: true },
+      select: { id: true },
+    });
+    if (!ownerRole) {
+      throw new ConflictException('Falta el rol owner. Aplica la semilla antes del primer uso.');
+    }
+
+    const emailTaken = await tx.user.findFirst({
+      where: { email: { equals: data.email, mode: 'insensitive' } },
+      select: { id: true },
+    });
+    if (emailTaken) {
+      throw new ConflictException('Ese correo ya está registrado.');
+    }
+
+    const location = await tx.location.findFirst({
+      where: { active: true },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    const username = await this.availableUsername(
+      tx as unknown as UsernameLookup,
+      data.firstName,
+      data.lastName,
+      data.email,
+    );
+    const employeeId = location
+      ? (
+          await tx.employee.create({
+            data: {
+              locationId: location.id,
+              employeeCode: `OWN-${randomBytes(3).toString('hex')}`,
+              firstName: data.firstName,
+              lastName: data.lastName,
+              jobCode: JobCode.Manager,
+              email: data.email,
+              hireDate: data.now,
+            },
+            select: { id: true },
+          })
+        ).id
+      : undefined;
+
+    const user = await tx.user.create({
+      data: {
+        employeeId,
+        username,
+        email: data.email,
+        passwordHash: data.passwordHash,
+        status: UserStatus.Active,
+        passwordChangedAt: data.now,
+        emailVerifiedAt: data.now,
+        roles: { create: { roleId: ownerRole.id, active: true } },
+      },
+      select: { id: true },
+    });
+
+    await tx.systemSetup.create({
+      data: { id: 1, ownerUserId: user.id, completedAt: data.now },
+    });
+
+    return user.id;
   }
 
   private async rotateContextSession(

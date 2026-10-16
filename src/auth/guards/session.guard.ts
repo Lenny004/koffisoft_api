@@ -7,6 +7,7 @@ import { requestMetadata, type AuthenticatedRequest } from '../auth.types.js';
 import {
   ALLOW_MFA_ENROLLMENT_KEY,
   ALLOW_MFA_PENDING_KEY,
+  ALLOW_PASSWORD_CHANGE_KEY,
 } from '../decorators/auth-flow.decorator.js';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator.js';
 import { AuthService } from '../auth.service.js';
@@ -59,6 +60,10 @@ export class SessionGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
+    const allowPasswordChange = this.reflector.getAllAndOverride<boolean>(
+      ALLOW_PASSWORD_CHANGE_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
     if (access.mfa.required && !access.mfa.enabled) {
       if (!allowEnrollment) {
@@ -70,6 +75,15 @@ export class SessionGuard implements CanActivate {
 
     if (!access.mfa.enabled && allowPending) {
       throw new ForbiddenException('No existe un factor MFA activo para esta sesión.');
+    }
+
+    if (
+      access.user.mustChangePassword &&
+      !allowPasswordChange &&
+      !allowPending &&
+      !allowEnrollment
+    ) {
+      throw new ForbiddenException('Debe cambiar su contraseña antes de continuar.');
     }
 
     request.auth = {

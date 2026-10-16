@@ -1,5 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsBoolean,
@@ -45,6 +46,13 @@ function parseBoolean({ value }: { value: unknown }): unknown {
 
 /** Parámetros públicos para listar paquetes de eventos visibles. */
 export class PublicEventCatalogQueryDto {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  locationId!: string;
+}
+
+/** Parámetros públicos para listar eventos editoriales vigentes. */
+export class PublicEventListQueryDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   locationId!: string;
@@ -136,11 +144,12 @@ export class EventListQueryDto {
   @IsUUID()
   locationId!: string;
 
-  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @ApiPropertyOptional({ minimum: 1, maximum: 10_000, default: 1 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(10_000)
   page = 1;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })
@@ -483,9 +492,10 @@ export class CreateEventPackageDto {
   @IsBoolean()
   active = true;
 
-  @ApiPropertyOptional({ type: () => [EventPackageLineDto] })
+  @ApiPropertyOptional({ type: () => [EventPackageLineDto], maxItems: 100 })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => EventPackageLineDto)
   lines?: EventPackageLineDto[];
@@ -564,9 +574,10 @@ export class UpdateEventPackageDto {
   @IsBoolean()
   active?: boolean;
 
-  @ApiPropertyOptional({ type: () => [EventPackageLineDto] })
+  @ApiPropertyOptional({ type: () => [EventPackageLineDto], maxItems: 100 })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => EventPackageLineDto)
   lines?: EventPackageLineDto[];
@@ -668,9 +679,10 @@ export class CreateEventQuoteDto {
   @Transform(trimValue)
   termsEn?: string;
 
-  @ApiProperty({ type: () => [EventQuoteLineDto] })
+  @ApiProperty({ type: () => [EventQuoteLineDto], maxItems: 100 })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(100)
   @ValidateNested({ each: true })
   @Type(() => EventQuoteLineDto)
   lines!: EventQuoteLineDto[];

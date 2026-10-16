@@ -65,11 +65,15 @@ databaseTests('auth HTTP con Fastify inject', () => {
   });
 
   it('ejecuta login, alta TOTP, recuperación de sesión, replay y logout', async () => {
-    const login = await app.getHttpAdapter().getInstance().inject({
-      method: 'POST',
-      url: '/auth/login',
-      payload: { email, password },
-    });
+    const login = await app
+      .getHttpAdapter()
+      .getInstance()
+      .inject({
+        method: 'POST',
+        url: '/auth/login',
+        headers: { origin: 'http://localhost:5173' },
+        payload: { email, password },
+      });
     expect(login.statusCode).toBe(200);
     const initialCookie = cookieFrom(login.headers['set-cookie']);
 
@@ -101,11 +105,15 @@ databaseTests('auth HTTP con Fastify inject', () => {
     const recoveryCode = (confirm.json() as { recoveryCodes: string[] }).recoveryCodes[0];
     expect(recoveryCode).toMatch(/^[A-Z0-9]{20}$/u);
 
-    const secondLogin = await app.getHttpAdapter().getInstance().inject({
-      method: 'POST',
-      url: '/auth/login',
-      payload: { email, password },
-    });
+    const secondLogin = await app
+      .getHttpAdapter()
+      .getInstance()
+      .inject({
+        method: 'POST',
+        url: '/auth/login',
+        headers: { origin: 'http://localhost:5173' },
+        payload: { email, password },
+      });
     expect(secondLogin.statusCode).toBe(200);
     expect(secondLogin.json()).toMatchObject({ requiresMfa: true });
     const pendingCookie = cookieFrom(secondLogin.headers['set-cookie']);
@@ -143,11 +151,15 @@ databaseTests('auth HTTP con Fastify inject', () => {
       });
     expect(logout.statusCode).toBe(200);
 
-    const replayLogin = await app.getHttpAdapter().getInstance().inject({
-      method: 'POST',
-      url: '/auth/login',
-      payload: { email, password },
-    });
+    const replayLogin = await app
+      .getHttpAdapter()
+      .getInstance()
+      .inject({
+        method: 'POST',
+        url: '/auth/login',
+        headers: { origin: 'http://localhost:5173' },
+        payload: { email, password },
+      });
     const replay = await app
       .getHttpAdapter()
       .getInstance()
@@ -183,6 +195,7 @@ databaseTests('auth HTTP con Fastify inject', () => {
       .inject({
         method: 'POST',
         url: '/auth/login',
+        headers: { origin: 'http://localhost:5173' },
         payload: { email, password: 'Wrong Password 123!' },
       });
 

@@ -7,11 +7,18 @@ import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swag
 import { AuthModule } from './auth/auth.module.js';
 import { AnnouncementsModule } from './announcements/announcements.module.js';
 import { APP_CONFIG, type AppConfig } from './config/app-config.js';
+import { ContactModule } from './contact/contact.module.js';
 import { HttpExceptionFilter } from './common/http-exception.filter.js';
 import { EventsModule } from './events/events.module.js';
 import { AppModule } from './app.module.js';
+import { InventoryModule } from './inventory/inventory.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { ReservationsModule } from './reservations/reservations.module.js';
+import { SiteModule } from './site/site.module.js';
+import { SeoModule } from './seo/seo.module.js';
+import { UsersModule } from './users/users.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
+import { BackupsModule } from './backups/backups.module.js';
 
 export async function createApplication(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
@@ -55,7 +62,20 @@ export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObjec
     .build();
 
   return SwaggerModule.createDocument(app, options, {
-    include: [AuthModule, MenuModule, ReservationsModule, EventsModule, AnnouncementsModule],
+    include: [
+      AuthModule,
+      ContactModule,
+      MenuModule,
+      ReservationsModule,
+      EventsModule,
+      AnnouncementsModule,
+      SiteModule,
+      SeoModule,
+      UsersModule,
+      AnalyticsModule,
+      InventoryModule,
+      BackupsModule,
+    ],
   });
 }
 

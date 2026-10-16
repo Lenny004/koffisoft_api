@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 
 import { PrismaService } from '../database/prisma.service.js';
+import { PublicationStatus } from '../generated/prisma/enums.js';
 import type {
   AnnouncementListQueryDto,
   CreateAnnouncementDto,
@@ -20,8 +21,13 @@ export class AnnouncementsService {
       where: {
         locationId: query.locationId,
         active: true,
+        publicationStatus: PublicationStatus.Published,
+        publishedAt: { lte: now },
         OR: [{ startsAt: null }, { startsAt: { lte: now } }],
-        AND: [{ OR: [{ endsAt: null }, { endsAt: { gt: now } }] }],
+        AND: [
+          { OR: [{ endsAt: null }, { endsAt: { gt: now } }] },
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+        ],
       },
       orderBy: [{ displayOrder: 'asc' }, { createdAt: 'desc' }],
     });
@@ -38,6 +44,7 @@ export class AnnouncementsService {
 
   async create(dto: CreateAnnouncementDto): Promise<AnnouncementResponseDto> {
     this.validateDates(dto.startsAt, dto.endsAt);
+    const ctaUrl = validateCtaUrl(dto.ctaUrl);
     await this.requireLocation(dto.locationId);
     const row = await this.prisma.importantAnnouncement.create({
       data: {
@@ -45,7 +52,7 @@ export class AnnouncementsService {
         title: dto.title,
         message: dto.message,
         ctaLabel: dto.ctaLabel || null,
-        ctaUrl: dto.ctaUrl || null,
+        ctaUrl,
         startsAt: this.toDate(dto.startsAt),
         endsAt: this.toDate(dto.endsAt),
         displayOrder: dto.displayOrder,
@@ -55,32 +62,47 @@ export class AnnouncementsService {
     return this.toResponse(row);
   }
 
-  async update(id: string, dto: UpdateAnnouncementDto): Promise<AnnouncementResponseDto> {
-    const current = await this.prisma.importantAnnouncement.findUnique({ where: { id } });
+  async update(
+    id: string,
+    locationId: string,
+    dto: UpdateAnnouncementDto,
+  ): Promise<AnnouncementResponseDto> {
+    const current = await this.prisma.importantAnnouncement.findFirst({
+      where: { id, locationId },
+    });
     if (!current) throw new NotFoundException('Aviso importante no encontrado.');
     const startsAt = dto.startsAt === undefined ? current.startsAt : this.toDate(dto.startsAt);
     const endsAt = dto.endsAt === undefined ? current.endsAt : this.toDate(dto.endsAt);
     this.validateDates(startsAt?.toISOString(), endsAt?.toISOString());
-    const row = await this.prisma.importantAnnouncement.update({
-      where: { id },
+    const ctaUrl = dto.ctaUrl === undefined ? undefined : validateCtaUrl(dto.ctaUrl);
+    const result = await this.prisma.importantAnnouncement.updateMany({
+      where: { id, locationId },
       data: {
         ...(dto.title === undefined ? {} : { title: dto.title }),
         ...(dto.message === undefined ? {} : { message: dto.message }),
         ...(dto.ctaLabel === undefined ? {} : { ctaLabel: dto.ctaLabel || null }),
-        ...(dto.ctaUrl === undefined ? {} : { ctaUrl: dto.ctaUrl || null }),
+        ...(ctaUrl === undefined ? {} : { ctaUrl }),
         ...(dto.startsAt === undefined ? {} : { startsAt }),
         ...(dto.endsAt === undefined ? {} : { endsAt }),
         ...(dto.displayOrder === undefined ? {} : { displayOrder: dto.displayOrder }),
         ...(dto.active === undefined ? {} : { active: dto.active }),
       },
     });
+    if (result.count !== 1) throw new NotFoundException('Aviso importante no encontrado.');
+    const row = await this.prisma.importantAnnouncement.findFirstOrThrow({
+      where: { id, locationId },
+    });
     return this.toResponse(row);
   }
 
-  async remove(id: string): Promise<AnnouncementResponseDto> {
-    const row = await this.prisma.importantAnnouncement.update({
-      where: { id },
+  async remove(id: string, locationId: string): Promise<AnnouncementResponseDto> {
+    const result = await this.prisma.importantAnnouncement.updateMany({
+      where: { id, locationId },
       data: { active: false },
+    });
+    if (result.count !== 1) throw new NotFoundException('Aviso importante no encontrado.');
+    const row = await this.prisma.importantAnnouncement.findFirstOrThrow({
+      where: { id, locationId },
     });
     return this.toResponse(row);
   }
@@ -116,6 +138,10 @@ export class AnnouncementsService {
     ctaUrl: string | null;
     startsAt: Date | null;
     endsAt: Date | null;
+    publicationStatus: PublicationStatus;
+    publishedAt: Date | null;
+    scheduledAt: Date | null;
+    expiresAt: Date | null;
     displayOrder: number;
     active: boolean;
     createdAt: Date;
@@ -130,10 +156,47 @@ export class AnnouncementsService {
       ctaUrl: row.ctaUrl,
       startsAt: row.startsAt?.toISOString() ?? null,
       endsAt: row.endsAt?.toISOString() ?? null,
+      publicationStatus: row.publicationStatus,
+      publishedAt: row.publishedAt?.toISOString() ?? null,
+      scheduledAt: row.scheduledAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt?.toISOString() ?? null,
       displayOrder: row.displayOrder,
       active: row.active,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
     };
   }
+}
+
+/** Solo permite rutas internas o URL absolutas HTTP(S) para enlaces editoriales. */
+export function validateCtaUrl(value?: string | null): string | null {
+  if (value === undefined || value === null || value.trim() === '') return null;
+  const candidate = value.trim();
+  if (/[\u0000-\u001f\u007f\\]/u.test(candidate)) {
+    throw new BadRequestException(
+      'El enlace del botón debe ser una URL HTTP(S) o una ruta relativa.',
+    );
+  }
+  if (candidate.startsWith('/')) {
+    if (candidate.startsWith('//')) {
+      throw new BadRequestException(
+        'El enlace del botón debe ser una URL HTTP(S) o una ruta relativa.',
+      );
+    }
+    return candidate;
+  }
+  let parsed: URL;
+  try {
+    parsed = new URL(candidate);
+  } catch {
+    throw new BadRequestException(
+      'El enlace del botón debe ser una URL HTTP(S) o una ruta relativa.',
+    );
+  }
+  if (!['http:', 'https:'].includes(parsed.protocol) || !/^https?:\/\//iu.test(candidate)) {
+    throw new BadRequestException(
+      'El enlace del botón debe ser una URL HTTP(S) o una ruta relativa.',
+    );
+  }
+  return candidate;
 }

@@ -28,13 +28,8 @@ export class CsrfGuard implements CanActivate {
       (value): value is string => value !== undefined,
     );
 
-    // Clientes no navegador como curl pueden omitirlos al iniciar sesión, cuando
-    // todavía no existe una cookie de sesión que proteger.
     if (origins.length === 0) {
-      if (request.cookies?.[this.config.cookieName]) {
-        throw new ForbiddenException('Falta el origen de la solicitud.');
-      }
-      return true;
+      throw new ForbiddenException('Falta el origen de la solicitud.');
     }
 
     if (origins.some((requestOrigin) => !this.config.corsOrigins.includes(requestOrigin))) {

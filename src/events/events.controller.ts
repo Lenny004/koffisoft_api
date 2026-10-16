@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -24,6 +25,7 @@ import {
   EventListQueryDto,
   EventPackageListQueryDto,
   PublicEventCatalogQueryDto,
+  PublicEventListQueryDto,
   UpdateEventDto,
   UpdateEventPackageDto,
   UpdateEventQuoteStatusDto,
@@ -38,6 +40,7 @@ import {
   EventResponseDto,
   EventSpaceBookingResponseDto,
   PublicEventCatalogResponseDto,
+  PublicPublishedEventDto,
   PublicEventRequestResponseDto,
 } from './dto/event-response.dto.js';
 import { EventsService } from './events.service.js';
@@ -56,6 +59,14 @@ export class EventsController {
     @Query() query: PublicEventCatalogQueryDto,
   ): Promise<PublicEventCatalogResponseDto> {
     return this.service.getPublicCatalog(query.locationId);
+  }
+
+  @Get('public')
+  @Public()
+  @ApiOperation({ summary: 'Lista eventos editoriales públicos vigentes' })
+  @ApiResponse({ status: 200, type: [PublicPublishedEventDto] })
+  async publicList(@Query() query: PublicEventListQueryDto): Promise<PublicPublishedEventDto[]> {
+    return this.service.getPublicEvents(query.locationId);
   }
 
   @Post()
@@ -83,7 +94,7 @@ export class EventsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un evento y sus espacios y requisitos' })
   @ApiResponse({ status: 200, type: EventResponseDto })
-  async get(@Param('id') id: string): Promise<EventResponseDto> {
+  async get(@Param('id', ParseUUIDPipe) id: string): Promise<EventResponseDto> {
     return this.service.getEvent(id);
   }
 
@@ -102,7 +113,10 @@ export class EventsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Actualiza un evento' })
   @ApiResponse({ status: 200, type: EventResponseDto })
-  async update(@Param('id') id: string, @Body() dto: UpdateEventDto): Promise<EventResponseDto> {
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateEventDto,
+  ): Promise<EventResponseDto> {
     return this.service.updateEvent(id, dto);
   }
 
@@ -112,7 +126,7 @@ export class EventsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Cancela lógicamente un evento' })
   @ApiResponse({ status: 200, type: EventResponseDto })
-  async delete(@Param('id') id: string): Promise<EventResponseDto> {
+  async delete(@Param('id', ParseUUIDPipe) id: string): Promise<EventResponseDto> {
     return this.service.deleteEvent(id);
   }
 
@@ -123,7 +137,7 @@ export class EventsController {
   @ApiOperation({ summary: 'Reserva un espacio para un evento sin solapamiento' })
   @ApiResponse({ status: 201, type: EventSpaceBookingResponseDto })
   async bookSpace(
-    @Param('eventId') eventId: string,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
     @Body() dto: CreateEventSpaceBookingDto,
   ): Promise<EventSpaceBookingResponseDto> {
     return this.service.createSpaceBooking(eventId, dto);
@@ -135,7 +149,9 @@ export class EventsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Libera lógicamente una reserva de espacio' })
   @ApiResponse({ status: 200, type: EventSpaceBookingResponseDto })
-  async releaseSpace(@Param('id') id: string): Promise<EventSpaceBookingResponseDto> {
+  async releaseSpace(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<EventSpaceBookingResponseDto> {
     return this.service.releaseSpaceBooking(id);
   }
 
@@ -154,7 +170,7 @@ export class EventsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un paquete y sus líneas' })
   @ApiResponse({ status: 200, type: EventPackageResponseDto })
-  async getPackage(@Param('id') id: string): Promise<EventPackageResponseDto> {
+  async getPackage(@Param('id', ParseUUIDPipe) id: string): Promise<EventPackageResponseDto> {
     return this.service.getPackage(id);
   }
 
@@ -174,7 +190,7 @@ export class EventsController {
   @ApiOperation({ summary: 'Actualiza un paquete y reemplaza sus líneas opcionalmente' })
   @ApiResponse({ status: 200, type: EventPackageResponseDto })
   async updatePackage(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEventPackageDto,
   ): Promise<EventPackageResponseDto> {
     return this.service.updatePackage(id, dto);
@@ -186,7 +202,7 @@ export class EventsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva lógicamente un paquete' })
   @ApiResponse({ status: 200, type: EventPackageResponseDto })
-  async deletePackage(@Param('id') id: string): Promise<EventPackageResponseDto> {
+  async deletePackage(@Param('id', ParseUUIDPipe) id: string): Promise<EventPackageResponseDto> {
     return this.service.deletePackage(id);
   }
 
@@ -196,7 +212,7 @@ export class EventsController {
   @ApiParam({ name: 'eventId', format: 'uuid' })
   @ApiOperation({ summary: 'Lista las versiones de cotización de un evento' })
   @ApiResponse({ status: 200, type: EventQuotePageDto })
-  async listQuotes(@Param('eventId') eventId: string): Promise<EventQuotePageDto> {
+  async listQuotes(@Param('eventId', ParseUUIDPipe) eventId: string): Promise<EventQuotePageDto> {
     return this.service.listQuotes(eventId);
   }
 
@@ -206,7 +222,7 @@ export class EventsController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta una cotización y sus líneas calculadas' })
   @ApiResponse({ status: 200, type: EventQuoteResponseDto })
-  async getQuote(@Param('id') id: string): Promise<EventQuoteResponseDto> {
+  async getQuote(@Param('id', ParseUUIDPipe) id: string): Promise<EventQuoteResponseDto> {
     return this.service.getQuote(id);
   }
 
@@ -217,7 +233,7 @@ export class EventsController {
   @ApiOperation({ summary: 'Crea una nueva versión de cotización y calcula sus totales' })
   @ApiResponse({ status: 201, type: EventQuoteResponseDto })
   async createQuote(
-    @Param('eventId') eventId: string,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
     @Body() dto: CreateEventQuoteDto,
   ): Promise<EventQuoteResponseDto> {
     return this.service.createQuote(eventId, dto);
@@ -230,7 +246,7 @@ export class EventsController {
   @ApiOperation({ summary: 'Cambia el estado de una cotización' })
   @ApiResponse({ status: 200, type: EventQuoteResponseDto })
   async updateQuoteStatus(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEventQuoteStatusDto,
   ): Promise<EventQuoteResponseDto> {
     return this.service.updateQuoteStatus(id, dto);
@@ -243,7 +259,7 @@ export class EventsController {
   @ApiOperation({ summary: 'Agrega un requisito operativo al evento' })
   @ApiResponse({ status: 201, type: EventRequirementResponseDto })
   async createRequirement(
-    @Param('eventId') eventId: string,
+    @Param('eventId', ParseUUIDPipe) eventId: string,
     @Body() dto: CreateEventRequirementDto,
   ): Promise<EventRequirementResponseDto> {
     return this.service.createRequirement(eventId, dto);
@@ -256,7 +272,7 @@ export class EventsController {
   @ApiOperation({ summary: 'Actualiza o resuelve un requisito' })
   @ApiResponse({ status: 200, type: EventRequirementResponseDto })
   async updateRequirement(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateEventRequirementDto,
   ): Promise<EventRequirementResponseDto> {
     return this.service.updateRequirement(id, dto);
@@ -269,7 +285,7 @@ export class EventsController {
   @ApiOperation({ summary: 'Desactiva un requisito no necesario' })
   @ApiResponse({ status: 204, description: 'Requisito desactivado lógicamente.' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteRequirement(@Param('id') id: string): Promise<void> {
+  async deleteRequirement(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
     return this.service.deleteRequirement(id);
   }
 }

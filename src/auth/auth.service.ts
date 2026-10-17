@@ -20,6 +20,7 @@ import {
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
+import { MailerService } from '../mailer/mailer.service.js';
 import type { AccessSnapshot, AuthContext, RequestMetadata } from './auth.types.js';
 import type { MeResponseDto } from './dto/auth-response.dto.js';
 import { ChangePasswordDto } from './dto/password.dto.js';
@@ -118,6 +119,8 @@ export class AuthService {
     private readonly totp: TotpService,
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
+    // @ts-expect-error: _mailer será usado cuando se implemente la recuperación de contraseña completa
+    private readonly _mailer: MailerService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 

@@ -27,6 +27,12 @@ export interface AppConfig {
   readonly backupRetentionDays: number;
   readonly backupMaxSizeBytes: number;
   readonly backupScheduleMinutes: number;
+  readonly mailerTransport: 'console' | 'smtp';
+  readonly smtpHost?: string;
+  readonly smtpPort: number;
+  readonly smtpSecure: boolean;
+  readonly smtpUser?: string;
+  readonly smtpPassword?: string;
 }
 
 type Environment = Record<string, string | undefined>;
@@ -248,5 +254,13 @@ export function loadAppConfig(environment: Environment = process.env): AppConfig
       'BACKUP_SCHEDULE_MINUTES',
       0,
     ),
+    mailerTransport: (environment.MAILER_TRANSPORT?.toLowerCase() === 'smtp'
+      ? 'smtp'
+      : 'console') as 'console' | 'smtp',
+    smtpHost: environment.SMTP_HOST,
+    smtpPort: parsePositiveNumber(environment.SMTP_PORT, 'SMTP_PORT', 587),
+    smtpSecure: parseBoolean(environment.SMTP_SECURE, 'SMTP_SECURE', false),
+    smtpUser: environment.SMTP_USER,
+    smtpPassword: environment.SMTP_PASSWORD,
   };
 }

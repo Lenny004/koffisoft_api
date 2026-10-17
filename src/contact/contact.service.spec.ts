@@ -10,8 +10,9 @@ function serviceWith(prisma: Record<string, unknown>): ContactService {
   return new ContactService(
     prisma as never,
     new ContactRateLimitService(),
-    {} as never,
-    {} as never,
+    {} as never, // reservations
+    {} as never, // events
+    {} as never, // eventEmitter
   );
 }
 
@@ -104,8 +105,9 @@ describe('ContactService', () => {
     const service = new ContactService(
       prisma as never,
       rateLimit as never,
-      {} as never,
-      {} as never,
+      {} as never, // reservations
+      {} as never, // events
+      {} as never, // eventEmitter
     );
 
     await expect(service.createPublic({ ...dto, website: 'bot' } as never)).resolves.toEqual({

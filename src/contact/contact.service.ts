@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import type { RequestMetadata } from '../auth/auth.types.js';
 import { PrismaService } from '../database/prisma.service.js';
@@ -47,6 +48,7 @@ export class ContactService {
     private readonly rateLimit: ContactRateLimitService,
     private readonly reservations: ReservationsService,
     private readonly events: EventsService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async createPublic(
@@ -82,6 +84,15 @@ export class ContactService {
           message: dto.message,
         },
       });
+
+      this.eventEmitter.emit('contact.message-received', {
+        messageId: message.id,
+        locationId: dto.locationId,
+        name: dto.name,
+        email,
+        subject: dto.topic,
+      });
+
       await tx.auditLog.create({
         data: {
           actorUserId: null,

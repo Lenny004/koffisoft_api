@@ -31,6 +31,7 @@ describe('AuthService', () => {
       {} as never,
       {} as never,
       audit as never,
+      {} as never, // mailer
       { loginMaxAttempts: 5, loginLockMinutes: 15 } as AppConfig,
     );
 
@@ -76,6 +77,7 @@ describe('AuthService', () => {
       {} as never,
       {} as never,
       audit as never,
+      {} as never, // mailer
       {
         loginMaxAttempts: 5,
         loginLockMinutes: 15,
@@ -139,6 +141,7 @@ describe('AuthService', () => {
       {} as never,
       {} as never,
       audit as never,
+      {} as never, // mailer
       { loginMaxAttempts: 5, loginLockMinutes: 15 } as AppConfig,
     );
 
@@ -162,6 +165,7 @@ describe('AuthService', () => {
       {} as never,
       {} as never,
       {} as never,
+      {} as never, // mailer
       {} as never,
     );
 
@@ -183,9 +187,10 @@ describe('AuthService', () => {
       { hash: vi.fn().mockResolvedValue('$argon2id$hashed') } as never,
       {} as never,
       {} as never,
-      {} as never,
-      {} as never,
-      {} as never,
+      {} as never, // sessions
+      {} as never, // audit
+      {} as never, // mailer
+      {} as never, // config
     );
 
     await expect(

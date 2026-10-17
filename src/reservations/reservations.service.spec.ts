@@ -44,7 +44,7 @@ describe('ReservationsService', () => {
         ]),
       },
     };
-    const service = new ReservationsService(prisma as never);
+    const service = new ReservationsService(prisma as never, {} as never);
 
     const result = await service.getPublicAvailability({
       locationId,
@@ -70,7 +70,7 @@ describe('ReservationsService', () => {
       },
       $transaction: vi.fn(),
     };
-    const service = new ReservationsService(prisma as never);
+    const service = new ReservationsService(prisma as never, {} as never);
 
     await expect(
       service.transitionReservation(reservationId, ReservationStatus.Completed),
@@ -115,7 +115,7 @@ describe('ReservationsService', () => {
         callback(tx),
       ),
     };
-    const service = new ReservationsService(prisma as never);
+    const service = new ReservationsService(prisma as never, {} as never);
 
     const result = await service.transitionReservation(reservationId, ReservationStatus.Cancelled);
 
@@ -177,7 +177,7 @@ describe('ReservationsService', () => {
       ),
       reservation: { findUnique: vi.fn().mockResolvedValue(detail) },
     };
-    const service = new ReservationsService(prisma as never);
+    const service = new ReservationsService(prisma as never, {} as never);
 
     const result = await service.createAdminReservation(
       {
@@ -241,7 +241,7 @@ describe('ReservationsService', () => {
         callback(tx),
       ),
     };
-    const service = new ReservationsService(prisma as never);
+    const service = new ReservationsService(prisma as never, {} as never);
 
     await expect(
       service.createAdminReservation({
@@ -285,7 +285,7 @@ describe('ReservationsService', () => {
         callback(tx),
       ),
     };
-    const service = new ReservationsService(prisma as never);
+    const service = new ReservationsService(prisma as never, {} as never);
 
     await expect(
       service.createAdminReservation({
@@ -322,7 +322,7 @@ describe('ReservationsService', () => {
       ),
       reservation: { findUnique: vi.fn() },
     };
-    const service = new ReservationsService(prisma as never);
+    const service = new ReservationsService(prisma as never, {} as never);
 
     await expect(service.assignTables(reservationId, { tableIds: [tableId] })).rejects.toThrow(
       'no pertenecen a la sede',

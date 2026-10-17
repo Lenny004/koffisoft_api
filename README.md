@@ -150,40 +150,40 @@ detallan en [docs/backups.md](docs/backups.md).
 
 La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los uses como secretos de producción.
 
-| Variable                   | Descripción                                                               | Ejemplo                                        | Requerida |
-| -------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- | --------- |
-| `NODE_ENV`                 | Entorno de ejecución y activación de Swagger fuera de producción.         | `development`                                  | No        |
-| `HOST`                     | Interfaz donde escucha el servidor.                                       | `0.0.0.0`                                      | No        |
-| `PORT`                     | Puerto HTTP de la API.                                                    | `3000`                                         | No        |
-| `DATABASE_URL`             | URL de PostgreSQL usada por la aplicación y las migraciones.              | `postgresql://localhost:5432/koffisoft_local`  | No        |
-| `SHADOW_DATABASE_URL`      | URL opcional de una base separada para `migrate dev` y `migrate diff`.    | `postgresql://localhost:5432/koffisoft_shadow` | No        |
-| `DATABASE_CONNECT_ON_BOOT` | Indica si Prisma conecta durante el arranque.                             | `false`                                        | No        |
-| `CORS_ORIGIN`              | Lista exacta de orígenes permitidos; en producción todos deben ser HTTPS. | `http://localhost:5173`                        | No        |
-| `PUBLIC_SITE_URL`          | Origen público para canonical, Open Graph, sitemap y robots.              | `http://localhost:5173`                        | No        |
-| `COOKIE_SECURE`            | Activa `Secure`; debe ser `true` en producción y habilita `__Host-`.      | `false`                                        | No        |
-| `SESSION_COOKIE_NAME`      | Nombre base de la cookie de sesión.                                       | `koffisoft_session`                            | No        |
-| `MFA_ENCRYPTION_KEY`       | Llave Base64 de exactamente 32 bytes para cifrar secretos TOTP.           | `REPLACE_WITH_BASE64_32_BYTE_KEY`              | Sí        |
-| `MFA_KEY_VERSION`          | Versión de la llave usada para cifrar factores MFA.                       | `1`                                            | No        |
-| `MFA_REQUIRED_ROLES`       | Roles que deben tener TOTP activo, separados por comas.                   | `owner,admin,manager`                          | No        |
-| `SESSION_IDLE_MINUTES`     | Minutos de inactividad antes de expirar una sesión.                       | `30`                                           | No        |
-| `SESSION_ABSOLUTE_HOURS`   | Límite absoluto de vida de una sesión en horas.                           | `8`                                            | No        |
-| `AUTH_LOGIN_MAX_ATTEMPTS`  | Intentos fallidos antes del bloqueo temporal.                             | `5`                                            | No        |
-| `AUTH_LOGIN_LOCK_MINUTES`  | Duración del bloqueo temporal en minutos.                                 | `15`                                           | No        |
-| `TEST_DATABASE_URL`        | URL de la base aislada que habilita las pruebas e2e de auth.              | `postgresql://localhost:5432/koffisoft_test`   | No        |
-| `BACKUP_ENABLED`           | Habilita generación manual y scheduler de respaldos.                      | `false`                                        | No        |
-| `BACKUP_STORAGE_ROOT`      | Directorio privado donde se guardan artefactos fuera de PostgreSQL.       | `./var/backups`                                | No        |
-| `UPLOADS_DIRECTORY`        | Carpeta de uploads/imagenes que se empaqueta.                             | `./uploads`                                    | No        |
-| `PG_DUMP_PATH`             | Comando o ruta absoluta de `pg_dump`.                                     | `pg_dump`                                      | No        |
-| `TAR_PATH`                 | Comando o ruta absoluta de `tar`.                                         | `tar`                                          | No        |
-| `BACKUP_RETENTION_DAYS`    | Días de retención antes de marcar y limpiar un job.                       | `30`                                           | No        |
-| `BACKUP_MAX_SIZE_BYTES`    | Tamaño máximo permitido por artefacto.                                    | `53687091200`                                  | No        |
-| `BACKUP_SCHEDULE_MINUTES`  | Intervalo del scheduler; `0` lo desactiva.                                | `0`                                            | No        |
-| `MAILER_TRANSPORT`         | Transport de correo: `console` (logs) o `smtp` (producción).              | `console`                                      | No        |
-| `SMTP_HOST`                | Servidor SMTP para envío de correos.                                      | `smtp.example.com`                             | No        |
-| `SMTP_PORT`                | Puerto del servidor SMTP.                                                 | `587`                                          | No        |
-| `SMTP_SECURE`              | Habilita TLS en el transport SMTP.                                        | `false`                                        | No        |
-| `SMTP_USER`                | Usuario de autenticación SMTP.                                            |                                                | No        |
-| `SMTP_PASSWORD`            | Contraseña de autenticación SMTP.                                         |                                                | No        |
+| Variable                   | Descripción                                                               | Ejemplo                                             | Requerida |
+| -------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------- | --------- |
+| `NODE_ENV`                 | Entorno de ejecución y activación de Swagger fuera de producción.         | `development`                                       | No        |
+| `HOST`                     | Interfaz donde escucha el servidor.                                       | `0.0.0.0`                                           | No        |
+| `PORT`                     | Puerto HTTP de la API.                                                    | `3000`                                              | No        |
+| `DATABASE_URL`             | URL de PostgreSQL usada por la aplicación y las migraciones.              | `postgresql://localhost:5432/koffisoft_local`       | No        |
+| `SHADOW_DATABASE_URL`      | URL opcional de una base separada para `migrate dev` y `migrate diff`.    | `postgresql://localhost:5432/koffisoft_shadow`      | No        |
+| `DATABASE_CONNECT_ON_BOOT` | Indica si Prisma conecta durante el arranque.                             | `false`                                             | No        |
+| `CORS_ORIGIN`              | Lista exacta de orígenes permitidos; en producción todos deben ser HTTPS. | `http://localhost:5173`                             | No        |
+| `PUBLIC_SITE_URL`          | Origen público para canonical, Open Graph, sitemap y robots.              | `http://localhost:5173`                             | No        |
+| `COOKIE_SECURE`            | Activa `Secure`; debe ser `true` en producción y habilita `__Host-`.      | `false`                                             | No        |
+| `SESSION_COOKIE_NAME`      | Nombre base de la cookie de sesión.                                       | `koffisoft_session`                                 | No        |
+| `MFA_ENCRYPTION_KEY`       | Llave Base64 de exactamente 32 bytes para cifrar secretos TOTP.           | `REPLACE_WITH_BASE64_32_BYTE_KEY`                   | Sí        |
+| `MFA_KEY_VERSION`          | Versión de la llave usada para cifrar factores MFA.                       | `1`                                                 | No        |
+| `MFA_REQUIRED_ROLES`       | Roles que deben tener TOTP activo, separados por comas.                   | `owner,admin,manager`                               | No        |
+| `SESSION_IDLE_MINUTES`     | Minutos de inactividad antes de expirar una sesión.                       | `30`                                                | No        |
+| `SESSION_ABSOLUTE_HOURS`   | Límite absoluto de vida de una sesión en horas.                           | `8`                                                 | No        |
+| `AUTH_LOGIN_MAX_ATTEMPTS`  | Intentos fallidos antes del bloqueo temporal.                             | `5`                                                 | No        |
+| `AUTH_LOGIN_LOCK_MINUTES`  | Duración del bloqueo temporal en minutos.                                 | `15`                                                | No        |
+| `TEST_DATABASE_URL`        | URL de la base aislada que habilita las pruebas e2e de auth.              | `postgresql://localhost:5432/koffisoft_test`        | No        |
+| `BACKUP_ENABLED`           | Habilita generación manual y scheduler de respaldos.                      | `false`                                             | No        |
+| `BACKUP_STORAGE_ROOT`      | Directorio privado donde se guardan artefactos fuera de PostgreSQL.       | `./var/backups`                                     | No        |
+| `UPLOADS_DIRECTORY`        | Carpeta de uploads/imagenes que se empaqueta.                             | `./uploads`                                         | No        |
+| `PG_DUMP_PATH`             | Comando o ruta absoluta de `pg_dump`.                                     | `pg_dump`                                           | No        |
+| `TAR_PATH`                 | Comando o ruta absoluta de `tar`.                                         | `tar`                                               | No        |
+| `BACKUP_RETENTION_DAYS`    | Días de retención antes de marcar y limpiar un job.                       | `30`                                                | No        |
+| `BACKUP_MAX_SIZE_BYTES`    | Tamaño máximo permitido por artefacto.                                    | `53687091200`                                       | No        |
+| `BACKUP_SCHEDULE_MINUTES`  | Intervalo del scheduler; `0` lo desactiva.                                | `0`                                                 | No        |
+| `MAILER_TRANSPORT`         | Transport de correo: `console` (logs) o `smtp` (producción).              | `console`                                           | No        |
+| `SMTP_HOST`                | Servidor SMTP para envío de correos.                                      | `smtp.example.com`                                  | No        |
+| `SMTP_PORT`                | Puerto del servidor SMTP.                                                 | `587`                                               | No        |
+| `SMTP_SECURE`              | Habilita TLS en el transport SMTP.                                        | `false`                                             | No        |
+| `SMTP_USER`                | Usuario de autenticación SMTP.                                            |                                                     | No        |
+| `SMTP_PASSWORD`            | Contraseña de autenticación SMTP.                                         |                                                     | No        |
 | `MAIL_FROM`                | Dirección del remitente de correos.                                       | `"Koffi-Soft" <no-reply@koffisoft.example.invalid>` | No        |
 
 `DATABASE_URL` tiene un respaldo local para generar y validar Prisma, pero debe configurarse para migrar o consultar una base. `SHADOW_DATABASE_URL` nunca debe apuntar a la misma base que `DATABASE_URL`.

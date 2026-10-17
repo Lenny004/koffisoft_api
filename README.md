@@ -77,7 +77,7 @@ La captura y los reportes anónimos de visitas están documentados en
 - PostgreSQL 18 para una base local de desarrollo y pruebas de integración.
 - `argon2` `0.45.1`, que requiere su build nativo permitido por `pnpm-workspace.yaml`.
 
-Las versiones directas del resto del stack están fijadas sin rangos en `package.json`: `@fastify/static` `10.1.6`, `@nestjs/platform-fastify` `12.1.2`, `@prisma/client` `7.10.0`, `@prisma/adapter-pg` `7.10.0`, `pg` `8.23.1`, `class-validator` `0.15.1`, `class-transformer` `0.5.1`, `otplib` `13.5.0`, `@nestjs/throttler` `6.7.1`, `@nestjs/swagger` `12.0.2`, Vitest `5.0.3`, Supertest `7.3.1`, ESLint `10.12.0`, TypeScript ESLint `8.71.0` y Prettier `3.9.9`.
+Las versiones directas del resto del stack están fijadas sin rangos en `package.json`: `@fastify/static` `10.1.6`, `@nestjs/platform-fastify` `12.1.2`, `@prisma/client` `7.10.0`, `@prisma/adapter-pg` `7.10.0`, `pg` `8.23.1`, `class-validator` `0.15.1`, `class-transformer` `0.5.1`, `otplib` `13.5.0`, `@nestjs/throttler` `6.7.1`, `@nestjs/swagger` `12.0.2`, `@nestjs/schedule` `4.1.2`, `nodemailer` `6.9.16`, Vitest `5.0.3`, Supertest `7.3.1`, ESLint `10.12.0`, TypeScript ESLint `8.71.0` y Prettier `3.9.9`.
 
 <!-- section:installation -->
 
@@ -178,13 +178,17 @@ La tabla coincide con `.env.example`. Sus valores son ejemplos locales; no los u
 | `BACKUP_RETENTION_DAYS`    | Días de retención antes de marcar y limpiar un job.                       | `30`                                           | No        |
 | `BACKUP_MAX_SIZE_BYTES`    | Tamaño máximo permitido por artefacto.                                    | `53687091200`                                  | No        |
 | `BACKUP_SCHEDULE_MINUTES`  | Intervalo del scheduler; `0` lo desactiva.                                | `0`                                            | No        |
+| `MAILER_TRANSPORT`         | Transport de correo: `console` (logs) o `smtp` (producción).              | `console`                                      | No        |
+| `SMTP_HOST`                | Servidor SMTP para envío de correos.                                      | `smtp.example.com`                             | No        |
+| `SMTP_PORT`                | Puerto del servidor SMTP.                                                 | `587`                                          | No        |
+| `SMTP_SECURE`              | Habilita TLS en el transport SMTP.                                        | `false`                                        | No        |
+| `SMTP_USER`                | Usuario de autenticación SMTP.                                            |                                                | No        |
+| `SMTP_PASSWORD`            | Contraseña de autenticación SMTP.                                         |                                                | No        |
+| `MAIL_FROM`                | Dirección del remitente de correos.                                       | `"Koffi-Soft" <no-reply@koffisoft.example.invalid>` | No        |
 
 `DATABASE_URL` tiene un respaldo local para generar y validar Prisma, pero debe configurarse para migrar o consultar una base. `SHADOW_DATABASE_URL` nunca debe apuntar a la misma base que `DATABASE_URL`.
 
 <!-- section:structure -->
-
-El modulo `src/publication/` comparte estados editoriales, permisos, preview
-de un solo uso y transiciones automaticas para los tres tipos de contenido.
 
 ## 🗂️ Estructura del proyecto
 
@@ -210,7 +214,10 @@ de un solo uso y transiciones automaticas para los tres tipos de contenido.
 │   ├── inventory/              # Ingredientes, proveedores, movimientos y recetas
 │   ├── seo/                    # SEO editorial, sitemap, robots y defaults
 │   ├── backups/                # pg_dump, uploads, checksum, retención y stream autenticado
-│   └── jobs/                   # Frontera de trabajos adicionales
+│   ├── jobs/                   # Schedulers de alertas de inventario, recursos y limpieza
+│   ├── mailer/                 # Servicio de correo con transport console/SMTP
+│   ├── notifications/          # Notificaciones en tiempo real mediante SSE
+│   └── resources/              # Gestión de equipos, muebles y suministros no comestibles
 ├── .env.example                # Variables de entorno de ejemplo
 ├── AGENTS.md                   # Reglas para agentes de código
 ├── LICENSE                     # Licencia MIT

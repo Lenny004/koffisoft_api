@@ -9,6 +9,8 @@ import { DomainEventsModule } from './domain-events/domain-events.module.js';
 import { EventsModule } from './events/events.module.js';
 import { HealthModule } from './health/health.module.js';
 import { InventoryModule } from './inventory/inventory.module.js';
+import { JobsModule } from './jobs/jobs.module.js';
+import { MailerModule } from './mailer/mailer.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { ReservationsModule } from './reservations/reservations.module.js';
@@ -25,10 +27,12 @@ import { BackupsModule } from './backups/backups.module.js';
     ConfigModule,
     DatabaseModule,
     DomainEventsModule,
+    MailerModule,
     AuthModule,
     ContactModule,
     HealthModule,
     InventoryModule,
+    JobsModule,
     MenuModule,
     NotificationsModule,
     ReservationsModule,

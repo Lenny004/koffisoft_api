@@ -27,7 +27,7 @@ export class ResourcesController {
   constructor(private readonly service: ResourcesService) {}
 
   @Get()
-  @RequirePermissions('inventory.manage')
+  @RequirePermissions('resources.read')
   @ApiOperation({ summary: 'Listar recursos de una sede' })
   @ApiOkResponse({ type: ResourcePageDto })
   async listResources(@Query() query: ResourceListQueryDto): Promise<ResourcePageDto> {
@@ -35,7 +35,7 @@ export class ResourcesController {
   }
 
   @Get(':id')
-  @RequirePermissions('inventory.read')
+  @RequirePermissions('resources.read')
   @ApiOperation({ summary: 'Obtener un recurso' })
   @ApiOkResponse({ type: ResourceResponseDto })
   async getResource(
@@ -46,14 +46,14 @@ export class ResourcesController {
   }
 
   @Post()
-  @RequirePermissions('inventory.manage')
+  @RequirePermissions('resources.manage')
   @ApiOperation({ summary: 'Crear un recurso' })
   @ApiOkResponse({ type: ResourceResponseDto })
   async createResource(
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateResourceDto,
   ): Promise<ResourceResponseDto> {
-    const actorUserId = req.auth?.userId!;
+    const actorUserId = req.auth!.userId;
     const metadata = {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'] ?? undefined,
@@ -63,7 +63,7 @@ export class ResourcesController {
   }
 
   @Patch(':id')
-  @RequirePermissions('inventory.manage')
+  @RequirePermissions('resources.manage')
   @ApiOperation({ summary: 'Actualizar un recurso' })
   @ApiOkResponse({ type: ResourceResponseDto })
   async updateResource(
@@ -72,7 +72,7 @@ export class ResourcesController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: UpdateResourceDto,
   ): Promise<ResourceResponseDto> {
-    const actorUserId = req.auth?.userId!;
+    const actorUserId = req.auth!.userId;
     const metadata = {
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'] ?? undefined,
@@ -82,7 +82,7 @@ export class ResourcesController {
   }
 
   @Post('maintenance')
-  @RequirePermissions('inventory.manage')
+  @RequirePermissions('resources.manage')
   @ApiOperation({ summary: 'Programar un mantenimiento' })
   @ApiOkResponse({ type: MaintenanceScheduleResponseDto })
   async scheduleMaintenance(
@@ -92,7 +92,7 @@ export class ResourcesController {
   }
 
   @Patch('maintenance/:id/complete')
-  @RequirePermissions('inventory.manage')
+  @RequirePermissions('resources.manage')
   @ApiOperation({ summary: 'Completar un mantenimiento' })
   @ApiOkResponse({ type: MaintenanceScheduleResponseDto })
   async completeMaintenance(
@@ -100,7 +100,7 @@ export class ResourcesController {
     @Req() req: AuthenticatedRequest,
     @Body() dto: CompleteMaintenanceDto,
   ): Promise<MaintenanceScheduleResponseDto> {
-    const actorUserId = req.auth?.userId!;
+    const actorUserId = req.auth!.userId;
     return this.service.completeMaintenance(id, dto, actorUserId);
   }
 }

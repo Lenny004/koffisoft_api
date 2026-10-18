@@ -20,6 +20,7 @@ import {
 import type { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
+import { MailerService } from '../mailer/mailer.service.js';
 import type { AccessSnapshot, AuthContext, RequestMetadata } from './auth.types.js';
 import type { MeResponseDto } from './dto/auth-response.dto.js';
 import { ChangePasswordDto } from './dto/password.dto.js';
@@ -118,6 +119,8 @@ export class AuthService {
     private readonly totp: TotpService,
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
+    // @ts-expect-error: _mailer será usado cuando se implemente la recuperación de contraseña completa
+    private readonly _mailer: MailerService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -946,6 +949,88 @@ export class AuthService {
     });
 
     return user.id;
+  }
+
+  async requestPasswordReset(email: string, metadata: RequestMetadata): Promise<void> {
+    const user = await this.prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return;
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const tokenHash = await this.passwords.hashResetToken(token);
+    const expiresAt = new Date(Date.now() + 3600 * 1000);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    await this.audit.record(AuthEventType.PasswordChanged, metadata, {
+      userId: user.id,
+      details: { type: 'reset_requested' },
+    });
+
+    console.log(`[DEV] Token de recuperación para ${email}: ${token} (expira en 1 hora)`);
+  }
+
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    metadata: RequestMetadata,
+  ): Promise<void> {
+    const tokenHash = await this.passwords.hashResetToken(token);
+
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        usedAt: true,
+      },
+    });
+
+    if (!resetToken || resetToken.usedAt || resetToken.expiresAt < new Date()) {
+      throw new BadRequestException('Token de recuperación inválido o expirado.');
+    }
+
+    const passwordHash = await this.passwords.hash(newPassword);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.passwordResetToken.update({
+        where: { id: resetToken.id },
+        data: { usedAt: new Date() },
+      });
+
+      await tx.user.update({
+        where: { id: resetToken.userId },
+        data: {
+          passwordHash,
+          passwordChangedAt: new Date(),
+          mustChangePassword: false,
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+        },
+      });
+
+      await tx.userSession.updateMany({
+        where: { userId: resetToken.userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+
+      await this.audit.record(AuthEventType.PasswordChanged, metadata, {
+        userId: resetToken.userId,
+        details: { type: 'reset_completed' },
+      });
+    });
   }
 
   private async rotateContextSession(

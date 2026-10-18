@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { PrismaService } from '../database/prisma.service.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -64,7 +65,10 @@ type ReservationRecord = Prisma.ReservationGetPayload<{ include: typeof reservat
 /** Coordina disponibilidad, solicitudes públicas y operación de reservas de mesa. */
 @Injectable()
 export class ReservationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /** Calcula el intervalo local de El Salvador sin depender de la zona horaria del proceso. */
   async getPublicAvailability(
@@ -135,6 +139,16 @@ export class ReservationsService {
         preferredSpaceId: dto.preferredSpaceId,
         specialRequests: dto.specialRequests,
       },
+    });
+
+    this.eventEmitter.emit('reservation.created', {
+      reservationId: reservation.id,
+      locationId: reservation.locationId,
+      customerName: reservation.contactNameSnapshot,
+      partySize: reservation.partySize,
+      reservationDate: startsAt.toISOString().slice(0, 10),
+      reservationTime: startsAt.toISOString().slice(11, 16),
+      source: reservation.source,
     });
 
     return this.toPublicReservation(reservation);

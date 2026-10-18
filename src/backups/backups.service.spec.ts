@@ -73,7 +73,9 @@ async function setup() {
     },
     auditLog: { create: vi.fn().mockResolvedValue(undefined) },
   } as unknown as PrismaService;
-  const service = new BackupService(prisma, config, processRunner);
+  const service = new BackupService(prisma, config, processRunner, {
+    emit: vi.fn(),
+  } as never);
   return { root, uploads, config, processRunner, prisma, service, row };
 }
 

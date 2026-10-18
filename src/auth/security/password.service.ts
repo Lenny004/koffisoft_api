@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as argon2 from 'argon2';
+import { createHash } from 'node:crypto';
 
 export const ARGON2ID_OPTIONS = {
   type: argon2.argon2id,
@@ -35,5 +36,10 @@ export class PasswordService {
   /** Consume un coste Argon2 equivalente cuando el correo no corresponde a una cuenta. */
   async burn(value: string): Promise<void> {
     await this.hash(value);
+  }
+
+  /** Hashea un token de recuperación con SHA-256 para almacenamiento seguro. */
+  async hashResetToken(token: string): Promise<string> {
+    return createHash('sha256').update(token).digest('hex');
   }
 }

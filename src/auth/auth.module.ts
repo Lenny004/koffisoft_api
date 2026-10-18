@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AuthController } from './auth.controller.js';
+import { AuditLogController } from './audit-log.controller.js';
 import { AuthService } from './auth.service.js';
 import { AuditService } from './security/audit.service.js';
 import { AccessScopeService } from './security/access-scope.service.js';
@@ -23,7 +24,7 @@ import { SessionGuard } from './guards/session.guard.js';
       },
     ]),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, AuditLogController],
   providers: [
     AuthService,
     AccessScopeService,

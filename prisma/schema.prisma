@@ -400,6 +400,60 @@ enum BackupStatus {
   @@map("backup_status")
 }
 
+enum NotificationType {
+  LowStock         @map("low_stock")
+  LotExpiring      @map("lot_expiring")
+  SupplierReminder @map("supplier_reminder")
+  MaintenanceDue   @map("maintenance_due")
+  ReservationNew   @map("reservation_new")
+  ContactMessage   @map("contact_message")
+  BackupSuccess    @map("backup_success")
+  BackupFailed     @map("backup_failed")
+  SecurityAlert    @map("security_alert")
+  System           @map("system")
+
+  @@map("notification_type")
+}
+
+enum NotificationSeverity {
+  Info    @map("info")
+  Warning @map("warning")
+  Error   @map("error")
+  Success @map("success")
+
+  @@map("notification_severity")
+}
+
+enum ResourceCategory {
+  Equipment    @map("equipment")
+  Furniture    @map("furniture")
+  Supplies     @map("supplies")
+  Kitchenware  @map("kitchenware")
+  Electronics  @map("electronics")
+  Other        @map("other")
+
+  @@map("resource_category")
+}
+
+enum ResourceStatus {
+  Operational  @map("operational")
+  Maintenance  @map("maintenance")
+  Broken       @map("broken")
+  Retired      @map("retired")
+
+  @@map("resource_status")
+}
+
+enum PurchaseOrderStatus {
+  Draft     @map("draft")
+  Submitted @map("submitted")
+  Approved  @map("approved")
+  Received  @map("received")
+  Cancelled @map("cancelled")
+
+  @@map("purchase_order_status")
+}
+
 /// Alta inicial del propietario. La fila única (id = 1) y el CHECK SQL impiden repetirla.
 model SystemSetup {
   id          Int      @id @db.SmallInt
@@ -541,6 +595,8 @@ model Location {
   contactMessages       ContactMessage[]
   seoMetadata            SeoMetadata[]
   pageViews              PageView[]
+  resources              Resource[]
+  purchaseOrders         PurchaseOrder[]
 
   @@unique([businessId, code], map: "locations_code_unique")
   /// Los límites de latitud y longitud son CHECK exclusivos de SQL.
@@ -684,6 +740,11 @@ model User {
   archivedContactMessages        ContactMessage[]       @relation("ContactMessageArchiver")
   createdInventoryMovements      InventoryMovement[]   @relation("InventoryMovementCreator")
   completedSystemSetup           SystemSetup?
+  notifications                  Notification[]
+  completedMaintenances          ResourceMaintenanceSchedule[] @relation("MaintenanceCompleter")
+  createdPurchaseOrders          PurchaseOrder[]        @relation("PurchaseOrderCreator")
+  approvedPurchaseOrders         PurchaseOrder[]        @relation("PurchaseOrderApprover")
+  passwordResetTokens            PasswordResetToken[]
 
   /// Los CHECK de Argon2id, contador y bloqueo se conservan únicamente en SQL.
   /// Los índices lower(username/email) se conservan como índices expresivos SQL-only.
@@ -1250,6 +1311,7 @@ model Unit {
   receiptLines    GoodsReceiptLine[]    @relation("GoodsReceiptLineUnit")
   yieldRecipes   Recipe[]              @relation("RecipeYieldUnit")
   recipeLines    RecipeLine[]           @relation("RecipeLineUnit")
+  purchaseOrderLines PurchaseOrderLine[] @relation("PurchaseOrderLineUnit")
 
   /// precision_scale entre 0 y 6 es CHECK de SQL.
   @@map("units")
@@ -1277,6 +1339,7 @@ model Ingredient {
   recipeLines       RecipeLine[]
   ingredientAllergens IngredientAllergen[]
   inventoryMovements InventoryMovement[]
+  purchaseOrderLines PurchaseOrderLine[]
 
   /// reorder_level y actualización temporal son SQL/lógica de aplicación.
   @@map("ingredients")
@@ -1284,22 +1347,28 @@ model Ingredient {
 
 /// Proveedor de insumos.
 model Supplier {
-  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  locationId   String   @map("location_id") @db.Uuid
-  supplierCode String   @map("supplier_code") @db.VarChar(40)
-  name         String   @db.VarChar(200)
-  taxId        String?  @map("tax_id") @db.VarChar(40)
-  phone        String?  @db.VarChar(40)
-  email        String?  @db.VarChar(200)
-  addressLine  String?  @map("address_line") @db.Text
-  active       Boolean  @default(true)
-  createdAt    DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
+  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId         String   @map("location_id") @db.Uuid
+  supplierCode       String   @map("supplier_code") @db.VarChar(40)
+  name               String   @db.VarChar(200)
+  taxId              String?  @map("tax_id") @db.VarChar(40)
+  phone              String?  @db.VarChar(40)
+  email              String?  @db.VarChar(200)
+  addressLine        String?  @map("address_line") @db.Text
+  deliveryDays       Int?     @map("delivery_days") @db.SmallInt
+  orderReminderDays  Int?     @map("order_reminder_days") @db.SmallInt
+  lastOrderDate      DateTime? @map("last_order_date") @db.Date
+  notes              String?  @db.Text
+  active             Boolean  @default(true)
+  createdAt          DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
 
-  location      Location          @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  ingredientLinks IngredientSupplier[]
-  inventoryLots InventoryLot[]
-  goodsReceipts GoodsReceipt[]
+  location          Location          @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  ingredientLinks   IngredientSupplier[]
+  inventoryLots     InventoryLot[]
+  goodsReceipts     GoodsReceipt[]
+  purchaseOrders    PurchaseOrder[]
+  resources         Resource[]
 
   @@unique([locationId, supplierCode], map: "suppliers_code_unique")
   /// La actualización temporal la mantiene el trigger SQL; datos fiscales son CHECK/lógica externa.
@@ -2330,4 +2399,136 @@ model PageView {
   @@index([refererHost, occurredAt], map: "page_views_referer_date_idx")
   /// La retencion de 395 dias y la ausencia de IP/cookies se aplican en el servicio.
   @@map("page_views")
+}
+
+/// Notificaciones del sistema y alertas operativas.
+model Notification {
+  id                String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  recipientUserId   String?              @map("recipient_user_id") @db.Uuid
+  recipientRoleCode String?              @map("recipient_role_code") @db.VarChar(40)
+  notificationType  NotificationType     @map("notification_type")
+  severity          NotificationSeverity
+  title             String               @db.VarChar(200)
+  body              String               @db.Text
+  internalLink      String?              @map("internal_link") @db.VarChar(500)
+  readAt            DateTime?            @map("read_at") @db.Timestamptz(3)
+  archived          Boolean              @default(false)
+  createdAt         DateTime             @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  recipientUser User? @relation(fields: [recipientUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([recipientUserId, readAt, archived, createdAt], map: "notifications_user_unread_idx")
+  @@index([recipientRoleCode, readAt, archived, createdAt], map: "notifications_role_unread_idx")
+  @@index([notificationType, createdAt], map: "notifications_type_idx")
+  @@index([severity, createdAt], map: "notifications_severity_idx")
+  @@map("notifications")
+}
+
+/// Recursos de equipo, mobiliario e insumos no comestibles.
+model Resource {
+  id           String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId   String           @map("location_id") @db.Uuid
+  resourceCode String           @map("resource_code") @db.VarChar(40)
+  name         String           @db.VarChar(200)
+  category     ResourceCategory
+  location     String?          @db.VarChar(200)
+  status       ResourceStatus   @default(Operational)
+  purchaseDate DateTime?        @map("purchase_date") @db.Date
+  cost         Decimal?         @db.Decimal(14, 2)
+  supplierId   String?          @map("supplier_id") @db.Uuid
+  notes        String?          @db.Text
+  active       Boolean          @default(true)
+  createdAt    DateTime         @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime         @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  siteLocation  Location                      @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  supplier      Supplier?                     @relation(fields: [supplierId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  schedules     ResourceMaintenanceSchedule[]
+
+  @@unique([locationId, resourceCode], map: "resources_code_unique")
+  @@map("resources")
+}
+
+/// Mantenimientos programados de recursos.
+model ResourceMaintenanceSchedule {
+  id                String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  resourceId        String    @map("resource_id") @db.Uuid
+  scheduledDate     DateTime  @map("scheduled_date") @db.Date
+  description       String    @db.Text
+  completed         Boolean   @default(false)
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz(3)
+  completedByUserId String?   @map("completed_by_user_id") @db.Uuid
+  notes             String?   @db.Text
+  createdAt         DateTime  @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  resource    Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  completedBy User?    @relation("MaintenanceCompleter", fields: [completedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([resourceId, scheduledDate], map: "resource_maintenance_resource_date_idx")
+  @@index([completed, scheduledDate], map: "resource_maintenance_pending_idx")
+  @@map("resource_maintenance_schedules")
+}
+
+/// Órdenes de compra a proveedores.
+model PurchaseOrder {
+  id                String              @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId        String              @map("location_id") @db.Uuid
+  supplierId        String              @map("supplier_id") @db.Uuid
+  orderNumber       String              @map("order_number") @db.VarChar(80)
+  orderDate         DateTime            @map("order_date") @db.Date
+  expectedDelivery  DateTime?           @map("expected_delivery") @db.Date
+  status            PurchaseOrderStatus @default(Draft)
+  totalAmount       Decimal             @map("total_amount") @db.Decimal(14, 2)
+  notes             String?             @db.Text
+  createdByUserId   String              @map("created_by_user_id") @db.Uuid
+  approvedByUserId  String?             @map("approved_by_user_id") @db.Uuid
+  approvedAt        DateTime?           @map("approved_at") @db.Timestamptz(3)
+  createdAt         DateTime            @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime            @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location     Location             @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  supplier     Supplier             @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  createdBy    User                 @relation("PurchaseOrderCreator", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  approvedBy   User?                @relation("PurchaseOrderApprover", fields: [approvedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  lines        PurchaseOrderLine[]
+
+  @@unique([locationId, orderNumber], map: "purchase_orders_number_unique")
+  @@index([supplierId, orderDate], map: "purchase_orders_supplier_date_idx")
+  @@index([status, orderDate], map: "purchase_orders_status_date_idx")
+  @@map("purchase_orders")
+}
+
+/// Líneas de órdenes de compra.
+model PurchaseOrderLine {
+  id              String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  purchaseOrderId String    @map("purchase_order_id") @db.Uuid
+  ingredientId    String    @map("ingredient_id") @db.Uuid
+  unitId          String    @map("unit_id") @db.Uuid
+  quantityOrdered Decimal   @map("quantity_ordered") @db.Decimal(14, 6)
+  unitCost        Decimal   @map("unit_cost") @db.Decimal(14, 6)
+  totalCost       Decimal   @map("total_cost") @db.Decimal(14, 2)
+  quantityReceived Decimal? @map("quantity_received") @db.Decimal(14, 6)
+  receivedAt      DateTime? @map("received_at") @db.Timestamptz(3)
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ingredient    Ingredient    @relation(fields: [ingredientId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  unit          Unit          @relation("PurchaseOrderLineUnit", fields: [unitId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([purchaseOrderId, receivedAt], map: "purchase_order_lines_received_idx")
+  @@map("purchase_order_lines")
+}
+
+/// Tokens de recuperación de contraseña con expiración corta.
+model PasswordResetToken {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @unique(map: "password_reset_tokens_hash_unique") @map("token_hash") @db.Char(64)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId, expiresAt], map: "password_reset_tokens_user_idx")
+  @@map("password_reset_tokens")
 }

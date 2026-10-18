@@ -12,6 +12,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { Prisma } from '../generated/prisma/client.js';
 import { BackupStatus, BackupType } from '../generated/prisma/enums.js';
@@ -47,6 +48,7 @@ export class BackupService {
     private readonly prisma: PrismaService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly processRunner: BackupProcessRunner,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async list(type?: BackupType, limit = 100): Promise<BackupResponseDto[]> {
@@ -127,6 +129,12 @@ export class BackupService {
         },
       });
       await this.recordAudit('backups.completed', completed, job.actorUserId, metadata);
+
+      this.eventEmitter.emit('backup.success', {
+        backupId: completed.id,
+        backupType: completed.type,
+        sizeBytes: completed.sizeBytes?.toString() ?? '0',
+      });
     } catch (error) {
       const message = formatBackupError(error);
       this.logger.error(`Falló el respaldo ${id}: ${message}`);
@@ -149,6 +157,12 @@ export class BackupService {
           },
         });
         await this.recordAudit('backups.failed', failed, failed.actorUserId, metadata);
+
+        this.eventEmitter.emit('backup.failed', {
+          backupId: failed.id,
+          backupType: failed.type,
+          errorMessage: message,
+        });
       } catch (persistenceError) {
         this.logger.error(`No se pudo guardar el fallo del respaldo ${id}.`, persistenceError);
       }

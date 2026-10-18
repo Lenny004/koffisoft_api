@@ -34,6 +34,11 @@ import {
 } from './dto/mfa.dto.js';
 import { LoginDto } from './dto/login.dto.js';
 import { ChangePasswordDto } from './dto/password.dto.js';
+import {
+  ForgotPasswordDto,
+  ForgotPasswordResponseDto,
+  ResetPasswordDto,
+} from './dto/password-reset.dto.js';
 import { InitialSetupDto, SetupStatusDto } from './dto/setup.dto.js';
 import { SessionService } from './security/session.service.js';
 
@@ -289,6 +294,34 @@ export class AuthController {
       requestMetadata(request),
     );
     this.sessions.setCookie(reply, session.token, session.record.expiresAt);
+    return { ok: true };
+  }
+
+  @Post('forgot-password')
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Solicita un token de recuperación de contraseña' })
+  @ApiResponse({ status: 200, type: ForgotPasswordResponseDto })
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<ForgotPasswordResponseDto> {
+    await this.authService.requestPasswordReset(dto.email, requestMetadata(request));
+    return { message: 'Si el correo existe, recibirás instrucciones de recuperación.' };
+  }
+
+  @Post('reset-password')
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Restablece la contraseña con un token válido' })
+  @ApiResponse({ status: 200 })
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @Req() request: AuthenticatedRequest,
+  ): Promise<{ ok: true }> {
+    await this.authService.resetPassword(dto.token, dto.newPassword, requestMetadata(request));
     return { ok: true };
   }
 

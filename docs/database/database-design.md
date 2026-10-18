@@ -65,7 +65,7 @@ OWASP también recomienda no poner tokens de autenticación en `localStorage`; l
 - Modelos Prisma en singular/PascalCase (Order, DteDocument) y campos camelCase mediante @map/@@map solo cuando haga falta.
 - No se usa el prefijo tb, nombres españoles ni abreviaturas ambiguas. Se conservan solamente acrónimos de dominio conocidos: DTE, DUI, NIT y NRC.
 - relationMode = foreignKeys: PostgreSQL es la autoridad de integridad, no solo Prisma.
-- Prisma 7 puede hacer `db pull` sobre este esquema, pero reportará advertencias para CHECK, EXCLUDE, comentarios y algunos índices expresivos; esas piezas se conservan en migraciones SQL personalizadas y no se espera que el `schema.prisma` generado las reproduzca por completo. [Prisma 7: introspección y funciones no soportadas](https://www.prisma.io/docs/orm/v7/prisma-schema/introspection)
+- Prisma 7 puede hacer `db pull` sobre este esquema, pero reportará advertencias para CHECK, EXCLUDE, comentarios y algunos índices expresivos; esas piezas se conservan en migraciones SQL personalizadas y no se espera que los archivos de `prisma/schema/` las reproduzcan por completo. [Prisma 7: introspección y funciones no soportadas](https://www.prisma.io/docs/orm/v7/prisma-schema/introspection)
 
 ### Identidad, fechas y dinero
 

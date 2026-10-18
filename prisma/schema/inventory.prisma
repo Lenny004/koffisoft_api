@@ -1,0 +1,334 @@
+// Insumos, recetas, lotes y movimientos
+
+enum InventoryMovementType {
+  Receipt         @map("receipt")
+  SaleConsumption @map("sale_consumption")
+  Waste           @map("waste")
+  AdjustmentIn    @map("adjustment_in")
+  AdjustmentOut   @map("adjustment_out")
+
+  @@map("inventory_movement_type")
+}
+
+model IngredientCategory {
+  id       String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  name     String       @unique(map: "ingredient_categories_name_key") @db.VarChar(100)
+  active   Boolean      @default(true)
+
+  ingredients Ingredient[]
+
+  @@map("ingredient_categories")
+}
+
+/// Unidad base usada en recetas y recepciones.
+
+model Unit {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  code           String   @unique(map: "units_code_key") @db.VarChar(20)
+  name           String   @db.VarChar(80)
+  precisionScale Int      @map("precision_scale") @default(3) @db.SmallInt
+  active         Boolean  @default(true)
+
+  baseIngredients Ingredient[]         @relation("IngredientBaseUnit")
+  packLinks       IngredientSupplier[]  @relation("IngredientSupplierPackUnit")
+  receiptLines    GoodsReceiptLine[]    @relation("GoodsReceiptLineUnit")
+  yieldRecipes   Recipe[]              @relation("RecipeYieldUnit")
+  recipeLines    RecipeLine[]           @relation("RecipeLineUnit")
+  purchaseOrderLines PurchaseOrderLine[] @relation("PurchaseOrderLineUnit")
+
+  /// precision_scale entre 0 y 6 es CHECK de SQL.
+  @@map("units")
+}
+
+/// Insumo o materia prima controlada.
+
+model Ingredient {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  categoryId    String   @map("category_id") @db.Uuid
+  baseUnitId    String   @map("base_unit_id") @db.Uuid
+  sku           String   @unique(map: "ingredients_sku_key") @db.VarChar(50)
+  name          String   @unique(map: "ingredients_name_key") @db.VarChar(160)
+  description   String?  @db.Text
+  reorderLevel  Decimal  @map("reorder_level") @default(0) @db.Decimal(14, 6)
+  trackLots     Boolean  @map("track_lots") @default(true)
+  active        Boolean  @default(true)
+  createdAt     DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  category          IngredientCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  baseUnit          Unit                 @relation("IngredientBaseUnit", fields: [baseUnitId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  supplierLinks     IngredientSupplier[]
+  inventoryLots     InventoryLot[]
+  goodsReceiptLines  GoodsReceiptLine[]
+  recipeLines       RecipeLine[]
+  ingredientAllergens IngredientAllergen[]
+  inventoryMovements InventoryMovement[]
+  purchaseOrderLines PurchaseOrderLine[]
+
+  /// reorder_level y actualización temporal son SQL/lógica de aplicación.
+  @@map("ingredients")
+}
+
+/// Proveedor de insumos.
+
+model Supplier {
+  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId         String   @map("location_id") @db.Uuid
+  supplierCode       String   @map("supplier_code") @db.VarChar(40)
+  name               String   @db.VarChar(200)
+  taxId              String?  @map("tax_id") @db.VarChar(40)
+  phone              String?  @db.VarChar(40)
+  email              String?  @db.VarChar(200)
+  addressLine        String?  @map("address_line") @db.Text
+  deliveryDays       Int?     @map("delivery_days") @db.SmallInt
+  orderReminderDays  Int?     @map("order_reminder_days") @db.SmallInt
+  lastOrderDate      DateTime? @map("last_order_date") @db.Date
+  notes              String?  @db.Text
+  active             Boolean  @default(true)
+  createdAt          DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location          Location          @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  ingredientLinks   IngredientSupplier[]
+  inventoryLots     InventoryLot[]
+  goodsReceipts     GoodsReceipt[]
+  purchaseOrders    PurchaseOrder[]
+  resources         Resource[]
+
+  @@unique([locationId, supplierCode], map: "suppliers_code_unique")
+  /// La actualización temporal la mantiene el trigger SQL; datos fiscales son CHECK/lógica externa.
+  @@map("suppliers")
+}
+
+/// Proveedores y costos alternativos de un insumo.
+
+model IngredientSupplier {
+  ingredientId String   @map("ingredient_id") @db.Uuid
+  supplierId   String   @map("supplier_id") @db.Uuid
+  supplierSku  String?  @map("supplier_sku") @db.VarChar(60)
+  packQuantity Decimal  @map("pack_quantity") @db.Decimal(14, 6)
+  packUnitId   String   @map("pack_unit_id") @db.Uuid
+  unitCost     Decimal  @map("unit_cost") @db.Decimal(14, 6)
+  isPreferred  Boolean  @map("is_preferred") @default(false)
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  supplier   Supplier   @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  packUnit   Unit       @relation("IngredientSupplierPackUnit", fields: [packUnitId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([ingredientId, supplierId])
+  /// Cantidades, costos y preferencia se validan con CHECK/lógica de aplicación.
+  @@map("ingredient_suppliers")
+}
+
+/// Bodega o ubicación física de inventario.
+
+model StorageLocation {
+  id         String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId String @map("location_id") @db.Uuid
+  code       String   @db.VarChar(40)
+  name       String   @db.VarChar(100)
+  active     Boolean  @default(true)
+
+  location          Location             @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  inventoryLots     InventoryLot[]
+  inventoryMovements InventoryMovement[]
+
+  @@unique([locationId, code], map: "storage_locations_code_unique")
+  @@map("storage_locations")
+}
+
+/// Lote recibido de un insumo.
+
+model InventoryLot {
+  id                 String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  storageLocationId  String    @map("storage_location_id") @db.Uuid
+  ingredientId       String    @map("ingredient_id") @db.Uuid
+  supplierId         String?   @map("supplier_id") @db.Uuid
+  lotCode            String    @map("lot_code") @db.VarChar(80)
+  receivedOn         DateTime  @map("received_on") @db.Date
+  expiresOn          DateTime? @map("expires_on") @db.Date
+  quantityReceived   Decimal   @map("quantity_received") @db.Decimal(14, 6)
+  unitCost           Decimal   @map("unit_cost") @db.Decimal(14, 6)
+  active             Boolean   @default(true)
+
+  storageLocation  StorageLocation     @relation(fields: [storageLocationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  ingredient       Ingredient          @relation(fields: [ingredientId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  supplier         Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  receiptLines     GoodsReceiptLine[]
+  inventoryMovements InventoryMovement[]
+
+  @@unique([storageLocationId, ingredientId, lotCode], map: "inventory_lots_code_unique")
+  @@index([ingredientId, expiresOn], map: "inventory_lots_expiry_idx")
+  /// Vigencia, cantidad y costo tienen CHECK de SQL.
+  @@map("inventory_lots")
+}
+
+/// Recepción de mercancía.
+
+model GoodsReceipt {
+  id               String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId       String   @map("location_id") @db.Uuid
+  supplierId       String   @map("supplier_id") @db.Uuid
+  receiptNumber    String   @map("receipt_number") @db.VarChar(50)
+  receivedAt       DateTime @map("received_at") @db.Timestamptz(3)
+  receivedByUserId String?  @map("received_by_user_id") @db.Uuid
+  notes            String?  @db.Text
+  createdAt        DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  location  Location  @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  supplier  Supplier  @relation(fields: [supplierId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  receiver  User?     @relation("GoodsReceiptReceiver", fields: [receivedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  lines     GoodsReceiptLine[]
+
+  @@unique([locationId, receiptNumber], map: "goods_receipts_number_unique")
+  @@map("goods_receipts")
+}
+
+/// Línea de recepción vinculada a lote e insumo.
+
+model GoodsReceiptLine {
+  id                String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  goodsReceiptId    String   @map("goods_receipt_id") @db.Uuid
+  ingredientId      String   @map("ingredient_id") @db.Uuid
+  inventoryLotId    String   @map("inventory_lot_id") @db.Uuid
+  unitId            String   @map("unit_id") @db.Uuid
+  quantityReceived  Decimal  @map("quantity_received") @db.Decimal(14, 6)
+  unitCost          Decimal  @map("unit_cost") @db.Decimal(14, 6)
+  totalCost         Decimal  @map("total_cost") @db.Decimal(14, 2)
+
+  goodsReceipt     GoodsReceipt      @relation(fields: [goodsReceiptId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  ingredient       Ingredient        @relation(fields: [ingredientId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  inventoryLot     InventoryLot      @relation(fields: [inventoryLotId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  unit             Unit              @relation("GoodsReceiptLineUnit", fields: [unitId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  inventoryMovements InventoryMovement[]
+
+  /// Coherencia entre cantidad, costo y total es CHECK de SQL.
+  @@map("goods_receipt_lines")
+}
+
+/// Receta versionada y vigente para una variante.
+
+model Recipe {
+  id                 String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  menuItemVariantId  String   @map("menu_item_variant_id") @db.Uuid
+  versionNo          Int      @map("version_no")
+  effectiveFrom      DateTime @map("effective_from") @db.Date
+  effectiveTo        DateTime? @map("effective_to") @db.Date
+  yieldQuantity      Decimal  @map("yield_quantity") @default(1) @db.Decimal(14, 6)
+  yieldUnitId        String   @map("yield_unit_id") @db.Uuid
+  notes              String?  @db.Text
+  active             Boolean  @default(true)
+
+  /// Columna generada por PostgreSQL, de solo lectura; la aplicación nunca la escribe.
+  effectiveDuring Unsupported("daterange")? @default(dbgenerated("daterange(effective_from, COALESCE(effective_to, 'infinity'::date), '[)'::text)")) @map("effective_during")
+
+  menuItemVariant MenuItemVariant @relation(fields: [menuItemVariantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  yieldUnit       Unit            @relation("RecipeYieldUnit", fields: [yieldUnitId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  lines           RecipeLine[]
+  orderLines      OrderLine[]
+
+  @@unique([menuItemVariantId, versionNo], map: "recipes_version_unique")
+  /// effective_during es daterange generada; la EXCLUDE de recetas vive en SQL.
+  /// version_no, rendimiento y fechas son CHECK de SQL.
+  @@map("recipes")
+}
+
+/// Insumo y cantidad usada por una receta.
+
+model RecipeLine {
+  id         String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  recipeId   String   @map("recipe_id") @db.Uuid
+  ingredientId String @map("ingredient_id") @db.Uuid
+  unitId     String   @map("unit_id") @db.Uuid
+  quantity   Decimal  @db.Decimal(14, 6)
+  notes      String?  @db.Text
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  unit       Unit       @relation("RecipeLineUnit", fields: [unitId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([recipeId, ingredientId], map: "recipe_lines_ingredient_unique")
+  /// quantity positiva es CHECK de SQL.
+  @@map("recipe_lines")
+}
+
+/// Catálogo de alérgenos publicados.
+
+model Allergen {
+  id       String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  code     String   @unique(map: "allergens_code_key") @db.VarChar(40)
+  nameEs   String   @map("name_es") @db.VarChar(100)
+  nameEn   String   @map("name_en") @db.VarChar(100)
+  active   Boolean  @default(true)
+
+  ingredientAllergens IngredientAllergen[]
+  menuItemAllergens   MenuItemAllergen[]
+
+  @@map("allergens")
+}
+
+/// Alérgenos presentes o posibles en un insumo.
+
+model IngredientAllergen {
+  ingredientId String @map("ingredient_id") @db.Uuid
+  allergenId   String @map("allergen_id") @db.Uuid
+  presenceType String @map("presence_type") @db.VarChar(20)
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  allergen   Allergen   @relation(fields: [allergenId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([ingredientId, allergenId])
+  /// presence_type se restringe mediante CHECK de SQL.
+  @@map("ingredient_allergens")
+}
+
+/// Espacio de comedor o de evento privado.
+
+model MenuItemAllergen {
+  menuItemVariantId String   @map("menu_item_variant_id") @db.Uuid
+  allergenId        String   @map("allergen_id") @db.Uuid
+  presenceType      String   @map("presence_type") @db.VarChar(20)
+  isReviewed        Boolean  @map("is_reviewed") @default(false)
+  active            Boolean  @default(true)
+  reviewedAt        DateTime? @map("reviewed_at") @db.Timestamptz(3)
+  reviewedByUserId  String?  @map("reviewed_by_user_id") @db.Uuid
+
+  variant   MenuItemVariant @relation(fields: [menuItemVariantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  allergen  Allergen        @relation(fields: [allergenId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reviewedBy User?          @relation("MenuItemAllergenReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@id([menuItemVariantId, allergenId])
+  /// presence_type y revisión son CHECK/lógica de aplicación.
+  @@map("menu_item_allergens")
+}
+
+/// Mensaje recibido desde el formulario público.
+
+model InventoryMovement {
+  id                 String                 @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  storageLocationId  String                 @map("storage_location_id") @db.Uuid
+  ingredientId       String                 @map("ingredient_id") @db.Uuid
+  inventoryLotId     String?                @map("inventory_lot_id") @db.Uuid
+  movementType       InventoryMovementType  @map("movement_type")
+  quantityDelta      Decimal                @map("quantity_delta") @db.Decimal(14, 6)
+  unitCost           Decimal                @map("unit_cost") @default(0) @db.Decimal(14, 6)
+  goodsReceiptLineId String?                @map("goods_receipt_line_id") @db.Uuid
+  orderLineId        String?                @map("order_line_id") @db.Uuid
+  createdByUserId    String?                @map("created_by_user_id") @db.Uuid
+  reason             String?                @db.VarChar(200)
+  createdAt          DateTime               @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  storageLocation  StorageLocation  @relation(fields: [storageLocationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  ingredient       Ingredient       @relation(fields: [ingredientId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  inventoryLot     InventoryLot?    @relation(fields: [inventoryLotId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  goodsReceiptLine GoodsReceiptLine? @relation(fields: [goodsReceiptLineId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  orderLine        OrderLine?       @relation(fields: [orderLineId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  createdBy        User?            @relation("InventoryMovementCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([storageLocationId, ingredientId, createdAt], map: "inventory_movements_stock_idx")
+  /// La fuente válida de cada movimiento se impone con CHECK de SQL.
+  /// Las vistas inventory_balance y daily_sales son SQL-only y se omiten del cliente Prisma.
+  @@map("inventory_movements")
+}
+
+/// Agregado diario de visitas publicas sin identificadores personales.

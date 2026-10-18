@@ -1,0 +1,93 @@
+// Empleados y turnos
+
+enum EmployeeStatus {
+  Active  @map("active")
+  Inactive @map("inactive")
+  OnLeave @map("on_leave")
+
+  @@map("employee_status")
+}
+
+enum JobCode {
+  Manager   @map("manager")
+  Cashier   @map("cashier")
+  Server    @map("server")
+  Cook      @map("cook")
+  Barista   @map("barista")
+  Inventory @map("inventory")
+
+  @@map("job_code")
+}
+
+enum ShiftStatus {
+  Planned   @map("planned")
+  Started   @map("started")
+  Finished  @map("finished")
+  Absent    @map("absent")
+  Cancelled @map("cancelled")
+
+  @@map("shift_status")
+}
+
+model Employee {
+  id              String         @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId      String         @map("location_id") @db.Uuid
+  employeeCode    String         @map("employee_code") @db.VarChar(30)
+  firstName       String         @map("first_name") @db.VarChar(80)
+  lastName        String         @map("last_name") @db.VarChar(80)
+  jobCode         JobCode        @map("job_code")
+  status          EmployeeStatus @default(Active)
+  phone           String?        @db.VarChar(40)
+  email           String?        @db.VarChar(200)
+  hireDate        DateTime       @map("hire_date") @db.Date
+  terminationDate DateTime?      @map("termination_date") @db.Date
+  createdAt       DateTime       @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime       @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location         Location          @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  user             User?
+  shiftAssignments ShiftAssignment[]
+  tipDistributions TipDistribution[]
+  ordersAsServer   Order[]           @relation("OrderServerEmployee")
+
+  @@unique([locationId, employeeCode], map: "employees_code_unique")
+  @@index([locationId, status], map: "employees_location_status_idx")
+  /// Las fechas de contratación y terminación son CHECK exclusivos de SQL.
+  @@map("employees")
+}
+
+/// Cuenta de acceso separada del registro laboral.
+
+model Shift {
+  id           String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId   String      @map("location_id") @db.Uuid
+  businessDate DateTime    @map("business_date") @db.Date
+  startsAt     DateTime    @map("starts_at") @db.Timestamptz(3)
+  endsAt       DateTime    @map("ends_at") @db.Timestamptz(3)
+  status       ShiftStatus @default(Planned)
+  notes        String?     @db.Text
+  createdAt    DateTime    @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  location    Location          @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  assignments ShiftAssignment[]
+
+  /// El orden temporal ends_at > starts_at es CHECK de SQL.
+  @@index([locationId, businessDate, status], map: "shifts_location_date_idx")
+  @@map("shifts")
+}
+
+/// Empleados asignados a un turno.
+
+model ShiftAssignment {
+  shiftId    String   @map("shift_id") @db.Uuid
+  employeeId String   @map("employee_id") @db.Uuid
+  assignedAt DateTime @map("assigned_at") @default(now()) @db.Timestamptz(3)
+
+  shift    Shift    @relation(fields: [shiftId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([shiftId, employeeId])
+  @@map("shift_assignments")
+}
+
+/// Auditoría append-only de acciones sensibles de negocio.

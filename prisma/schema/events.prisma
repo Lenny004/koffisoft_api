@@ -1,0 +1,260 @@
+// Eventos, paquetes y cotizaciones
+
+enum EventType {
+  Wedding    @map("wedding")
+  Birthday   @map("birthday")
+  Corporate  @map("corporate")
+  Meeting    @map("meeting")
+  Anniversary @map("anniversary")
+  Other      @map("other")
+
+  @@map("event_type")
+}
+
+enum EventStatus {
+  Inquiry      @map("inquiry")
+  Quoted       @map("quoted")
+  Negotiating  @map("negotiating")
+  Tentative    @map("tentative")
+  Confirmed    @map("confirmed")
+  InProgress   @map("in_progress")
+  Completed    @map("completed")
+  Cancelled    @map("cancelled")
+  Lost         @map("lost")
+
+  @@map("event_status")
+}
+
+enum EventSpaceBookingStatus {
+  Held      @map("held")
+  Confirmed @map("confirmed")
+  Released  @map("released")
+
+  @@map("event_space_booking_status")
+}
+
+enum QuoteStatus {
+  Draft     @map("draft")
+  Sent      @map("sent")
+  Accepted  @map("accepted")
+  Rejected  @map("rejected")
+  Expired   @map("expired")
+  Cancelled @map("cancelled")
+
+  @@map("quote_status")
+}
+
+enum EventQuoteLineType {
+  Menu       @map("menu")
+  Beverage   @map("beverage")
+  Venue      @map("venue")
+  Decoration @map("decoration")
+  Staffing   @map("staffing")
+  Service    @map("service")
+  Other      @map("other")
+
+  @@map("event_quote_line_type")
+}
+
+model Event {
+  id                   String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId           String      @map("location_id") @db.Uuid
+  customerId           String?     @map("customer_id") @db.Uuid
+  eventCode            String      @map("event_code") @db.VarChar(50)
+  eventType            EventType   @map("event_type")
+  title                String      @db.VarChar(200)
+  contactNameSnapshot  String      @map("contact_name_snapshot") @db.VarChar(200)
+  contactPhoneSnapshot String      @map("contact_phone_snapshot") @db.VarChar(40)
+  contactEmailSnapshot String?     @map("contact_email_snapshot") @db.VarChar(200)
+  preferredLanguage    String      @map("preferred_language") @default("es") @db.Char(2)
+  startsAt             DateTime    @map("starts_at") @db.Timestamptz(3)
+  endsAt               DateTime    @map("ends_at") @db.Timestamptz(3)
+  setupStartsAt        DateTime?   @map("setup_starts_at") @db.Timestamptz(3)
+  estimatedGuestCount  Int         @map("estimated_guest_count") @db.SmallInt
+  confirmedGuestCount  Int?        @map("confirmed_guest_count") @db.SmallInt
+  budgetTarget         Decimal?    @map("budget_target") @db.Decimal(14, 2)
+  status               EventStatus @default(Inquiry)
+  publicationStatus    PublicationStatus @default(Draft) @map("publication_status")
+  publishedAt          DateTime?         @map("published_at") @db.Timestamptz(3)
+  scheduledAt          DateTime?         @map("scheduled_at") @db.Timestamptz(3)
+  expiresAt            DateTime?         @map("expires_at") @db.Timestamptz(3)
+  previewTokenHash     String?           @unique(map: "events_preview_token_unique") @map("preview_token_hash") @db.Char(64)
+  previewExpiresAt     DateTime?         @map("preview_expires_at") @db.Timestamptz(3)
+  source               String      @default("web") @db.VarChar(30)
+  specialRequirements  String?     @map("special_requirements") @db.Text
+  internalNotes        String?     @map("internal_notes") @db.Text
+  coordinatorUserId    String?     @map("coordinator_user_id") @db.Uuid
+  createdAt            DateTime    @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime    @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location       Location           @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  customer       Customer?          @relation(fields: [customerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  spaceBookings  EventSpaceBooking[]
+  quotes         EventQuote[]
+  requirements   EventRequirement[]
+  orders         Order[]            @relation("EventOrders")
+  payments       Payment[]          @relation("EventPayments")
+  coordinator    User?              @relation("EventCoordinator", fields: [coordinatorUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  contactMessages ContactMessage[]
+
+  @@unique([locationId, eventCode], map: "events_code_unique")
+  @@index([locationId, startsAt, status], map: "events_location_start_idx")
+  @@index([locationId, publicationStatus, scheduledAt], map: "events_publication_idx")
+  /// Duración, montaje, invitados y fuente son CHECK de SQL.
+  @@map("events")
+}
+
+/// Bloqueo de un espacio para un evento.
+
+model EventSpaceBooking {
+  id                String                   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  eventId           String                   @map("event_id") @db.Uuid
+  venueSpaceId      String                   @map("venue_space_id") @db.Uuid
+  startsAt          DateTime                 @map("starts_at") @db.Timestamptz(3)
+  endsAt            DateTime                 @map("ends_at") @db.Timestamptz(3)
+  setupStartsAt     DateTime?                @map("setup_starts_at") @db.Timestamptz(3)
+  teardownEndsAt    DateTime?                @map("teardown_ends_at") @db.Timestamptz(3)
+  bookingStatus     EventSpaceBookingStatus  @map("booking_status") @default(Held)
+  capacityReserved  Int                      @map("capacity_reserved") @db.SmallInt
+  holdExpiresAt     DateTime?                @map("hold_expires_at") @db.Timestamptz(3)
+
+  /// Columna generada por PostgreSQL, de solo lectura; la aplicación nunca la escribe.
+  blockedDuring Unsupported("tstzrange")? @default(dbgenerated("tstzrange(COALESCE(setup_starts_at, starts_at), COALESCE(teardown_ends_at, ends_at), '[)'::text)")) @map("blocked_during")
+
+  event      Event      @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  venueSpace VenueSpace @relation(fields: [venueSpaceId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([eventId], map: "event_space_bookings_event_idx")
+  /// blocked_during y event_space_bookings_no_overlap son columna generada y EXCLUDE SQL.
+  @@map("event_space_bookings")
+}
+
+/// Paquete reutilizable pequeño para eventos.
+
+model EventPackage {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId     String   @map("location_id") @db.Uuid
+  packageCode    String   @map("package_code") @db.VarChar(50)
+  nameEs         String   @map("name_es") @db.VarChar(160)
+  nameEn         String   @map("name_en") @db.VarChar(160)
+  descriptionEs  String?  @map("description_es") @db.Text
+  descriptionEn  String?  @map("description_en") @db.Text
+  pricingModel   String   @map("pricing_model") @db.VarChar(20)
+  basePrice      Decimal  @map("base_price") @db.Decimal(14, 2)
+  minGuestCount  Int?     @map("min_guest_count") @db.SmallInt
+  maxGuestCount  Int?     @map("max_guest_count") @db.SmallInt
+  active         Boolean  @default(true)
+
+  location Location           @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  lines    EventPackageLine[]
+  quotes   EventQuote[]
+
+  @@unique([locationId, packageCode], map: "event_packages_code_unique")
+  /// Modelo de precio y rango de invitados son CHECK de SQL.
+  @@map("event_packages")
+}
+
+/// Línea de un paquete reutilizable.
+
+model EventPackageLine {
+  id                String              @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  eventPackageId    String              @map("event_package_id") @db.Uuid
+  lineType          EventQuoteLineType  @map("line_type")
+  menuItemVariantId String?             @map("menu_item_variant_id") @db.Uuid
+  labelEs           String              @map("label_es") @db.VarChar(200)
+  labelEn           String              @map("label_en") @db.VarChar(200)
+  quantity          Decimal             @db.Decimal(14, 6)
+  unit              String              @db.VarChar(40)
+  unitPrice         Decimal             @map("unit_price") @db.Decimal(14, 2)
+  sortOrder         Int                 @map("sort_order") @default(0) @db.SmallInt
+  active            Boolean             @default(true)
+
+  eventPackage EventPackage      @relation(fields: [eventPackageId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  variant      MenuItemVariant?  @relation(fields: [menuItemVariantId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  quoteLines   EventQuoteLine[]
+
+  /// La exigencia de variante para menu/beverage es CHECK de SQL.
+  @@map("event_package_lines")
+}
+
+/// Cotización versionada de un evento.
+
+model EventQuote {
+  id              String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  eventId         String      @map("event_id") @db.Uuid
+  eventPackageId  String?     @map("event_package_id") @db.Uuid
+  versionNo       Int         @map("version_no")
+  status          QuoteStatus @default(Draft)
+  currency        String      @default("USD") @db.Char(3)
+  validUntil      DateTime    @map("valid_until") @db.Date
+  subtotalAmount  Decimal     @map("subtotal_amount") @default(0) @db.Decimal(14, 2)
+  discountAmount  Decimal     @map("discount_amount") @default(0) @db.Decimal(14, 2)
+  taxableAmount   Decimal     @map("taxable_amount") @default(0) @db.Decimal(14, 2)
+  taxAmount       Decimal     @map("tax_amount") @default(0) @db.Decimal(14, 2)
+  totalAmount     Decimal     @map("total_amount") @default(0) @db.Decimal(14, 2)
+  termsEs         String?     @map("terms_es") @db.Text
+  termsEn         String?     @map("terms_en") @db.Text
+  sentAt          DateTime?   @map("sent_at") @db.Timestamptz(3)
+  acceptedAt      DateTime?   @map("accepted_at") @db.Timestamptz(3)
+  createdAt       DateTime    @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime    @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  event   Event            @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  package EventPackage?    @relation(fields: [eventPackageId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  lines   EventQuoteLine[]
+
+  @@unique([eventId, versionNo], map: "event_quotes_version_unique")
+  @@index([eventId, versionNo(sort: Desc)], map: "event_quotes_event_idx")
+  /// Totales y el índice parcial de una sola cotización aceptada son SQL-only.
+  @@map("event_quotes")
+}
+
+/// Línea congelada de una cotización.
+
+model EventQuoteLine {
+  id                String             @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  eventQuoteId      String             @map("event_quote_id") @db.Uuid
+  eventPackageLineId String?            @map("event_package_line_id") @db.Uuid
+  menuItemVariantId String?            @map("menu_item_variant_id") @db.Uuid
+  lineType          EventQuoteLineType @map("line_type")
+  labelEs           String             @map("label_es") @db.VarChar(200)
+  labelEn           String             @map("label_en") @db.VarChar(200)
+  quantity          Decimal            @db.Decimal(14, 6)
+  unit              String             @db.VarChar(40)
+  unitPrice         Decimal            @map("unit_price") @db.Decimal(14, 2)
+  discountAmount    Decimal            @map("discount_amount") @default(0) @db.Decimal(14, 2)
+  taxRate           Decimal            @map("tax_rate") @default(0) @db.Decimal(7, 6)
+  taxableAmount     Decimal            @map("taxable_amount") @db.Decimal(14, 2)
+  taxAmount         Decimal            @map("tax_amount") @db.Decimal(14, 2)
+  lineTotal         Decimal            @map("line_total") @db.Decimal(14, 2)
+  sortOrder         Int                @map("sort_order") @default(0) @db.SmallInt
+
+  eventQuote       EventQuote        @relation(fields: [eventQuoteId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  eventPackageLine EventPackageLine? @relation(fields: [eventPackageLineId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  variant          MenuItemVariant?  @relation(fields: [menuItemVariantId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  /// Totales, tasa y variante requerida son CHECK de SQL.
+  @@map("event_quote_lines")
+}
+
+/// Requisito operativo o de atención de un evento.
+
+model EventRequirement {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  eventId         String   @map("event_id") @db.Uuid
+  requirementType String   @map("requirement_type") @db.VarChar(30)
+  description     String   @db.Text
+  guestCount      Int?     @map("guest_count") @db.SmallInt
+  severity        String   @default("important") @db.VarChar(20)
+  status          String   @default("open") @db.VarChar(20)
+  resolvedAt      DateTime? @map("resolved_at") @db.Timestamptz(3)
+  createdAt       DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  active          Boolean  @default(true)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  /// Tipo, severidad y estado son CHECK de SQL.
+  @@map("event_requirements")
+}
+
+/// Venta operativa separada de pago y DTE.

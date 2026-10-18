@@ -1,0 +1,217 @@
+// Caja, pagos y propinas
+
+enum PaymentMethodType {
+  Cash         @map("cash")
+  Card         @map("card")
+  BankTransfer @map("bank_transfer")
+  MobileWallet @map("mobile_wallet")
+  Other        @map("other")
+
+  @@map("payment_method_type")
+}
+
+enum PaymentStatus {
+  Pending  @map("pending")
+  Captured @map("captured")
+  Failed   @map("failed")
+  Refunded @map("refunded")
+  Voided   @map("voided")
+
+  @@map("payment_status")
+}
+
+enum TipStatus {
+  Accepted             @map("accepted")
+  PartiallyDistributed @map("partially_distributed")
+  Distributed          @map("distributed")
+  Cancelled            @map("cancelled")
+  Refunded             @map("refunded")
+
+  @@map("tip_status")
+}
+
+enum TipDistributionStatus {
+  Pending   @map("pending")
+  Paid      @map("paid")
+  Cancelled @map("cancelled")
+
+  @@map("tip_distribution_status")
+}
+
+enum CashSessionStatus {
+  Open   @map("open")
+  Closed @map("closed")
+
+  @@map("cash_session_status")
+}
+
+enum CashMovementType {
+  Opening    @map("opening")
+  Sale       @map("sale")
+  Deposit    @map("deposit")
+  Withdrawal @map("withdrawal")
+  Refund     @map("refund")
+  Adjustment @map("adjustment")
+
+  @@map("cash_movement_type")
+}
+
+model PaymentMethod {
+  id         String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId String            @map("location_id") @db.Uuid
+  code       String            @db.VarChar(30)
+  name       String            @db.VarChar(100)
+  methodType PaymentMethodType @map("method_type")
+  active     Boolean           @default(true)
+
+  location Location  @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  payments Payment[]
+
+  @@unique([locationId, code], map: "payment_methods_code_unique")
+  @@map("payment_methods")
+}
+
+/// Caja física.
+
+model CashRegister {
+  id         String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId String  @map("location_id") @db.Uuid
+  code       String  @db.VarChar(30)
+  name       String  @db.VarChar(100)
+  active     Boolean @default(true)
+
+  location Location      @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  sessions CashSession[]
+
+  @@unique([locationId, code], map: "cash_registers_code_unique")
+  @@map("cash_registers")
+}
+
+/// Apertura y cierre de una caja por fecha comercial.
+
+model CashSession {
+  id                 String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  cashRegisterId     String            @map("cash_register_id") @db.Uuid
+  businessDate       DateTime          @map("business_date") @db.Date
+  openedByUserId     String            @map("opened_by_user_id") @db.Uuid
+  closedByUserId     String?           @map("closed_by_user_id") @db.Uuid
+  status             CashSessionStatus @default(Open)
+  openingAmount      Decimal           @map("opening_amount") @default(0) @db.Decimal(14, 2)
+  expectedCashAmount Decimal?         @map("expected_cash_amount") @db.Decimal(14, 2)
+  countedCashAmount  Decimal?         @map("counted_cash_amount") @db.Decimal(14, 2)
+  differenceAmount   Decimal?         @map("difference_amount") @db.Decimal(14, 2)
+  openedAt           DateTime          @map("opened_at") @default(now()) @db.Timestamptz(3)
+  closedAt           DateTime?         @map("closed_at") @db.Timestamptz(3)
+  notes              String?           @db.Text
+
+  cashRegister CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  openedBy     User         @relation("CashSessionOpenedBy", fields: [openedByUserId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  closedBy     User?        @relation("CashSessionClosedBy", fields: [closedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  movements    CashMovement[]
+  payments     Payment[]
+
+  @@unique([cashRegisterId, businessDate], map: "cash_sessions_unique_open")
+  @@index([cashRegisterId, businessDate], map: "cash_sessions_register_date_idx")
+  /// Cierre, montos y estado son CHECK de SQL.
+  @@map("cash_sessions")
+}
+
+/// Movimiento de caja.
+
+model CashMovement {
+  id            String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  cashSessionId String          @map("cash_session_id") @db.Uuid
+  movementType  CashMovementType @map("movement_type")
+  amount        Decimal         @db.Decimal(14, 2)
+  reason        String?         @db.VarChar(200)
+  createdByUserId String?       @map("created_by_user_id") @db.Uuid
+  createdAt     DateTime        @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  cashSession CashSession @relation(fields: [cashSessionId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  creator     User?       @relation("CashMovementCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  /// amount positivo es CHECK de SQL.
+  @@map("cash_movements")
+}
+
+/// Pago perteneciente a exactamente un contexto.
+
+model Payment {
+  id                 String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  orderId            String?       @map("order_id") @db.Uuid
+  reservationId      String?       @map("reservation_id") @db.Uuid
+  eventId            String?       @map("event_id") @db.Uuid
+  paymentMethodId    String        @map("payment_method_id") @db.Uuid
+  cashSessionId      String?       @map("cash_session_id") @db.Uuid
+  amount             Decimal       @db.Decimal(14, 2)
+  currency           String        @default("USD") @db.Char(3)
+  status             PaymentStatus @default(Pending)
+  externalReference  String?       @map("external_reference") @db.VarChar(160)
+  receivedByUserId   String?       @map("received_by_user_id") @db.Uuid
+  paidAt             DateTime?     @map("paid_at") @db.Timestamptz(3)
+  notes              String?       @db.Text
+  createdAt          DateTime      @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  order         Order?         @relation("OrderPayments", fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reservation   Reservation?   @relation("ReservationPayments", fields: [reservationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  event         Event?         @relation("EventPayments", fields: [eventId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  paymentMethod PaymentMethod  @relation(fields: [paymentMethodId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  cashSession   CashSession?   @relation(fields: [cashSessionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  receivedBy    User?          @relation("PaymentReceiver", fields: [receivedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  dtePayments   DteDocumentPayment[]
+
+  @@index([orderId, paidAt], map: "payments_order_idx")
+  @@index([eventId, paidAt], map: "payments_event_idx")
+  @@index([reservationId, paidAt], map: "payments_reservation_idx")
+  /// num_nonnulls(order_id, reservation_id, event_id) = 1 es CHECK SQL.
+  @@map("payments")
+}
+
+/// Propina voluntaria separada de descuentos.
+
+model Tip {
+  id              String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  orderId         String    @unique(map: "tips_order_id_key") @map("order_id") @db.Uuid
+  tipRate         Decimal   @map("tip_rate") @db.Decimal(7, 6)
+  amount          Decimal   @db.Decimal(14, 2)
+  status          TipStatus @default(Accepted)
+  wasInformed     Boolean   @map("was_informed") @default(false)
+  acceptedAt      DateTime? @map("accepted_at") @db.Timestamptz(3)
+  adjustedAt     DateTime? @map("adjusted_at") @db.Timestamptz(3)
+  adjustedByUserId String?  @map("adjusted_by_user_id") @db.Uuid
+  dueAt           DateTime? @map("due_at") @db.Timestamptz(3)
+  distributedAt   DateTime? @map("distributed_at") @db.Timestamptz(3)
+  notes           String?   @db.Text
+  createdAt       DateTime  @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  order    Order          @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  adjustedBy User?        @relation("TipAdjuster", fields: [adjustedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  distributions TipDistribution[]
+
+  /// El rango de tip_rate y coherencia de fechas se valida en SQL/aplicación.
+  @@map("tips")
+}
+
+/// Distribución de propina a un empleado.
+
+model TipDistribution {
+  id           String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  tipId        String                @map("tip_id") @db.Uuid
+  employeeId   String                @map("employee_id") @db.Uuid
+  amount       Decimal               @db.Decimal(14, 2)
+  status       TipDistributionStatus @default(Pending)
+  dueAt        DateTime              @map("due_at") @db.Timestamptz(3)
+  paidAt       DateTime?             @map("paid_at") @db.Timestamptz(3)
+  paidByUserId String?               @map("paid_by_user_id") @db.Uuid
+  notes        String?               @db.Text
+
+  tip      Tip      @relation(fields: [tipId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  paidBy   User?    @relation("TipPayout", fields: [paidByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@unique([tipId, employeeId], map: "tip_distributions_employee_unique")
+  /// amount y paid_at/status son CHECK/lógica de aplicación.
+  @@map("tip_distributions")
+}
+
+/// Secuencia local para numeración de documentos DTE.

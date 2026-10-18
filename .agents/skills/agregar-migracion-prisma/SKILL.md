@@ -6,7 +6,7 @@ description: Agrega una migración Prisma 7 para PostgreSQL conservando trazabil
 # Agregar una migración Prisma
 
 1. Confirmar que el cambio de esquema está aprobado y que existe una copia aislada y restaurable de la base; no apuntar al legacy ni a producción.
-2. Actualizar `prisma/schema.prisma` con nombres físicos conservados mediante `@map` y `@@map` cuando la compatibilidad lo requiera.
+2. Actualizar el archivo de dominio en `prisma/schema/` con nombres físicos conservados mediante `@map` y `@@map` cuando la compatibilidad lo requiera.
 3. Ejecutar `pnpm prisma:validate` antes de generar una migración.
 4. Con `DATABASE_URL` apuntando solo a la copia aislada, ejecutar `pnpm prisma migrate dev --name <nombre>`; nunca ejecutar `migrate reset` sin aprobación explícita.
 5. Revisar el SQL generado, índices, claves, procedimientos y triggers; documentar precondiciones, compatibilidad y estrategia expand/contract.

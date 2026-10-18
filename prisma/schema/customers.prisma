@@ -1,0 +1,62 @@
+// Clientes y documentos
+
+enum CustomerType {
+  Person   @map("person")
+  Business @map("business")
+
+  @@map("customer_type")
+}
+
+enum CustomerDocumentType {
+  Dui            @map("dui")
+  Nit            @map("nit")
+  Nrc            @map("nrc")
+  Passport       @map("passport")
+  ResidenceCard  @map("residence_card")
+  Other          @map("other")
+
+  @@map("customer_document_type")
+}
+
+model Customer {
+  id                 String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  customerType       CustomerType @map("customer_type") @default(Person)
+  displayName        String       @map("display_name") @db.VarChar(200)
+  phone              String?      @db.VarChar(40)
+  email              String?      @db.VarChar(200)
+  preferredLanguage  String       @map("preferred_language") @default("es") @db.Char(2)
+  marketingOptIn    Boolean      @map("marketing_opt_in") @default(false)
+  marketingConsentAt DateTime?   @map("marketing_consent_at") @db.Timestamptz(3)
+  notes              String?      @db.Text
+  active             Boolean      @default(true)
+  createdAt          DateTime     @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime     @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  documents        CustomerDocument[]
+  reservations     Reservation[]
+  events           Event[]
+  orders           Order[]
+  contactMessages  ContactMessage[]
+
+  /// Los idiomas, consentimiento y estados de activación tienen CHECK/lógica SQL.
+  @@map("customers")
+}
+
+/// Documento opcional de identidad o fiscalidad del cliente.
+
+model CustomerDocument {
+  id             String              @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  customerId     String              @map("customer_id") @db.Uuid
+  documentType   CustomerDocumentType @map("document_type")
+  countryCode    String?             @map("country_code") @db.Char(2)
+  documentNumber String              @map("document_number") @db.VarChar(80)
+  holderName     String?             @map("holder_name") @db.VarChar(200)
+  createdAt      DateTime            @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([documentType, countryCode, documentNumber], map: "customer_documents_unique")
+  @@map("customer_documents")
+}
+
+/// Tasa efectiva por vigencia para precios y documentos.

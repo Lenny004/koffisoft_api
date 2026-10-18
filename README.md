@@ -252,7 +252,7 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
-La migración inicial contiene el DDL y `prisma/seed/seed.sql` contiene los datos demo fuera de las migraciones. `pnpm db:deploy` aplica migraciones existentes; `pnpm prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --config ./prisma.config.ts` compara el historial con el schema. `pnpm db:reset` es destructivo y queda reservado para una base local aislada.
+La migración inicial contiene el DDL y `prisma/seed/seed.sql` contiene los datos demo fuera de las migraciones. `pnpm db:deploy` aplica migraciones existentes; `pnpm prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema --config ./prisma.config.ts` compara el historial con el schema. `pnpm db:reset` es destructivo y queda reservado para una base local aislada.
 
 Para crear o actualizar una cuenta local, `pnpm auth:create-user` acepta `--email`, `--password`, `--role` y `--username`; también lee `AUTH_USER_EMAIL`, `AUTH_USER_PASSWORD`, `AUTH_USER_ROLE` y `AUTH_USER_USERNAME` cuando no se pasan las opciones. No guardes esas credenciales en archivos versionados.
 

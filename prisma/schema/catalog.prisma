@@ -1,0 +1,328 @@
+// Carta, modificadores y promociones
+
+enum MenuItemType {
+  Food      @map("food")
+  Beverage  @map("beverage")
+  Dessert   @map("dessert")
+  Service   @map("service")
+
+  @@map("menu_item_type")
+}
+
+enum MenuChannel {
+  Pos      @map("pos")
+  Web      @map("web")
+  Event    @map("event")
+  Takeaway @map("takeaway")
+
+  @@map("menu_channel")
+}
+
+enum PromotionStatus {
+  Draft     @map("draft")
+  Scheduled @map("scheduled")
+  Active    @map("active")
+  Paused    @map("paused")
+  Expired   @map("expired")
+
+  @@map("promotion_status")
+}
+
+enum PromotionChannel {
+  Pos  @map("pos")
+  Web  @map("web")
+  All  @map("all")
+
+  @@map("promotion_channel")
+}
+
+model PrepStation {
+  id          String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId  String  @map("location_id") @db.Uuid
+  code        String  @db.VarChar(30)
+  name        String  @db.VarChar(100)
+  stationType String  @map("station_type") @db.VarChar(30)
+  active      Boolean @default(true)
+
+  location       Location         @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  menuVariants   MenuItemVariant[]
+  kitchenTickets KitchenTicket[]
+
+  @@unique([locationId, code], map: "prep_stations_code_unique")
+  @@map("prep_stations")
+}
+
+/// Cliente persona o empresa que interactúa con el negocio.
+
+model TaxRate {
+  id        String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  code      String   @db.VarChar(30)
+  name      String   @db.VarChar(100)
+  rate      Decimal  @db.Decimal(7, 6)
+  validFrom DateTime @map("valid_from") @db.Date
+  validTo   DateTime? @map("valid_to") @db.Date
+  active    Boolean  @default(true)
+
+  menuPrices MenuPrice[]
+
+  @@unique([code, validFrom], map: "tax_rates_code_date_unique")
+  /// rate y la vigencia se validan con CHECK de SQL.
+  @@map("tax_rates")
+}
+
+/// Categoría visible del menú.
+
+model MenuCategory {
+  id            String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId    String   @map("location_id") @db.Uuid
+  slug          String   @db.VarChar(120)
+  nameEs        String   @map("name_es") @db.VarChar(120)
+  nameEn        String   @map("name_en") @db.VarChar(120)
+  descriptionEs String?  @map("description_es") @db.Text
+  descriptionEn String?  @map("description_en") @db.Text
+  displayOrder  Int      @map("display_order") @default(0)
+  active        Boolean  @default(true)
+  createdAt     DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location  Location   @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  menuItems MenuItem[]
+
+  @@unique([locationId, slug], map: "menu_categories_slug_unique")
+  /// display_order no negativo es CHECK de SQL.
+  @@map("menu_categories")
+}
+
+/// Producto comercial del menú.
+
+model MenuItem {
+  id           String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  categoryId   String       @map("category_id") @db.Uuid
+  sku          String       @unique(map: "menu_items_sku_unique") @db.VarChar(50)
+  slug         String       @db.VarChar(160)
+  itemType     MenuItemType  @map("item_type")
+  nameEs       String       @map("name_es") @db.VarChar(160)
+  nameEn       String       @map("name_en") @db.VarChar(160)
+  descriptionEs String?     @map("description_es") @db.Text
+  descriptionEn String?     @map("description_en") @db.Text
+  publicVisible Boolean     @map("public_visible") @default(true)
+  publicationStatus PublicationStatus @default(Draft) @map("publication_status")
+  publishedAt       DateTime?         @map("published_at") @db.Timestamptz(3)
+  scheduledAt       DateTime?         @map("scheduled_at") @db.Timestamptz(3)
+  expiresAt         DateTime?         @map("expires_at") @db.Timestamptz(3)
+  previewTokenHash  String?           @unique(map: "menu_items_preview_token_unique") @map("preview_token_hash") @db.Char(64)
+  previewExpiresAt  DateTime?         @map("preview_expires_at") @db.Timestamptz(3)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime     @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  category  MenuCategory     @relation(fields: [categoryId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  variants  MenuItemVariant[]
+
+  @@unique([categoryId, slug], map: "menu_items_slug_unique")
+  @@index([publicationStatus, scheduledAt], map: "menu_items_publication_idx")
+  @@map("menu_items")
+}
+
+/// Presentación vendible de un producto y estación principal.
+
+model MenuItemVariant {
+  id           String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  menuItemId   String   @map("menu_item_id") @db.Uuid
+  prepStationId String  @map("prep_station_id") @db.Uuid
+  sku          String   @unique(map: "menu_item_variants_sku_unique") @db.VarChar(60)
+  nameEs       String   @map("name_es") @db.VarChar(100)
+  nameEn       String   @map("name_en") @db.VarChar(100)
+  isDefault    Boolean  @map("is_default") @default(false)
+  active       Boolean  @default(true)
+  createdAt    DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  menuItem             MenuItem                  @relation(fields: [menuItemId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  prepStation          PrepStation               @relation(fields: [prepStationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  prices               MenuPrice[]
+  availabilities       MenuAvailability[]
+  outages              MenuItemOutage[]
+  modifierGroups       MenuItemModifierGroup[]
+  promotionItems       PromotionItem[]
+  eventPackageLines    EventPackageLine[]
+  eventQuoteLines      EventQuoteLine[]
+  recipes              Recipe[]
+  orderLines           OrderLine[]
+  menuItemAllergens    MenuItemAllergen[]
+
+  @@unique([menuItemId, nameEs], map: "menu_item_variants_name_unique")
+  /// El índice parcial de una sola variante default activa vive en SQL.
+  @@map("menu_item_variants")
+}
+
+/// Precio histórico por variante, sede y canal.
+
+model MenuPrice {
+  id         String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  variantId  String      @map("variant_id") @db.Uuid
+  locationId String      @map("location_id") @db.Uuid
+  channel    MenuChannel
+  price      Decimal     @db.Decimal(14, 2)
+  currency   String      @default("USD") @db.Char(3)
+  includesTax Boolean    @map("includes_tax") @default(true)
+  taxRateId  String      @map("tax_rate_id") @db.Uuid
+  validFrom  DateTime    @map("valid_from") @db.Date
+  validTo    DateTime?   @map("valid_to") @db.Date
+  active     Boolean     @default(true)
+
+  /// Columna generada por PostgreSQL, de solo lectura; la aplicación nunca la escribe.
+  validDuring Unsupported("daterange")? @default(dbgenerated("daterange(valid_from, COALESCE(valid_to, 'infinity'::date), '[)'::text)")) @map("valid_during")
+
+  variant  MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  location Location        @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  taxRate  TaxRate         @relation(fields: [taxRateId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  /// valid_during es una columna daterange generada y la EXCLUDE de vigencias vive en SQL.
+  /// price, currency y la vigencia también tienen CHECK de SQL.
+  @@map("menu_prices")
+}
+
+/// Ventana de disponibilidad de una variante.
+
+model MenuAvailability {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  variantId      String   @map("variant_id") @db.Uuid
+  locationId     String   @map("location_id") @db.Uuid
+  channel        MenuChannel
+  dayOfWeek      Int      @map("day_of_week") @db.SmallInt
+  startsAt       DateTime @map("starts_at") @db.Time(6)
+  endsAt         DateTime @map("ends_at") @db.Time(6)
+  crossesMidnight Boolean  @map("crosses_midnight") @default(false)
+  validFrom      DateTime? @map("valid_from") @db.Date
+  validTo        DateTime? @map("valid_to") @db.Date
+  active         Boolean  @default(true)
+
+  variant  MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  location Location        @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  /// Las ventanas horarias y de fechas son CHECK exclusivos de SQL.
+  @@map("menu_availability")
+}
+
+/// Agotado temporal de una variante.
+
+model MenuItemOutage {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  variantId       String   @map("variant_id") @db.Uuid
+  locationId      String   @map("location_id") @db.Uuid
+  startsAt        DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt          DateTime? @map("ends_at") @db.Timestamptz(3)
+  reason          String   @db.VarChar(200)
+  createdByUserId String?  @map("created_by_user_id") @db.Uuid
+  active          Boolean  @default(true)
+  createdAt       DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  variant  MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  location Location        @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  creator  User?           @relation("MenuItemOutageCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  /// El rango ends_at > starts_at es CHECK de SQL.
+  @@map("menu_item_outages")
+}
+
+/// Reglas de selección de extras o preferencias.
+
+model ModifierGroup {
+  id           String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId   String   @map("location_id") @db.Uuid
+  code         String   @db.VarChar(40)
+  nameEs       String   @map("name_es") @db.VarChar(120)
+  nameEn       String   @map("name_en") @db.VarChar(120)
+  selectionMin Int      @map("selection_min") @default(0) @db.SmallInt
+  selectionMax Int      @map("selection_max") @default(1) @db.SmallInt
+  required     Boolean  @default(false)
+  active       Boolean  @default(true)
+
+  location   Location                 @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  modifiers  Modifier[]
+  menuVariants MenuItemModifierGroup[]
+
+  @@unique([locationId, code], map: "modifier_groups_code_unique")
+  /// Los mínimos y máximos de selección son CHECK de SQL.
+  @@map("modifier_groups")
+}
+
+/// Opción concreta de un grupo de modificadores.
+
+model Modifier {
+  id              String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  modifierGroupId String   @map("modifier_group_id") @db.Uuid
+  code            String   @db.VarChar(40)
+  nameEs          String   @map("name_es") @db.VarChar(120)
+  nameEn          String   @map("name_en") @db.VarChar(120)
+  priceDelta      Decimal  @map("price_delta") @default(0) @db.Decimal(14, 2)
+  active          Boolean  @default(true)
+
+  modifierGroup     ModifierGroup        @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  orderLineModifiers OrderLineModifier[]
+
+  @@unique([modifierGroupId, code], map: "modifiers_code_unique")
+  /// price_delta no negativo es CHECK de SQL.
+  @@map("modifiers")
+}
+
+/// Grupos de modificadores permitidos para una variante.
+
+model MenuItemModifierGroup {
+  variantId      String @map("variant_id") @db.Uuid
+  modifierGroupId String @map("modifier_group_id") @db.Uuid
+  selectionMin   Int?   @map("selection_min") @db.SmallInt
+  selectionMax   Int?   @map("selection_max") @db.SmallInt
+  displayOrder   Int    @map("display_order") @default(0) @db.SmallInt
+  active         Boolean @default(true)
+
+  variant       MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  modifierGroup ModifierGroup   @relation(fields: [modifierGroupId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([variantId, modifierGroupId])
+  /// Los límites de selección son CHECK de SQL.
+  @@map("menu_item_modifier_groups")
+}
+
+/// Promoción simple publicable para POS y sitio.
+
+model Promotion {
+  id             String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId     String            @map("location_id") @db.Uuid
+  code           String?           @db.VarChar(50)
+  nameEs         String            @map("name_es") @db.VarChar(160)
+  nameEn         String            @map("name_en") @db.VarChar(160)
+  descriptionEs  String?           @map("description_es") @db.Text
+  descriptionEn  String?           @map("description_en") @db.Text
+  status         PromotionStatus   @default(Draft)
+  channel        PromotionChannel  @default(All)
+  discountType   String            @map("discount_type") @db.VarChar(20)
+  discountValue  Decimal           @map("discount_value") @default(0) @db.Decimal(14, 2)
+  startsAt       DateTime          @map("starts_at") @db.Timestamptz(3)
+  endsAt         DateTime          @map("ends_at") @db.Timestamptz(3)
+  active         Boolean           @default(true)
+
+  location    Location         @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  items       PromotionItem[]
+  adjustments OrderAdjustment[]
+
+  @@unique([locationId, code], map: "promotions_code_unique")
+  /// Tipo, porcentaje y orden temporal del descuento son CHECK de SQL.
+  @@map("promotions")
+}
+
+/// Variantes alcanzadas por una promoción.
+
+model PromotionItem {
+  promotionId String @map("promotion_id") @db.Uuid
+  variantId   String @map("variant_id") @db.Uuid
+
+  promotion Promotion       @relation(fields: [promotionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  variant   MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([promotionId, variantId])
+  @@map("promotion_items")
+}
+
+/// Familia de ingredientes.

@@ -1,0 +1,238 @@
+// Pedidos y cocina
+
+enum OrderServiceType {
+  DineIn   @map("dine_in")
+  Takeaway @map("takeaway")
+  Catering @map("catering")
+  Event    @map("event")
+
+  @@map("order_service_type")
+}
+
+enum OrderSource {
+  Pos   @map("pos")
+  Web   @map("web")
+  Phone @map("phone")
+  Admin @map("admin")
+
+  @@map("order_source")
+}
+
+enum OrderStatus {
+  Open         @map("open")
+  Sent         @map("sent")
+  Preparing    @map("preparing")
+  Ready        @map("ready")
+  Served       @map("served")
+  PartiallyPaid @map("partially_paid")
+  Paid         @map("paid")
+  Voided       @map("voided")
+
+  @@map("order_status")
+}
+
+enum OrderLineStatus {
+  Open      @map("open")
+  Sent      @map("sent")
+  Preparing @map("preparing")
+  Ready     @map("ready")
+  Served    @map("served")
+  Voided    @map("voided")
+
+  @@map("order_line_status")
+}
+
+enum KitchenTicketStatus {
+  Queued    @map("queued")
+  Preparing @map("preparing")
+  Ready     @map("ready")
+  Served    @map("served")
+  Cancelled @map("cancelled")
+
+  @@map("kitchen_ticket_status")
+}
+
+model Order {
+  id                  String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId          String          @map("location_id") @db.Uuid
+  orderNumber         BigInt          @map("order_number") @default(autoincrement()) @db.BigInt
+  businessDate        DateTime        @map("business_date") @db.Date
+  serviceType         OrderServiceType @map("service_type")
+  source              OrderSource     @default(Pos)
+  customerId          String?         @map("customer_id") @db.Uuid
+  reservationId       String?         @map("reservation_id") @db.Uuid
+  eventId             String?         @map("event_id") @db.Uuid
+  serverEmployeeId    String?         @map("server_employee_id") @db.Uuid
+  status              OrderStatus     @default(Open)
+  currency            String          @default("USD") @db.Char(3)
+  subtotalAmount      Decimal         @map("subtotal_amount") @default(0) @db.Decimal(14, 2)
+  discountAmount      Decimal         @map("discount_amount") @default(0) @db.Decimal(14, 2)
+  taxAmount           Decimal         @map("tax_amount") @default(0) @db.Decimal(14, 2)
+  serviceChargeAmount Decimal         @map("service_charge_amount") @default(0) @db.Decimal(14, 2)
+  tipAmount           Decimal         @map("tip_amount") @default(0) @db.Decimal(14, 2)
+  totalAmount         Decimal         @map("total_amount") @default(0) @db.Decimal(14, 2)
+  balanceDue          Decimal         @map("balance_due") @default(0) @db.Decimal(14, 2)
+  notes               String?         @db.Text
+  openedAt            DateTime        @map("opened_at") @default(now()) @db.Timestamptz(3)
+  closedAt            DateTime?       @map("closed_at") @db.Timestamptz(3)
+  createdAt           DateTime        @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime        @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location       Location            @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  customer       Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  reservation    Reservation?        @relation("ReservationOrders", fields: [reservationId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  event          Event?              @relation("EventOrders", fields: [eventId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  serverEmployee Employee?           @relation("OrderServerEmployee", fields: [serverEmployeeId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  tables         OrderTableAssignment[]
+  lines          OrderLine[]
+  adjustments    OrderAdjustment[]
+  kitchenTickets KitchenTicket[]
+  payments       Payment[]            @relation("OrderPayments")
+  tip            Tip?
+  dteDocuments  DteDocument[]
+
+  @@unique([locationId, orderNumber], map: "orders_number_unique")
+  @@index([locationId, businessDate, status], map: "orders_location_date_status_idx")
+  @@index([customerId, openedAt(sort: Desc)], map: "orders_customer_idx")
+  /// Totales, cierre y fecha comercial tienen CHECK/lógica de aplicación.
+  @@map("orders")
+}
+
+/// Mesas asociadas a una orden.
+
+model OrderTableAssignment {
+  orderId       String   @map("order_id") @db.Uuid
+  diningTableId String   @map("dining_table_id") @db.Uuid
+  isPrimary     Boolean  @map("is_primary") @default(false)
+  assignedAt    DateTime @map("assigned_at") @default(now()) @db.Timestamptz(3)
+
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  diningTable DiningTable @relation(fields: [diningTableId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  /// El índice parcial de una sola mesa primaria vive en SQL.
+  @@id([orderId, diningTableId])
+  @@map("order_table_assignments")
+}
+
+/// Línea de venta con snapshots históricos.
+
+model OrderLine {
+  id                  String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  orderId             String          @map("order_id") @db.Uuid
+  lineNo              Int             @map("line_no") @db.SmallInt
+  menuItemVariantId   String?         @map("menu_item_variant_id") @db.Uuid
+  recipeId            String?         @map("recipe_id") @db.Uuid
+  itemNameSnapshot    String          @map("item_name_snapshot") @db.VarChar(200)
+  variantNameSnapshot String          @map("variant_name_snapshot") @db.VarChar(120)
+  skuSnapshot         String          @map("sku_snapshot") @db.VarChar(60)
+  quantity            Decimal         @db.Decimal(14, 6)
+  unitPrice           Decimal         @map("unit_price") @db.Decimal(14, 2)
+  includesTax         Boolean         @map("includes_tax") @default(true)
+  taxRate             Decimal         @map("tax_rate") @default(0) @db.Decimal(7, 6)
+  grossAmount         Decimal         @map("gross_amount") @db.Decimal(14, 2)
+  discountAmount      Decimal         @map("discount_amount") @default(0) @db.Decimal(14, 2)
+  taxableAmount       Decimal         @map("taxable_amount") @db.Decimal(14, 2)
+  taxAmount           Decimal         @map("tax_amount") @db.Decimal(14, 2)
+  totalAmount         Decimal         @map("total_amount") @db.Decimal(14, 2)
+  status              OrderLineStatus @default(Open)
+  specialInstructions String?         @map("special_instructions") @db.Text
+  createdAt           DateTime        @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  order             Order             @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  menuItemVariant   MenuItemVariant?  @relation(fields: [menuItemVariantId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  recipe            Recipe?           @relation(fields: [recipeId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  modifiers         OrderLineModifier[]
+  kitchenTicketLines KitchenTicketLine[]
+  dteDocumentLines  DteDocumentLine[]
+  inventoryMovements InventoryMovement[]
+
+  @@unique([orderId, lineNo], map: "order_lines_number_unique")
+  @@index([orderId], map: "order_lines_order_idx")
+  /// Importes, descuentos y conciliación de línea son CHECK de SQL.
+  @@map("order_lines")
+}
+
+/// Modificador elegido para una línea de orden.
+
+model OrderLineModifier {
+  id          String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  orderLineId String   @map("order_line_id") @db.Uuid
+  modifierId  String?  @map("modifier_id") @db.Uuid
+  nameSnapshot String  @map("name_snapshot") @db.VarChar(120)
+  quantity    Decimal  @default(1) @db.Decimal(14, 6)
+  priceDelta  Decimal  @map("price_delta") @default(0) @db.Decimal(14, 2)
+  totalDelta  Decimal  @map("total_delta") @default(0) @db.Decimal(14, 2)
+  notes       String?  @db.Text
+
+  orderLine OrderLine @relation(fields: [orderLineId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  modifier  Modifier? @relation(fields: [modifierId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  /// total_delta = round(quantity * price_delta, 2) es CHECK de SQL.
+  @@map("order_line_modifiers")
+}
+
+/// Descuento o cargo de servicio aplicado a una orden.
+
+model OrderAdjustment {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  orderId        String   @map("order_id") @db.Uuid
+  adjustmentType String   @map("adjustment_type") @db.VarChar(20)
+  description    String   @db.VarChar(200)
+  rate           Decimal? @db.Decimal(7, 6)
+  amount         Decimal  @db.Decimal(14, 2)
+  promotionId    String?  @map("promotion_id") @db.Uuid
+  createdByUserId String? @map("created_by_user_id") @db.Uuid
+  createdAt      DateTime @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  order     Order      @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  promotion Promotion? @relation(fields: [promotionId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  creator   User?      @relation("OrderAdjustmentCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  /// adjustment_type, rate y amount son CHECK de SQL.
+  @@map("order_adjustments")
+}
+
+/// Comanda enviada a una estación específica.
+
+model KitchenTicket {
+  id            String              @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  orderId       String              @map("order_id") @db.Uuid
+  prepStationId String              @map("prep_station_id") @db.Uuid
+  ticketNumber  Int                 @map("ticket_number")
+  status        KitchenTicketStatus  @default(Queued)
+  sentAt        DateTime             @map("sent_at") @default(now()) @db.Timestamptz(3)
+  startedAt     DateTime?            @map("started_at") @db.Timestamptz(3)
+  readyAt       DateTime?            @map("ready_at") @db.Timestamptz(3)
+  servedAt      DateTime?            @map("served_at") @db.Timestamptz(3)
+  notes         String?              @db.Text
+
+  order       Order              @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  prepStation PrepStation        @relation(fields: [prepStationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  lines       KitchenTicketLine[]
+
+  @@unique([orderId, ticketNumber], map: "kitchen_tickets_number_unique")
+  @@index([prepStationId, status, sentAt], map: "kitchen_tickets_station_status_idx")
+  @@map("kitchen_tickets")
+}
+
+/// Línea de una comanda de cocina o barra.
+
+model KitchenTicketLine {
+  id                  String              @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  kitchenTicketId     String              @map("kitchen_ticket_id") @db.Uuid
+  orderLineId         String              @map("order_line_id") @db.Uuid
+  itemNameSnapshot    String              @map("item_name_snapshot") @db.VarChar(200)
+  quantity            Decimal             @db.Decimal(14, 6)
+  modifiersSnapshot   String?             @map("modifiers_snapshot") @db.Text
+  specialInstructions String?             @map("special_instructions") @db.Text
+  status              KitchenTicketStatus  @default(Queued)
+  createdAt           DateTime            @map("created_at") @default(now()) @db.Timestamptz(3)
+
+  kitchenTicket KitchenTicket @relation(fields: [kitchenTicketId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  orderLine     OrderLine     @relation(fields: [orderLineId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  /// quantity positiva es CHECK de SQL.
+  @@map("kitchen_ticket_lines")
+}
+
+/// Medio de pago configurado para una sede.

@@ -1,0 +1,141 @@
+// Documentos tributarios electrónicos
+
+enum DteStatus {
+  Draft       @map("draft")
+  Signed      @map("signed")
+  Transmitted  @map("transmitted")
+  Accepted    @map("accepted")
+  Rejected    @map("rejected")
+  Contingency @map("contingency")
+  Invalidated @map("invalidated")
+
+  @@map("dte_status")
+}
+
+enum DteEventType {
+  Generated   @map("generated")
+  Signed      @map("signed")
+  Transmitted @map("transmitted")
+  Accepted    @map("accepted")
+  Rejected    @map("rejected")
+  Contingency @map("contingency")
+  Invalidated @map("invalidated")
+
+  @@map("dte_event_type")
+}
+
+model DteSequence {
+  id               String  @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId       String  @map("location_id") @db.Uuid
+  documentTypeCode String  @map("document_type_code") @db.VarChar(10)
+  series           String? @db.VarChar(20)
+  nextNumber       BigInt   @map("next_number") @default(1) @db.BigInt
+  active           Boolean  @default(true)
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@unique([locationId, documentTypeCode, series], map: "dte_sequences_unique")
+  /// next_number positivo es CHECK de SQL.
+  @@map("dte_sequences")
+}
+
+/// Cabecera y snapshot de un DTE.
+
+model DteDocument {
+  id                   String              @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId           String              @map("location_id") @db.Uuid
+  orderId              String?             @map("order_id") @db.Uuid
+  documentTypeCode     String              @map("document_type_code") @db.VarChar(10)
+  status               DteStatus           @default(Draft)
+  generationCode       String              @unique(map: "dte_documents_generation_code_key") @map("generation_code") @default(dbgenerated("uuidv4()")) @db.Uuid
+  controlNumber        String?             @map("control_number") @db.VarChar(100)
+  receptionStamp       String?             @map("reception_stamp") @db.VarChar(100)
+  issueAt              DateTime            @map("issue_at") @db.Timestamptz(3)
+  transmissionType     String              @map("transmission_type") @default("normal") @db.VarChar(30)
+  receptorName         String?             @map("receptor_name") @db.VarChar(200)
+  receptorDocumentType CustomerDocumentType? @map("receptor_document_type")
+  receptorDocumentNumber String?            @map("receptor_document_number") @db.VarChar(80)
+  receptorNrc          String?             @map("receptor_nrc") @db.VarChar(80)
+  receptorAddress      String?             @map("receptor_address") @db.Text
+  subtotalAmount       Decimal             @map("subtotal_amount") @default(0) @db.Decimal(14, 2)
+  discountAmount       Decimal             @map("discount_amount") @default(0) @db.Decimal(14, 2)
+  taxAmount            Decimal             @map("tax_amount") @default(0) @db.Decimal(14, 2)
+  totalAmount          Decimal             @map("total_amount") @default(0) @db.Decimal(14, 2)
+  signedDteJson        Json?               @map("signed_dte_json") @db.JsonB
+  readableDocument     String?             @map("readable_document") @db.Text
+  errorMessage         String?             @map("error_message") @db.Text
+  createdAt            DateTime            @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime            @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location       Location              @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  order          Order?                @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  lines          DteDocumentLine[]
+  payments       DteDocumentPayment[]
+  events         DteEvent[]
+
+  @@index([locationId, issueAt, status], map: "dte_documents_location_date_idx")
+  /// generation_code es UUIDv4 y la unicidad parcial del sello son SQL/lógica fiscal.
+  /// El documento aceptado se trata como snapshot inmutable por la aplicación.
+  @@map("dte_documents")
+}
+
+/// Línea fiscal congelada de un DTE.
+
+model DteDocumentLine {
+  id                String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  dteDocumentId     String   @map("dte_document_id") @db.Uuid
+  sourceOrderLineId String?  @map("source_order_line_id") @db.Uuid
+  lineNumber        Int      @map("line_number")
+  description       String   @db.VarChar(250)
+  quantity          Decimal  @db.Decimal(14, 6)
+  unitPrice         Decimal  @map("unit_price") @db.Decimal(14, 2)
+  discountAmount    Decimal  @map("discount_amount") @default(0) @db.Decimal(14, 2)
+  taxRate           Decimal  @map("tax_rate") @default(0) @db.Decimal(7, 6)
+  taxableAmount     Decimal  @map("taxable_amount") @db.Decimal(14, 2)
+  taxAmount         Decimal  @map("tax_amount") @db.Decimal(14, 2)
+  lineTotal         Decimal  @map("line_total") @db.Decimal(14, 2)
+
+  dteDocument   DteDocument @relation(fields: [dteDocumentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  sourceOrderLine OrderLine? @relation(fields: [sourceOrderLineId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@unique([dteDocumentId, lineNumber], map: "dte_document_lines_unique")
+  /// Coherencia de importes y cantidades es CHECK de SQL.
+  @@map("dte_document_lines")
+}
+
+/// Forma de pago declarada en un DTE.
+
+model DteDocumentPayment {
+  id                String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  dteDocumentId     String   @map("dte_document_id") @db.Uuid
+  paymentId         String?  @map("payment_id") @db.Uuid
+  paymentMethodCode String   @map("payment_method_code") @db.VarChar(40)
+  amount            Decimal  @db.Decimal(14, 2)
+  currency          String   @default("USD") @db.Char(3)
+
+  dteDocument DteDocument @relation(fields: [dteDocumentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  payment     Payment?    @relation(fields: [paymentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  /// amount y currency se validan con CHECK de SQL.
+  @@map("dte_document_payments")
+}
+
+/// Evento de transmisión o cambio de estado de un DTE.
+
+model DteEvent {
+  id             String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  dteDocumentId  String       @map("dte_document_id") @db.Uuid
+  eventType      DteEventType @map("event_type")
+  status         String       @db.VarChar(20)
+  occurredAt     DateTime     @map("occurred_at") @default(now()) @db.Timestamptz(3)
+  requestJson    Json?        @map("request_json") @db.JsonB
+  responseJson   Json?        @map("response_json") @db.JsonB
+  errorMessage   String?      @map("error_message") @db.Text
+
+  dteDocument DteDocument @relation(fields: [dteDocumentId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  /// status es CHECK de SQL.
+  @@map("dte_events")
+}
+
+/// Alérgeno revisado para una variante vendible.

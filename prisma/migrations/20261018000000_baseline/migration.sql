@@ -1,4 +1,5 @@
--- Koffi-Soft — migración inicial de PostgreSQL
+-- Origen: 20261003120000_init
+-- Koffi-Soft â€” migraciÃ³n inicial de PostgreSQL
 -- DDL completo sin datos demo. Las columnas de secretos solo contienen
 -- material cifrado o hashes y las claves permanecen fuera de PostgreSQL.
 
@@ -1629,9 +1630,9 @@ COMMENT ON TABLE locations IS 'Tabla del modelo operativo de Koffi-Soft.';
 COMMENT ON TABLE location_hours IS 'Tabla del modelo operativo de Koffi-Soft.';
 COMMENT ON TABLE location_hour_overrides IS 'Tabla del modelo operativo de Koffi-Soft.';
 COMMENT ON TABLE employees IS 'Tabla del modelo operativo de Koffi-Soft.';
-COMMENT ON TABLE users IS 'Cuentas del panel; solo se conserva un hash Argon2id de la contraseña.';
+COMMENT ON TABLE users IS 'Cuentas del panel; solo se conserva un hash Argon2id de la contraseÃ±a.';
 COMMENT ON TABLE roles IS 'Tabla del modelo operativo de Koffi-Soft.';
-COMMENT ON TABLE user_roles IS 'Asignación de roles a cuentas de usuario.';
+COMMENT ON TABLE user_roles IS 'AsignaciÃ³n de roles a cuentas de usuario.';
 COMMENT ON TABLE user_sessions IS 'Sesiones server-side; solo se almacena el hash del token opaco.';
 COMMENT ON TABLE shifts IS 'Tabla del modelo operativo de Koffi-Soft.';
 COMMENT ON TABLE shift_assignments IS 'Tabla del modelo operativo de Koffi-Soft.';
@@ -1697,30 +1698,739 @@ COMMENT ON TABLE dte_events IS 'Tabla del modelo operativo de Koffi-Soft.';
 COMMENT ON TABLE menu_item_allergens IS 'Tabla del modelo operativo de Koffi-Soft.';
 COMMENT ON TABLE contact_messages IS 'Tabla del modelo operativo de Koffi-Soft.';
 COMMENT ON TABLE inventory_movements IS 'Tabla del modelo operativo de Koffi-Soft.';
-COMMENT ON TABLE permissions IS 'Catálogo de permisos estables y editables por código.';
-COMMENT ON TABLE role_permissions IS 'Relación muchos-a-muchos entre roles y permisos.';
+COMMENT ON TABLE permissions IS 'CatÃ¡logo de permisos estables y editables por cÃ³digo.';
+COMMENT ON TABLE role_permissions IS 'RelaciÃ³n muchos-a-muchos entre roles y permisos.';
 COMMENT ON TABLE user_mfa_factors IS 'Factores MFA; el secreto TOTP permanece cifrado con AES-256-GCM.';
-COMMENT ON TABLE user_mfa_recovery_codes IS 'Códigos de recuperación; solo conserva hashes de un solo uso.';
-COMMENT ON TABLE auth_events IS 'Registro de intentos, fallos, bloqueos y cambios de autenticación.';
+COMMENT ON TABLE user_mfa_recovery_codes IS 'CÃ³digos de recuperaciÃ³n; solo conserva hashes de un solo uso.';
+COMMENT ON TABLE auth_events IS 'Registro de intentos, fallos, bloqueos y cambios de autenticaciÃ³n.';
 COMMENT ON VIEW inventory_balance IS 'Saldo derivado de los movimientos de inventario.';
 COMMENT ON VIEW daily_sales IS 'Resumen inicial de ventas para reportes.';
 COMMENT ON COLUMN businesses.tax_id IS 'Identificador tributario del negocio; conserva formato y ceros iniciales.';
 COMMENT ON COLUMN businesses.nrc IS 'Registro de contribuyente del negocio.';
-COMMENT ON COLUMN users.password_hash IS 'Hash Argon2id ficticio en la semilla; nunca usar una contraseña demo en producción.';
-COMMENT ON COLUMN users.failed_login_attempts IS 'Contador administrado por la aplicación para limitar intentos fallidos.';
+COMMENT ON COLUMN users.password_hash IS 'Hash Argon2id ficticio en la semilla; nunca usar una contraseÃ±a demo en producciÃ³n.';
+COMMENT ON COLUMN users.failed_login_attempts IS 'Contador administrado por la aplicaciÃ³n para limitar intentos fallidos.';
 COMMENT ON COLUMN user_sessions.session_token_hash IS 'Hash SHA-256 hexadecimal del token opaco; el token nunca se guarda.';
-COMMENT ON COLUMN user_sessions.mfa_verified IS 'Indica si la sesión completó el segundo factor requerido.';
-COMMENT ON COLUMN user_mfa_factors.secret_ciphertext IS 'Ciphertext AES-256-GCM; la llave de aplicación no vive en PostgreSQL.';
+COMMENT ON COLUMN user_sessions.mfa_verified IS 'Indica si la sesiÃ³n completÃ³ el segundo factor requerido.';
+COMMENT ON COLUMN user_mfa_factors.secret_ciphertext IS 'Ciphertext AES-256-GCM; la llave de aplicaciÃ³n no vive en PostgreSQL.';
 COMMENT ON COLUMN user_mfa_factors.secret_iv IS 'Nonce de 12 bytes usado por AES-256-GCM.';
-COMMENT ON COLUMN user_mfa_factors.secret_auth_tag IS 'Etiqueta de autenticación de 16 bytes de AES-256-GCM.';
-COMMENT ON COLUMN user_mfa_factors.last_used_time_step IS 'Último paso TOTP aceptado; la aplicación impide reutilizarlo.';
-COMMENT ON COLUMN user_mfa_recovery_codes.code_hash IS 'Hash del código de recuperación; el texto original no se persiste.';
+COMMENT ON COLUMN user_mfa_factors.secret_auth_tag IS 'Etiqueta de autenticaciÃ³n de 16 bytes de AES-256-GCM.';
+COMMENT ON COLUMN user_mfa_factors.last_used_time_step IS 'Ãšltimo paso TOTP aceptado; la aplicaciÃ³n impide reutilizarlo.';
+COMMENT ON COLUMN user_mfa_recovery_codes.code_hash IS 'Hash del cÃ³digo de recuperaciÃ³n; el texto original no se persiste.';
 COMMENT ON COLUMN orders.business_date IS 'Fecha comercial local calculada con la zona horaria de la sede.';
 COMMENT ON COLUMN orders.subtotal_amount IS 'Base imponible acumulada antes de IVA.';
-COMMENT ON COLUMN order_lines.gross_amount IS 'Importe antes del descuento de línea, con modificadores y tributo incluido cuando aplica.';
-COMMENT ON COLUMN order_lines.taxable_amount IS 'Base imponible después del descuento de línea.';
-COMMENT ON COLUMN dte_documents.generation_code IS 'Código de generación independiente del PK, sujeto a la especificación de Hacienda.';
-COMMENT ON COLUMN dte_documents.reception_stamp IS 'Sello de recepción de Hacienda; puede ser nulo en borradores o rechazos.';
-COMMENT ON COLUMN tips.due_at IS 'Fecha operativa límite para distribuir la propina.';
+COMMENT ON COLUMN order_lines.gross_amount IS 'Importe antes del descuento de lÃ­nea, con modificadores y tributo incluido cuando aplica.';
+COMMENT ON COLUMN order_lines.taxable_amount IS 'Base imponible despuÃ©s del descuento de lÃ­nea.';
+COMMENT ON COLUMN dte_documents.generation_code IS 'CÃ³digo de generaciÃ³n independiente del PK, sujeto a la especificaciÃ³n de Hacienda.';
+COMMENT ON COLUMN dte_documents.reception_stamp IS 'Sello de recepciÃ³n de Hacienda; puede ser nulo en borradores o rechazos.';
+COMMENT ON COLUMN tips.due_at IS 'Fecha operativa lÃ­mite para distribuir la propina.';
 COMMENT ON COLUMN inventory_movements.quantity_delta IS 'Positivo para entradas y negativo para consumos, mermas o salidas.';
+
+
+
+-- Origen: 20261010090000_logical_deletes
+-- Alcance: conservar relaciones, requisitos y asignaciones invalidadas sin borrar filas.
+-- PrecondiciÃ³n: las tablas pertenecen a la migraciÃ³n inicial y no se eliminan datos existentes.
+-- Estrategia expand/contract: se agregan columnas con DEFAULT true; la aplicaciÃ³n empieza a
+-- desactivar filas y las consultas filtran las relaciones inactivas antes de cualquier limpieza.
+
+ALTER TABLE role_permissions
+    ADD COLUMN active boolean NOT NULL DEFAULT true;
+
+ALTER TABLE user_roles
+    ADD COLUMN active boolean NOT NULL DEFAULT true;
+
+ALTER TABLE menu_item_allergens
+    ADD COLUMN active boolean NOT NULL DEFAULT true;
+
+ALTER TABLE menu_item_modifier_groups
+    ADD COLUMN active boolean NOT NULL DEFAULT true;
+
+ALTER TABLE event_requirements
+    ADD COLUMN active boolean NOT NULL DEFAULT true;
+
+CREATE INDEX menu_item_allergens_variant_active_idx
+    ON menu_item_allergens (menu_item_variant_id)
+    WHERE active;
+
+CREATE INDEX menu_item_modifier_groups_variant_active_idx
+    ON menu_item_modifier_groups (variant_id)
+    WHERE active;
+
+CREATE INDEX event_requirements_event_active_idx
+    ON event_requirements (event_id, created_at)
+    WHERE active;
+
+
+-- Origen: 20261010130000_important_announcements
+-- Avisos editoriales administrables y publicables por ventana de vigencia.
+
+CREATE TABLE important_announcements (
+    id uuid PRIMARY KEY DEFAULT uuidv7(),
+    location_id uuid NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+    title varchar(160) NOT NULL,
+    message text NOT NULL,
+    cta_label varchar(80),
+    cta_url varchar(500),
+    starts_at timestamptz(3),
+    ends_at timestamptz(3),
+    display_order integer NOT NULL DEFAULT 0,
+    active boolean NOT NULL DEFAULT true,
+    created_at timestamptz(3) NOT NULL DEFAULT now(),
+    updated_at timestamptz(3) NOT NULL DEFAULT now(),
+    CONSTRAINT important_announcements_dates_check CHECK (
+        ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at
+    ),
+    CONSTRAINT important_announcements_order_check CHECK (display_order >= 0)
+);
+
+CREATE INDEX important_announcements_public_idx
+    ON important_announcements (location_id, active, display_order);
+
+CREATE TRIGGER important_announcements_set_updated_at
+    BEFORE UPDATE ON important_announcements
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+
+-- Origen: 20261010180000_system_setup
+-- Alta inicial de un solo uso.
+-- PrecondiciÃ³n: la migraciÃ³n inicial ya creÃ³ users.
+-- Estrategia: tabla nueva, sin reescritura de datos existentes.
+-- El CHECK id = 1 deja una sola fila posible; el candado de la aplicaciÃ³n serializa el alta.
+
+CREATE TABLE system_setups (
+    id smallint PRIMARY KEY,
+    completed_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    owner_user_id uuid NOT NULL,
+    CONSTRAINT system_setups_singleton_check CHECK (id = 1),
+    CONSTRAINT system_setups_owner_user_id_fkey
+        FOREIGN KEY (owner_user_id) REFERENCES users (id)
+        ON DELETE RESTRICT ON UPDATE NO ACTION
+);
+
+CREATE UNIQUE INDEX system_setups_owner_user_id_key ON system_setups (owner_user_id);
+
+COMMENT ON TABLE system_setups IS 'Marca de un solo uso del primer propietario. No admite una segunda fila.';
+
+
+-- Origen: 20261012150000_users_admin
+-- P1: permite exigir un cambio de contrasena en el siguiente acceso.
+ALTER TABLE users
+    ADD COLUMN must_change_password boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN users.must_change_password IS
+    'Indica que la cuenta debe cambiar su contrasena antes de usar el resto de la API.';
+
+
+-- Origen: 20261015120000_business_site_profile
+-- Bloque 1: perfil editorial por negocio y permisos para administrarlo.
+-- Expand-only: no modifica ni elimina tablas existentes; locations y las tablas
+-- de horarios continÃºan siendo la fuente de datos por sede.
+
+CREATE TABLE business_site_profiles (
+    id uuid PRIMARY KEY DEFAULT uuidv7(),
+    business_id uuid NOT NULL UNIQUE,
+    hero_eyebrow varchar(120) NOT NULL,
+    hero_title varchar(160) NOT NULL,
+    hero_description text NOT NULL,
+    hero_image_url varchar(500),
+    about_title varchar(160) NOT NULL,
+    about_description text NOT NULL,
+    about_mission text NOT NULL,
+    about_vision text NOT NULL,
+    about_team jsonb NOT NULL,
+    social_facebook_url varchar(500),
+    social_instagram_url varchar(500),
+    social_tiktok_url varchar(500),
+    created_at timestamptz(3) NOT NULL DEFAULT now(),
+    updated_at timestamptz(3) NOT NULL DEFAULT now(),
+    CONSTRAINT business_site_profiles_business_fk
+        FOREIGN KEY (business_id) REFERENCES businesses(id)
+        ON DELETE CASCADE ON UPDATE NO ACTION,
+    CONSTRAINT business_site_profiles_text_check CHECK (
+        length(btrim(hero_eyebrow)) > 0
+        AND length(btrim(hero_title)) > 0
+        AND length(btrim(hero_description)) > 0
+        AND length(btrim(about_title)) > 0
+        AND length(btrim(about_description)) > 0
+        AND length(btrim(about_mission)) > 0
+        AND length(btrim(about_vision)) > 0
+    ),
+    CONSTRAINT business_site_profiles_team_array_check CHECK (
+        jsonb_typeof(about_team) = 'array'
+    )
+);
+
+CREATE TRIGGER business_site_profiles_set_updated_at
+    BEFORE UPDATE ON business_site_profiles
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+COMMENT ON TABLE business_site_profiles IS
+    'Contenido editorial comÃºn del sitio pÃºblico de un negocio.';
+COMMENT ON COLUMN business_site_profiles.about_team IS
+    'Arreglo JSONB validado por la API con nombre, rol y descripciÃ³n editorial.';
+
+INSERT INTO permissions (id, code, description)
+VALUES
+    ('80000000-0000-0000-0000-000000000053', 'site_content.read', 'Consultar contenido del sitio'),
+    ('80000000-0000-0000-0000-000000000054', 'site_content.manage', 'Administrar contenido del sitio')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code IN ('site_content.read', 'site_content.manage')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+
+-- Origen: 20261015160000_contact_inbox
+-- Bloque 3: bandeja de contacto y conversiones.
+-- Expand-only: conserva los mensajes y estados existentes; el archivado es
+-- explÃ­cito y permite ocultar mensajes sin alterar su historial operativo.
+
+ALTER TABLE contact_messages
+    ADD COLUMN archived_at timestamptz(3),
+    ADD COLUMN archived_by_user_id uuid REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE INDEX contact_messages_location_status_received_idx
+    ON contact_messages (location_id, status, received_at);
+
+CREATE INDEX contact_messages_location_received_idx
+    ON contact_messages (location_id, received_at);
+
+INSERT INTO permissions (id, code, description)
+VALUES
+    ('80000000-0000-0000-0000-000000000055', 'contact.read', 'Consultar mensajes de contacto'),
+    ('80000000-0000-0000-0000-000000000056', 'contact.manage', 'Gestionar mensajes y conversiones de contacto')
+ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code IN ('contact.read', 'contact.manage')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+COMMENT ON COLUMN contact_messages.archived_at IS
+    'Momento en que el mensaje dejÃ³ de aparecer en la bandeja activa.';
+
+
+-- Origen: 20261015180000_seo_metadata
+-- Bloque 2: metadatos SEO editables y permisos de administraciÃ³n.
+-- Expand-only: agrega una tabla independiente; no altera recursos publicados.
+
+CREATE TABLE seo_metadata (
+    id uuid PRIMARY KEY DEFAULT uuidv7(),
+    business_id uuid REFERENCES businesses(id) ON DELETE CASCADE ON UPDATE NO ACTION,
+    location_id uuid REFERENCES locations(id) ON DELETE CASCADE ON UPDATE NO ACTION,
+    resource_type varchar(30) NOT NULL,
+    resource_key varchar(160) NOT NULL,
+    meta_title varchar(70) NOT NULL,
+    meta_description varchar(160) NOT NULL,
+    og_image_url varchar(500),
+    canonical_url varchar(500),
+    noindex boolean NOT NULL DEFAULT false,
+    created_at timestamptz(3) NOT NULL DEFAULT now(),
+    updated_at timestamptz(3) NOT NULL DEFAULT now(),
+    CONSTRAINT seo_metadata_resource_type_check CHECK (
+        resource_type IN ('menu_item', 'event', 'announcement', 'page')
+    ),
+    CONSTRAINT seo_metadata_resource_key_check CHECK (length(btrim(resource_key)) > 0),
+    CONSTRAINT seo_metadata_scope_check CHECK (
+        (resource_type = 'page' AND business_id IS NOT NULL)
+        OR (resource_type <> 'page' AND location_id IS NOT NULL AND business_id IS NOT NULL)
+    )
+);
+
+CREATE UNIQUE INDEX seo_metadata_resource_unique
+    ON seo_metadata (
+        COALESCE(business_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        COALESCE(location_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        resource_type,
+        resource_key
+    );
+
+CREATE INDEX seo_metadata_business_type_idx
+    ON seo_metadata (business_id, resource_type);
+
+CREATE INDEX seo_metadata_location_type_idx
+    ON seo_metadata (location_id, resource_type);
+
+CREATE TRIGGER seo_metadata_set_updated_at
+    BEFORE UPDATE ON seo_metadata
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+COMMENT ON TABLE seo_metadata IS
+    'Overrides SEO por recurso; los nombres y contenidos canÃ³nicos siguen en sus tablas fuente.';
+COMMENT ON COLUMN seo_metadata.resource_key IS
+    'Slug, UUID o clave de pÃ¡gina segÃºn resource_type; no duplica el recurso editorial.';
+
+INSERT INTO permissions (id, code, description)
+VALUES
+    ('80000000-0000-0000-0000-000000000057', 'seo.read', 'Consultar metadatos SEO'),
+    ('80000000-0000-0000-0000-000000000058', 'seo.manage', 'Administrar metadatos SEO')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code IN ('seo.read', 'seo.manage')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+
+-- Origen: 20261015190000_content_publication
+-- Bloque 4: estados editoriales, fechas de vigencia y tokens de vista previa.
+-- Expand-only: las filas existentes que ya eran pÃºblicas conservan su visibilidad.
+
+DO $$
+BEGIN
+    CREATE TYPE publication_status AS ENUM ('draft', 'scheduled', 'published');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE important_announcements
+    ADD COLUMN publication_status publication_status NOT NULL DEFAULT 'draft',
+    ADD COLUMN published_at timestamptz(3),
+    ADD COLUMN scheduled_at timestamptz(3),
+    ADD COLUMN expires_at timestamptz(3),
+    ADD COLUMN preview_token_hash char(64),
+    ADD COLUMN preview_expires_at timestamptz(3);
+
+ALTER TABLE menu_items
+    ADD COLUMN publication_status publication_status NOT NULL DEFAULT 'draft',
+    ADD COLUMN published_at timestamptz(3),
+    ADD COLUMN scheduled_at timestamptz(3),
+    ADD COLUMN expires_at timestamptz(3),
+    ADD COLUMN preview_token_hash char(64),
+    ADD COLUMN preview_expires_at timestamptz(3);
+
+ALTER TABLE events
+    ADD COLUMN publication_status publication_status NOT NULL DEFAULT 'draft',
+    ADD COLUMN published_at timestamptz(3),
+    ADD COLUMN scheduled_at timestamptz(3),
+    ADD COLUMN expires_at timestamptz(3),
+    ADD COLUMN preview_token_hash char(64),
+    ADD COLUMN preview_expires_at timestamptz(3);
+
+UPDATE important_announcements
+SET publication_status = 'published',
+    published_at = COALESCE(starts_at, created_at),
+    expires_at = ends_at
+WHERE active = true;
+
+UPDATE menu_items
+SET publication_status = 'published',
+    published_at = created_at
+WHERE active = true AND public_visible = true;
+
+CREATE UNIQUE INDEX important_announcements_preview_token_unique
+    ON important_announcements (preview_token_hash)
+    WHERE preview_token_hash IS NOT NULL;
+
+CREATE UNIQUE INDEX menu_items_preview_token_unique
+    ON menu_items (preview_token_hash)
+    WHERE preview_token_hash IS NOT NULL;
+
+CREATE UNIQUE INDEX events_preview_token_unique
+    ON events (preview_token_hash)
+    WHERE preview_token_hash IS NOT NULL;
+
+CREATE INDEX important_announcements_publication_idx
+    ON important_announcements (location_id, publication_status, scheduled_at);
+
+CREATE INDEX menu_items_publication_idx
+    ON menu_items (publication_status, scheduled_at);
+
+CREATE INDEX events_publication_idx
+    ON events (location_id, publication_status, scheduled_at);
+
+ALTER TABLE important_announcements
+    ADD CONSTRAINT important_announcements_publication_dates_check CHECK (
+        (publication_status = 'draft' AND scheduled_at IS NULL AND published_at IS NULL AND expires_at IS NULL)
+        OR (publication_status = 'scheduled' AND scheduled_at IS NOT NULL AND published_at IS NULL)
+        OR (publication_status = 'published' AND published_at IS NOT NULL AND scheduled_at IS NULL)
+    ),
+    ADD CONSTRAINT important_announcements_publication_expiry_check CHECK (
+        expires_at IS NULL OR expires_at > COALESCE(scheduled_at, published_at)
+    ),
+    ADD CONSTRAINT important_announcements_preview_pair_check CHECK (
+        (preview_token_hash IS NULL AND preview_expires_at IS NULL)
+        OR (preview_token_hash IS NOT NULL AND preview_expires_at IS NOT NULL)
+    );
+
+ALTER TABLE menu_items
+    ADD CONSTRAINT menu_items_publication_dates_check CHECK (
+        (publication_status = 'draft' AND scheduled_at IS NULL AND published_at IS NULL AND expires_at IS NULL)
+        OR (publication_status = 'scheduled' AND scheduled_at IS NOT NULL AND published_at IS NULL)
+        OR (publication_status = 'published' AND published_at IS NOT NULL AND scheduled_at IS NULL)
+    ),
+    ADD CONSTRAINT menu_items_publication_expiry_check CHECK (
+        expires_at IS NULL OR expires_at > COALESCE(scheduled_at, published_at)
+    ),
+    ADD CONSTRAINT menu_items_preview_pair_check CHECK (
+        (preview_token_hash IS NULL AND preview_expires_at IS NULL)
+        OR (preview_token_hash IS NOT NULL AND preview_expires_at IS NOT NULL)
+    );
+
+ALTER TABLE events
+    ADD CONSTRAINT events_publication_dates_check CHECK (
+        (publication_status = 'draft' AND scheduled_at IS NULL AND published_at IS NULL AND expires_at IS NULL)
+        OR (publication_status = 'scheduled' AND scheduled_at IS NOT NULL AND published_at IS NULL)
+        OR (publication_status = 'published' AND published_at IS NOT NULL AND scheduled_at IS NULL)
+    ),
+    ADD CONSTRAINT events_publication_expiry_check CHECK (
+        expires_at IS NULL OR expires_at > COALESCE(scheduled_at, published_at)
+    ),
+    ADD CONSTRAINT events_preview_pair_check CHECK (
+        (preview_token_hash IS NULL AND preview_expires_at IS NULL)
+        OR (preview_token_hash IS NOT NULL AND preview_expires_at IS NOT NULL)
+    );
+
+COMMENT ON COLUMN important_announcements.publication_status IS
+    'Estado editorial independiente de active y de la ventana operativa starts_at/ends_at.';
+COMMENT ON COLUMN menu_items.publication_status IS
+    'Estado editorial que controla la exposiciÃ³n pÃºblica del plato.';
+COMMENT ON COLUMN events.publication_status IS
+    'Estado editorial independiente del estado operativo del evento.';
+COMMENT ON COLUMN important_announcements.preview_token_hash IS
+    'Hash SHA-256 de un token opaco de un solo uso; nunca se almacena el token en claro.';
+
+INSERT INTO permissions (id, code, description)
+VALUES (
+    '80000000-0000-0000-0000-000000000059',
+    'content.publish',
+    'Programar y publicar contenido editorial'
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin', 'manager')
+  AND permissions.code = 'content.publish'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+
+-- Origen: 20261015200000_analytics_page_views
+-- Bloque 5: estadisticas anonimas agregadas por dia.
+-- No se almacena IP, cookie, identificador de visitante ni contenido de referer.
+
+CREATE TABLE page_views (
+    id uuid PRIMARY KEY DEFAULT uuidv7(),
+    business_id uuid NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+    location_id uuid REFERENCES locations(id) ON DELETE CASCADE,
+    path varchar(500) NOT NULL,
+    resource_type varchar(30) NOT NULL,
+    resource_key varchar(160),
+    referer_host varchar(255),
+    occurred_at date NOT NULL,
+    user_agent_family varchar(80),
+    aggregate_key char(64) NOT NULL,
+    view_count integer NOT NULL DEFAULT 1,
+    created_at timestamptz(3) NOT NULL DEFAULT now(),
+    updated_at timestamptz(3) NOT NULL DEFAULT now(),
+    CONSTRAINT page_views_path_check CHECK (path LIKE '/%'),
+    CONSTRAINT page_views_resource_type_check CHECK (
+        resource_type IN ('page', 'menu_item', 'event', 'announcement')
+    ),
+    CONSTRAINT page_views_view_count_check CHECK (view_count > 0),
+    CONSTRAINT page_views_aggregate_key_check CHECK (aggregate_key ~ '^[0-9a-f]{64}$')
+);
+
+CREATE UNIQUE INDEX page_views_aggregate_key_unique
+    ON page_views (aggregate_key);
+
+CREATE INDEX page_views_business_date_idx
+    ON page_views (business_id, occurred_at);
+
+CREATE INDEX page_views_location_date_idx
+    ON page_views (location_id, occurred_at);
+
+CREATE INDEX page_views_path_date_idx
+    ON page_views (path, occurred_at);
+
+CREATE INDEX page_views_resource_date_idx
+    ON page_views (resource_type, resource_key, occurred_at);
+
+CREATE INDEX page_views_referer_date_idx
+    ON page_views (referer_host, occurred_at);
+
+CREATE TRIGGER page_views_set_updated_at
+BEFORE UPDATE ON page_views
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+COMMENT ON TABLE page_views IS
+    'Agregados diarios de visitas publicas sin IP, cookies ni identificadores personales.';
+COMMENT ON COLUMN page_views.aggregate_key IS
+    'Clave SHA-256 determinista de la combinacion agregada; no identifica visitantes.';
+COMMENT ON COLUMN page_views.occurred_at IS
+    'Dia calendario de la sede; las filas con mas de 395 dias se purgan por la API.';
+
+
+-- Origen: 20261015210000_backup_jobs
+-- Bloque 6: respaldos externos de PostgreSQL y uploads con retenciÃ³n auditable.
+-- Los artefactos viven fuera de PostgreSQL; esta migraciÃ³n solo guarda referencias.
+
+CREATE TYPE backup_type AS ENUM ('database', 'uploads', 'full');
+
+CREATE TYPE backup_status AS ENUM ('pending', 'running', 'succeeded', 'failed', 'expired');
+
+CREATE TABLE backup_jobs (
+    id uuid PRIMARY KEY DEFAULT uuidv7(),
+    type backup_type NOT NULL,
+    status backup_status NOT NULL DEFAULT 'pending',
+    size_bytes bigint,
+    checksum char(64),
+    storage_key varchar(500),
+    expires_at timestamptz(3),
+    actor_user_id uuid REFERENCES users (id) ON DELETE SET NULL ON UPDATE NO ACTION,
+    started_at timestamptz(3),
+    completed_at timestamptz(3),
+    error_message text,
+    created_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamptz(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT backup_jobs_size_check CHECK (size_bytes IS NULL OR size_bytes >= 0),
+    CONSTRAINT backup_jobs_checksum_check CHECK (checksum IS NULL OR checksum ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT backup_jobs_storage_key_check CHECK (
+        storage_key IS NULL OR storage_key ~ '^[0-9a-f-]{36}/[0-9a-f-]{36}\.(dump|tar\.gz)$'
+    )
+);
+
+CREATE INDEX backup_jobs_status_created_idx ON backup_jobs (status, created_at DESC);
+CREATE INDEX backup_jobs_expires_idx ON backup_jobs (expires_at);
+
+CREATE TRIGGER backup_jobs_set_updated_at
+    BEFORE UPDATE ON backup_jobs
+    FOR EACH ROW
+    EXECUTE FUNCTION set_updated_at();
+
+COMMENT ON TABLE backup_jobs IS
+    'Referencias de respaldos almacenados fuera de PostgreSQL, con checksum y retenciÃ³n.';
+COMMENT ON COLUMN backup_jobs.storage_key IS
+    'Ruta relativa generada por la API; nunca proviene de una solicitud administrativa.';
+
+INSERT INTO permissions (id, code, description) VALUES
+    ('80000000-0000-0000-0000-000000000061', 'backups.read', 'Consultar respaldos'),
+    ('80000000-0000-0000-0000-000000000062', 'backups.create', 'Generar respaldos'),
+    ('80000000-0000-0000-0000-000000000063', 'backups.download', 'Descargar respaldos'),
+    ('80000000-0000-0000-0000-000000000064', 'backups.delete', 'Eliminar respaldos')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT roles.id, permissions.id
+FROM roles
+CROSS JOIN permissions
+WHERE roles.code IN ('owner', 'admin')
+  AND permissions.code IN ('backups.read', 'backups.create', 'backups.download', 'backups.delete')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+
+-- Origen: 20261017220000_notifications_resources_purchases
+-- Agrega notificaciones, recursos, Ã³rdenes de compra y recuperaciÃ³n de contraseÃ±a.
+
+BEGIN;
+
+-- Enums nuevos
+CREATE TYPE notification_type AS ENUM (
+  'low_stock',
+  'lot_expiring',
+  'supplier_reminder',
+  'maintenance_due',
+  'reservation_new',
+  'contact_message',
+  'backup_success',
+  'backup_failed',
+  'security_alert',
+  'system'
+);
+
+CREATE TYPE notification_severity AS ENUM (
+  'info',
+  'warning',
+  'error',
+  'success'
+);
+
+CREATE TYPE resource_category AS ENUM (
+  'equipment',
+  'furniture',
+  'supplies',
+  'kitchenware',
+  'electronics',
+  'other'
+);
+
+CREATE TYPE resource_status AS ENUM (
+  'operational',
+  'maintenance',
+  'broken',
+  'retired'
+);
+
+CREATE TYPE purchase_order_status AS ENUM (
+  'draft',
+  'submitted',
+  'approved',
+  'received',
+  'cancelled'
+);
+
+-- Extender suppliers con nuevos campos
+ALTER TABLE suppliers
+  ADD COLUMN delivery_days SMALLINT,
+  ADD COLUMN order_reminder_days SMALLINT,
+  ADD COLUMN last_order_date DATE,
+  ADD COLUMN notes TEXT;
+
+ALTER TABLE suppliers
+  ADD CONSTRAINT suppliers_delivery_days_check CHECK (delivery_days IS NULL OR delivery_days > 0),
+  ADD CONSTRAINT suppliers_reminder_days_check CHECK (order_reminder_days IS NULL OR order_reminder_days > 0);
+
+-- Notificaciones
+CREATE TABLE notifications (
+  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  recipient_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  recipient_role_code VARCHAR(40),
+  notification_type notification_type NOT NULL,
+  severity notification_severity NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  body TEXT NOT NULL,
+  internal_link VARCHAR(500),
+  read_at TIMESTAMPTZ(3),
+  archived BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ(3) NOT NULL DEFAULT now()
+);
+
+CREATE INDEX notifications_user_unread_idx
+  ON notifications(recipient_user_id, read_at, archived, created_at);
+CREATE INDEX notifications_role_unread_idx
+  ON notifications(recipient_role_code, read_at, archived, created_at);
+CREATE INDEX notifications_type_idx
+  ON notifications(notification_type, created_at);
+CREATE INDEX notifications_severity_idx
+  ON notifications(severity, created_at);
+
+-- Recursos
+CREATE TABLE resources (
+  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  location_id UUID NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+  resource_code VARCHAR(40) NOT NULL,
+  name VARCHAR(200) NOT NULL,
+  category resource_category NOT NULL,
+  location VARCHAR(200),
+  status resource_status NOT NULL DEFAULT 'operational',
+  purchase_date DATE,
+  cost DECIMAL(14,2) CHECK (cost IS NULL OR cost >= 0),
+  supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+  notes TEXT,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ(3) NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ(3) NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX resources_code_unique
+  ON resources(location_id, resource_code);
+
+-- Mantenimientos programados
+CREATE TABLE resource_maintenance_schedules (
+  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  resource_id UUID NOT NULL REFERENCES resources(id) ON DELETE CASCADE,
+  scheduled_date DATE NOT NULL,
+  description TEXT NOT NULL,
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  completed_at TIMESTAMPTZ(3),
+  completed_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ(3) NOT NULL DEFAULT now()
+);
+
+CREATE INDEX resource_maintenance_resource_date_idx
+  ON resource_maintenance_schedules(resource_id, scheduled_date);
+CREATE INDEX resource_maintenance_pending_idx
+  ON resource_maintenance_schedules(completed, scheduled_date);
+
+-- Ã“rdenes de compra
+CREATE TABLE purchase_orders (
+  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  location_id UUID NOT NULL REFERENCES locations(id) ON DELETE RESTRICT,
+  supplier_id UUID NOT NULL REFERENCES suppliers(id) ON DELETE RESTRICT,
+  order_number VARCHAR(80) NOT NULL,
+  order_date DATE NOT NULL,
+  expected_delivery DATE,
+  status purchase_order_status NOT NULL DEFAULT 'draft',
+  total_amount DECIMAL(14,2) NOT NULL CHECK (total_amount >= 0),
+  notes TEXT,
+  created_by_user_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+  approved_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ(3),
+  created_at TIMESTAMPTZ(3) NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ(3) NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX purchase_orders_number_unique
+  ON purchase_orders(location_id, order_number);
+CREATE INDEX purchase_orders_supplier_date_idx
+  ON purchase_orders(supplier_id, order_date);
+CREATE INDEX purchase_orders_status_date_idx
+  ON purchase_orders(status, order_date);
+
+-- LÃ­neas de Ã³rdenes de compra
+CREATE TABLE purchase_order_lines (
+  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  purchase_order_id UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  ingredient_id UUID NOT NULL REFERENCES ingredients(id) ON DELETE RESTRICT,
+  unit_id UUID NOT NULL REFERENCES units(id) ON DELETE RESTRICT,
+  quantity_ordered DECIMAL(14,6) NOT NULL CHECK (quantity_ordered > 0),
+  unit_cost DECIMAL(14,6) NOT NULL CHECK (unit_cost >= 0),
+  total_cost DECIMAL(14,2) NOT NULL CHECK (total_cost >= 0)
+);
+
+-- Tokens de recuperaciÃ³n de contraseÃ±a
+CREATE TABLE password_reset_tokens (
+  id UUID PRIMARY KEY DEFAULT uuidv7(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash CHAR(64) NOT NULL,
+  expires_at TIMESTAMPTZ(3) NOT NULL,
+  used_at TIMESTAMPTZ(3),
+  created_at TIMESTAMPTZ(3) NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX password_reset_tokens_hash_unique
+  ON password_reset_tokens(token_hash);
+CREATE INDEX password_reset_tokens_user_idx
+  ON password_reset_tokens(user_id, expires_at);
+
+-- Trigger de updated_at para nuevas tablas
+CREATE TRIGGER set_resources_updated_at
+  BEFORE UPDATE ON resources
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_purchase_orders_updated_at
+  BEFORE UPDATE ON purchase_orders
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+COMMIT;
+
+
+-- Origen: 20261017230000_purchase_order_reception
+-- CreatePurchaseOrderReception: Agrega campos de recepciÃ³n a lÃ­neas de Ã³rdenes de compra
+-- Solo agrega campos adicionales mÃ­nimos sin alterar estructura existente
+
+ALTER TABLE purchase_order_lines
+ADD COLUMN quantity_received DECIMAL(14,6),
+ADD COLUMN received_at TIMESTAMPTZ(3);
+
+COMMENT ON COLUMN purchase_order_lines.quantity_received IS 'Cantidad recibida (puede diferir de quantity_ordered)';
+COMMENT ON COLUMN purchase_order_lines.received_at IS 'Timestamp de recepciÃ³n de esta lÃ­nea';
+
+-- Ãndice para consultar lÃ­neas recibidas
+CREATE INDEX purchase_order_lines_received_idx ON purchase_order_lines(purchase_order_id, received_at)
+WHERE received_at IS NOT NULL;
+
 

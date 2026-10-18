@@ -1,0 +1,143 @@
+// Mesas y reservaciones
+
+enum ReservationStatus {
+  Requested          @map("requested")
+  PendingConfirmation @map("pending_confirmation")
+  Confirmed          @map("confirmed")
+  Seated             @map("seated")
+  Completed          @map("completed")
+  Cancelled          @map("cancelled")
+  NoShow             @map("no_show")
+  Expired            @map("expired")
+
+  @@map("reservation_status")
+}
+
+enum ReservationSource {
+  Web     @map("web")
+  Phone   @map("phone")
+  Whatsapp @map("whatsapp")
+  Admin   @map("admin")
+  WalkIn  @map("walk_in")
+
+  @@map("reservation_source")
+}
+
+enum ReservationTableStatus {
+  Held     @map("held")
+  Assigned @map("assigned")
+  Released @map("released")
+
+  @@map("reservation_table_status")
+}
+
+model VenueSpace {
+  id                     String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId             String   @map("location_id") @db.Uuid
+  code                   String   @db.VarChar(40)
+  nameEs                 String   @map("name_es") @db.VarChar(120)
+  nameEn                 String   @map("name_en") @db.VarChar(120)
+  spaceType              String   @map("space_type") @db.VarChar(30)
+  seatedCapacity         Int      @map("seated_capacity") @db.SmallInt
+  standingCapacity       Int?     @map("standing_capacity") @db.SmallInt
+  allowsTableReservation Boolean  @map("allows_table_reservation") @default(true)
+  allowsPrivateEvent     Boolean  @map("allows_private_event") @default(false)
+  active                 Boolean  @default(true)
+
+  location       Location             @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  diningTables   DiningTable[]
+  preferredFor   Reservation[]        @relation("ReservationPreferredSpace")
+  eventBookings  EventSpaceBooking[]
+
+  @@unique([locationId, code], map: "venue_spaces_code_unique")
+  /// Capacidad y tipo de espacio son CHECK de SQL.
+  @@map("venue_spaces")
+}
+
+/// Mesa física dentro de un espacio.
+
+model DiningTable {
+  id         String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  spaceId    String   @map("space_id") @db.Uuid
+  tableCode  String   @map("table_code") @db.VarChar(30)
+  name       String   @db.VarChar(80)
+  seatCount  Int      @map("seat_count") @db.SmallInt
+  shape      String   @default("round") @db.VarChar(20)
+  active     Boolean  @default(true)
+
+  space              VenueSpace              @relation(fields: [spaceId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  reservationTables  ReservationTable[]
+  orderAssignments   OrderTableAssignment[]
+
+  @@unique([spaceId, tableCode], map: "dining_tables_code_unique")
+  /// seat_count y shape se validan con CHECK de SQL.
+  @@map("dining_tables")
+}
+
+/// Reserva de mesa con duración y snapshot de contacto.
+
+model Reservation {
+  id                    String            @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  locationId            String            @map("location_id") @db.Uuid
+  customerId            String?           @map("customer_id") @db.Uuid
+  reservationCode       String            @map("reservation_code") @db.VarChar(50)
+  contactNameSnapshot   String            @map("contact_name_snapshot") @db.VarChar(200)
+  contactPhoneSnapshot  String            @map("contact_phone_snapshot") @db.VarChar(40)
+  contactEmailSnapshot  String?           @map("contact_email_snapshot") @db.VarChar(200)
+  preferredLanguage     String            @map("preferred_language") @default("es") @db.Char(2)
+  startsAt              DateTime          @map("starts_at") @db.Timestamptz(3)
+  endsAt                DateTime          @map("ends_at") @db.Timestamptz(3)
+  partySize             Int               @map("party_size") @db.SmallInt
+  status                ReservationStatus @default(Requested)
+  source                ReservationSource
+  preferredSpaceId      String?           @map("preferred_space_id") @db.Uuid
+  specialRequests       String?           @map("special_requests") @db.Text
+  internalNotes         String?           @map("internal_notes") @db.Text
+  createdByUserId       String?           @map("created_by_user_id") @db.Uuid
+  confirmedAt           DateTime?         @map("confirmed_at") @db.Timestamptz(3)
+  seatedAt              DateTime?         @map("seated_at") @db.Timestamptz(3)
+  completedAt           DateTime?         @map("completed_at") @db.Timestamptz(3)
+  cancelledAt           DateTime?         @map("cancelled_at") @db.Timestamptz(3)
+  createdAt             DateTime          @map("created_at") @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime          @map("updated_at") @default(now()) @db.Timestamptz(3)
+
+  location       Location        @relation(fields: [locationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  customer       Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  preferredSpace VenueSpace?     @relation("ReservationPreferredSpace", fields: [preferredSpaceId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  tables         ReservationTable[]
+  payments       Payment[]       @relation("ReservationPayments")
+  orders         Order[]         @relation("ReservationOrders")
+  createdBy      User?           @relation("ReservationCreator", fields: [createdByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  contactMessages ContactMessage[]
+
+  @@unique([locationId, reservationCode], map: "reservations_code_unique")
+  @@index([locationId, startsAt, status], map: "reservations_location_start_idx")
+  /// ends_at > starts_at y estados son CHECK/lógica de aplicación.
+  @@map("reservations")
+}
+
+/// Mesa asignada a una reserva y protegida contra traslapes.
+
+model ReservationTable {
+  id             String                @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  reservationId  String                @map("reservation_id") @db.Uuid
+  diningTableId  String                @map("dining_table_id") @db.Uuid
+  startsAt       DateTime              @map("starts_at") @db.Timestamptz(3)
+  endsAt         DateTime              @map("ends_at") @db.Timestamptz(3)
+  allocationStatus ReservationTableStatus @map("allocation_status") @default(Held)
+  assignedByUserId String?             @map("assigned_by_user_id") @db.Uuid
+  assignedAt     DateTime              @map("assigned_at") @default(now()) @db.Timestamptz(3)
+
+  /// Columna generada por PostgreSQL, de solo lectura; la aplicación nunca la escribe.
+  reservedDuring Unsupported("tstzrange")? @default(dbgenerated("tstzrange(starts_at, ends_at, '[)'::text)")) @map("reserved_during")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  diningTable DiningTable @relation(fields: [diningTableId], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  assignedBy  User?       @relation("ReservationTableAssigner", fields: [assignedByUserId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([reservationId], map: "reservation_tables_reservation_idx")
+  /// reserved_during y reservation_tables_no_overlap son una columna generada y EXCLUDE SQL.
+  @@map("reservation_tables")
+}
+
+/// Evento privado solicitado por un cliente.

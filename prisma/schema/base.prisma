@@ -1,0 +1,14 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider     = "postgresql"
+  relationMode = "foreignKeys"
+}
+
+// Prisma 7 obtiene la URL desde prisma.config.ts.
+// Las restricciones CHECK, EXCLUDE, triggers, vistas e índices parciales/expresivos
+// se conservan en la migración SQL personalizada. Los rangos generados se declaran
+// como Unsupported para que Prisma los conserve, aunque la aplicación nunca los escribe.

@@ -69,6 +69,15 @@ export class MaintenanceScheduleResponseDto {
   @ApiProperty()
   readonly resourceId!: string;
 
+  @ApiPropertyOptional()
+  readonly locationId?: string;
+
+  @ApiPropertyOptional()
+  readonly resourceCode?: string;
+
+  @ApiPropertyOptional()
+  readonly resourceName?: string;
+
   @ApiProperty()
   readonly scheduledDate!: string;
 
@@ -89,4 +98,17 @@ export class MaintenanceScheduleResponseDto {
 
   @ApiProperty()
   readonly createdAt!: string;
+}
+
+export class MaintenancePageDto {
+  @ApiProperty({ type: [MaintenanceScheduleResponseDto] })
+  readonly data!: MaintenanceScheduleResponseDto[];
+
+  @ApiProperty()
+  readonly meta!: {
+    readonly page: number;
+    readonly pageSize: number;
+    readonly total: number;
+    readonly totalPages: number;
+  };
 }

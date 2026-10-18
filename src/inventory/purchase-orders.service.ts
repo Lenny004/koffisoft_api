@@ -13,6 +13,7 @@ import type {
 import {
   CreatePurchaseOrderDto,
   UpdatePurchaseOrderDto,
+  UpdatePurchaseOrderLineDto,
   PurchaseOrderListQueryDto,
   ReceivePurchaseOrderDto,
   CreateSupplierDto,
@@ -187,34 +188,50 @@ export class PurchaseOrdersService {
     actorUserId: string,
     metadata: RequestMetadata,
   ): Promise<PurchaseOrderResponseDto> {
-    const existing = await this.prisma.purchaseOrder.findUnique({ where: { id } });
+    const existing = await this.prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: { lines: { select: { id: true } } },
+    });
 
     if (!existing) {
       throw new NotFoundException('Orden de compra no encontrada');
     }
 
-    if (
+    if (dto.lines) {
+      if (existing.status !== PurchaseOrderStatus.Draft) {
+        throw new ConflictException('Las líneas solo se pueden editar en estado Draft');
+      }
+    } else if (
       existing.status !== PurchaseOrderStatus.Draft &&
       existing.status !== PurchaseOrderStatus.Submitted
     ) {
       throw new ConflictException('Solo se pueden modificar órdenes en estado Draft o Submitted');
     }
 
-    const updated = await this.prisma.purchaseOrder.update({
-      where: { id },
-      data: {
-        expectedDelivery: dto.expectedDelivery ? new Date(dto.expectedDelivery) : undefined,
-        notes: dto.notes,
-      },
-      include: {
-        supplier: { select: { name: true } },
-        lines: {
-          include: {
-            ingredient: { select: { name: true } },
-            unit: { select: { code: true } },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (dto.lines) {
+        await this.replaceDraftLinesInTx(tx, id, existing.lines, dto.lines);
+      }
+
+      const totalAmount = dto.lines ? this.calculateLinesTotal(dto.lines) : undefined;
+
+      return tx.purchaseOrder.update({
+        where: { id },
+        data: {
+          expectedDelivery: dto.expectedDelivery ? new Date(dto.expectedDelivery) : undefined,
+          notes: dto.notes,
+          ...(totalAmount ? { totalAmount } : {}),
+        },
+        include: {
+          supplier: { select: { name: true } },
+          lines: {
+            include: {
+              ingredient: { select: { name: true } },
+              unit: { select: { code: true } },
+            },
           },
         },
-      },
+      });
     });
 
     await this.prisma.auditLog.create({
@@ -226,13 +243,24 @@ export class PurchaseOrdersService {
         afterData: {
           expectedDelivery: dto.expectedDelivery ?? null,
           notes: dto.notes ?? null,
-        } as any,
+          linesChanged: Boolean(dto.lines),
+          totalAmount: updated.totalAmount.toString(),
+        },
         ipAddress: metadata.ipAddress,
         requestId: metadata.requestId,
       },
     });
 
     return toPurchaseOrderResponse(updated);
+  }
+
+  async replaceDraftLines(
+    id: string,
+    lines: UpdatePurchaseOrderLineDto[],
+    actorUserId: string,
+    metadata: RequestMetadata,
+  ): Promise<PurchaseOrderResponseDto> {
+    return this.updateOrder(id, { lines }, actorUserId, metadata);
   }
 
   async submitOrder(
@@ -717,6 +745,62 @@ export class PurchaseOrdersService {
 
     if (!storage) {
       throw new NotFoundException('Ubicación de almacenamiento no encontrada');
+    }
+  }
+
+  private calculateLinesTotal(lines: UpdatePurchaseOrderLineDto[]): Prisma.Decimal {
+    return lines.reduce(
+      (sum, line) => sum.add(new Prisma.Decimal(line.quantityOrdered).mul(line.unitCost)),
+      new Prisma.Decimal(0),
+    );
+  }
+
+  private async replaceDraftLinesInTx(
+    tx: Prisma.TransactionClient,
+    purchaseOrderId: string,
+    currentLines: readonly { id: string }[],
+    nextLines: UpdatePurchaseOrderLineDto[],
+  ): Promise<void> {
+    const currentIds = new Set(currentLines.map((line) => line.id));
+    const keepIds = new Set<string>();
+
+    for (const line of nextLines) {
+      if (!line.id) continue;
+      if (!currentIds.has(line.id)) {
+        throw new NotFoundException(`Línea de orden ${line.id} no encontrada`);
+      }
+      keepIds.add(line.id);
+    }
+
+    const removeIds = currentLines.filter((line) => !keepIds.has(line.id)).map((line) => line.id);
+    if (removeIds.length > 0) {
+      await tx.purchaseOrderLine.deleteMany({
+        where: { purchaseOrderId, id: { in: removeIds } },
+      });
+    }
+
+    for (const line of nextLines) {
+      const quantityOrdered = new Prisma.Decimal(line.quantityOrdered);
+      const unitCost = new Prisma.Decimal(line.unitCost);
+      const totalCost = quantityOrdered.mul(unitCost);
+      const data = {
+        ingredientId: line.ingredientId,
+        unitId: line.unitId,
+        quantityOrdered,
+        unitCost,
+        totalCost,
+      };
+
+      if (line.id) {
+        await tx.purchaseOrderLine.update({
+          where: { id: line.id },
+          data,
+        });
+      } else {
+        await tx.purchaseOrderLine.create({
+          data: { purchaseOrderId, ...data },
+        });
+      }
     }
   }
 }

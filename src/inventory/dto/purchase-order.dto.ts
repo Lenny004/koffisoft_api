@@ -1,4 +1,6 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsDateString,
   IsEnum,
   IsNotEmpty,
@@ -65,6 +67,33 @@ export class CreatePurchaseOrderDto {
   lines!: PurchaseOrderLineItemDto[];
 }
 
+export class UpdatePurchaseOrderLineDto {
+  @ApiPropertyOptional({
+    description: 'Identificador de la línea existente; si se omite, se crea.',
+  })
+  @IsUUID()
+  @IsOptional()
+  id?: string;
+
+  @ApiProperty()
+  @IsUUID()
+  @IsNotEmpty()
+  ingredientId!: string;
+
+  @ApiProperty()
+  @IsUUID()
+  @IsNotEmpty()
+  unitId!: string;
+
+  @ApiProperty()
+  @IsPositive()
+  quantityOrdered!: number;
+
+  @ApiProperty()
+  @IsPositive()
+  unitCost!: number;
+}
+
 export class UpdatePurchaseOrderDto {
   @ApiPropertyOptional()
   @IsDateString()
@@ -75,6 +104,29 @@ export class UpdatePurchaseOrderDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiPropertyOptional({
+    type: () => [UpdatePurchaseOrderLineDto],
+    description: 'Reemplazo de líneas (solo Draft): las omitidas se eliminan.',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => UpdatePurchaseOrderLineDto)
+  lines?: UpdatePurchaseOrderLineDto[];
+}
+
+export class ReplacePurchaseOrderLinesDto {
+  @ApiProperty({
+    type: () => [UpdatePurchaseOrderLineDto],
+    description: 'Conjunto completo de líneas. Las existentes no listadas se eliminan.',
+  })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => UpdatePurchaseOrderLineDto)
+  lines!: UpdatePurchaseOrderLineDto[];
 }
 
 export class SubmitPurchaseOrderDto {

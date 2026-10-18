@@ -1,7 +1,6 @@
-import { Controller, Get, Post, Patch, Query, Param, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Query, Param, Body, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiBearerAuth } from '@nestjs/swagger';
 
-import { SessionGuard } from '../auth/guards/session.guard.js';
 import { RequirePermissions } from '../auth/decorators/permissions.decorator.js';
 import { ResourcesService } from './resources.service.js';
 import type { AuthenticatedRequest } from '../auth/auth.types.js';
@@ -11,17 +10,18 @@ import {
   ResourceListQueryDto,
   CreateMaintenanceScheduleDto,
   CompleteMaintenanceDto,
+  MaintenanceListQueryDto,
 } from './dto/resource.dto.js';
 import {
   ResourceResponseDto,
   ResourcePageDto,
   MaintenanceScheduleResponseDto,
+  MaintenancePageDto,
 } from './dto/resource-response.dto.js';
 
 /** CRUD administrativo de recursos y mantenimientos programados. */
 @ApiTags('resources')
 @Controller('resources/admin')
-@UseGuards(SessionGuard)
 @ApiBearerAuth('session')
 export class ResourcesController {
   constructor(private readonly service: ResourcesService) {}
@@ -32,6 +32,27 @@ export class ResourcesController {
   @ApiOkResponse({ type: ResourcePageDto })
   async listResources(@Query() query: ResourceListQueryDto): Promise<ResourcePageDto> {
     return this.service.listResources(query);
+  }
+
+  @Get('maintenance')
+  @RequirePermissions('resources.read')
+  @ApiOperation({
+    summary: 'Listar mantenimientos (global o por recurso, con historial de completados)',
+  })
+  @ApiOkResponse({ type: MaintenancePageDto })
+  async listMaintenances(@Query() query: MaintenanceListQueryDto): Promise<MaintenancePageDto> {
+    return this.service.listMaintenances(query);
+  }
+
+  @Get(':id/maintenance')
+  @RequirePermissions('resources.read')
+  @ApiOperation({ summary: 'Listar mantenimientos de un recurso' })
+  @ApiOkResponse({ type: MaintenancePageDto })
+  async listResourceMaintenances(
+    @Param('id') id: string,
+    @Query() query: MaintenanceListQueryDto,
+  ): Promise<MaintenancePageDto> {
+    return this.service.listMaintenances({ ...query, resourceId: id });
   }
 
   @Get(':id')

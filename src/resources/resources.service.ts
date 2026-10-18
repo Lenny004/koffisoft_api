@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { PrismaService } from '../database/prisma.service.js';
 import { Prisma } from '../generated/prisma/client.js';
@@ -9,11 +14,13 @@ import type {
   ResourceListQueryDto,
   CreateMaintenanceScheduleDto,
   CompleteMaintenanceDto,
+  MaintenanceListQueryDto,
 } from './dto/resource.dto.js';
 import type {
   ResourceResponseDto,
   ResourcePageDto,
   MaintenanceScheduleResponseDto,
+  MaintenancePageDto,
 } from './dto/resource-response.dto.js';
 
 const resourceInclude = {
@@ -172,12 +179,21 @@ export class ResourcesService {
   async scheduleMaintenance(
     dto: CreateMaintenanceScheduleDto,
   ): Promise<MaintenanceScheduleResponseDto> {
+    const resource = await this.prisma.resource.findFirst({
+      where: { id: dto.resourceId },
+      select: { id: true },
+    });
+    if (!resource) throw new NotFoundException('Recurso no encontrado.');
+
     const schedule = await this.prisma.resourceMaintenanceSchedule.create({
       data: {
         resourceId: dto.resourceId,
         scheduledDate: new Date(dto.scheduledDate),
         description: dto.description,
         notes: dto.notes || null,
+      },
+      include: {
+        resource: { select: { locationId: true, resourceCode: true, name: true } },
       },
     });
 
@@ -197,9 +213,78 @@ export class ResourcesService {
         completedByUserId: actorUserId,
         notes: dto.notes || null,
       },
+      include: {
+        resource: { select: { locationId: true, resourceCode: true, name: true } },
+      },
     });
 
     return this.toMaintenanceResponse(schedule);
+  }
+
+  async listMaintenances(query: MaintenanceListQueryDto): Promise<MaintenancePageDto> {
+    if (!query.locationId && !query.resourceId) {
+      throw new BadRequestException('Indica locationId o resourceId para listar mantenimientos.');
+    }
+
+    if (query.locationId) {
+      await this.requireLocation(query.locationId);
+    }
+
+    if (query.resourceId) {
+      const resource = await this.prisma.resource.findFirst({
+        where: {
+          id: query.resourceId,
+          ...(query.locationId ? { locationId: query.locationId } : {}),
+        },
+        select: { id: true },
+      });
+      if (!resource) throw new NotFoundException('Recurso no encontrado.');
+    }
+
+    const where: Prisma.ResourceMaintenanceScheduleWhereInput = {
+      ...(query.resourceId ? { resourceId: query.resourceId } : {}),
+      ...(query.locationId && !query.resourceId
+        ? { resource: { locationId: query.locationId } }
+        : {}),
+      ...(query.completed === undefined ? {} : { completed: query.completed }),
+      ...(query.dateFrom || query.dateTo
+        ? {
+            scheduledDate: {
+              ...(query.dateFrom ? { gte: new Date(query.dateFrom) } : {}),
+              ...(query.dateTo ? { lte: new Date(query.dateTo) } : {}),
+            },
+          }
+        : {}),
+    };
+
+    const skip = (query.page - 1) * query.pageSize;
+    const orderBy =
+      query.completed === true
+        ? [{ completedAt: 'desc' as const }, { id: 'desc' as const }]
+        : [{ scheduledDate: 'asc' as const }, { id: 'asc' as const }];
+
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.resourceMaintenanceSchedule.count({ where }),
+      this.prisma.resourceMaintenanceSchedule.findMany({
+        where,
+        include: {
+          resource: { select: { locationId: true, resourceCode: true, name: true } },
+        },
+        orderBy,
+        skip,
+        take: query.pageSize,
+      }),
+    ]);
+
+    return {
+      data: rows.map((row) => this.toMaintenanceResponse(row)),
+      meta: {
+        page: query.page,
+        pageSize: query.pageSize,
+        total,
+        totalPages: Math.ceil(total / query.pageSize) || 0,
+      },
+    };
   }
 
   private buildWhere(query: ResourceListQueryDto): Prisma.ResourceWhereInput {
@@ -306,12 +391,24 @@ export class ResourcesService {
     };
   }
 
-  private toMaintenanceResponse(
-    row: Prisma.ResourceMaintenanceScheduleGetPayload<Record<string, never>>,
-  ): MaintenanceScheduleResponseDto {
+  private toMaintenanceResponse(row: {
+    id: string;
+    resourceId: string;
+    scheduledDate: Date;
+    description: string;
+    completed: boolean;
+    completedAt: Date | null;
+    completedByUserId: string | null;
+    notes: string | null;
+    createdAt: Date;
+    resource?: { locationId: string; resourceCode: string; name: string } | null;
+  }): MaintenanceScheduleResponseDto {
     return {
       id: row.id,
       resourceId: row.resourceId,
+      locationId: row.resource?.locationId,
+      resourceCode: row.resource?.resourceCode,
+      resourceName: row.resource?.name,
       scheduledDate: row.scheduledDate.toISOString().slice(0, 10),
       description: row.description,
       completed: row.completed,

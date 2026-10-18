@@ -20,6 +20,8 @@ describe('PurchaseOrdersService', () => {
       },
       purchaseOrderLine: {
         update: vi.fn(),
+        create: vi.fn(),
+        deleteMany: vi.fn(),
       },
       supplier: {
         findUnique: vi.fn(),
@@ -236,6 +238,104 @@ describe('PurchaseOrdersService', () => {
         'purchase-order.received',
         expect.objectContaining({ purchaseOrderId: orderId }),
       );
+    });
+  });
+
+  describe('replaceDraftLines', () => {
+    it('agrega, modifica y quita líneas de una orden Draft y recalcula el total', async () => {
+      prisma.purchaseOrder.findUnique.mockResolvedValue({
+        id: 'po-1',
+        status: PurchaseOrderStatus.Draft,
+        lines: [{ id: 'line-1' }, { id: 'line-obsolete' }],
+      });
+      prisma.purchaseOrder.update.mockResolvedValue({
+        id: 'po-1',
+        orderNumber: 'PO-202610-0001',
+        status: PurchaseOrderStatus.Draft,
+        orderDate: new Date('2026-10-17'),
+        expectedDelivery: null,
+        totalAmount: '800.00',
+        notes: null,
+        locationId: 'loc-1',
+        supplierId: 'sup-1',
+        createdByUserId: 'user-0',
+        approvedByUserId: null,
+        approvedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        supplier: { name: 'Proveedor Test' },
+        lines: [
+          {
+            id: 'line-1',
+            ingredientId: 'ing-1',
+            unitId: 'unit-1',
+            quantityOrdered: '2',
+            unitCost: '100',
+            totalCost: '200',
+            quantityReceived: null,
+            receivedAt: null,
+            ingredient: { name: 'Café' },
+            unit: { code: 'kg' },
+          },
+          {
+            id: 'line-2',
+            ingredientId: 'ing-2',
+            unitId: 'unit-1',
+            quantityOrdered: '3',
+            unitCost: '200',
+            totalCost: '600',
+            quantityReceived: null,
+            receivedAt: null,
+            ingredient: { name: 'Azúcar' },
+            unit: { code: 'kg' },
+          },
+        ],
+      });
+
+      const result = await service.replaceDraftLines(
+        'po-1',
+        [
+          {
+            id: 'line-1',
+            ingredientId: 'ing-1',
+            unitId: 'unit-1',
+            quantityOrdered: 2,
+            unitCost: 100,
+          },
+          { ingredientId: 'ing-2', unitId: 'unit-1', quantityOrdered: 3, unitCost: 200 },
+        ],
+        'user-1',
+        { ipAddress: '127.0.0.1', requestId: 'req-1' },
+      );
+
+      expect(prisma.purchaseOrderLine.deleteMany).toHaveBeenCalledWith({
+        where: { purchaseOrderId: 'po-1', id: { in: ['line-obsolete'] } },
+      });
+      expect(prisma.purchaseOrderLine.update).toHaveBeenCalled();
+      expect(prisma.purchaseOrderLine.create).toHaveBeenCalled();
+      expect(prisma.purchaseOrder.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ totalAmount: expect.anything() }),
+        }),
+      );
+      expect(result.totalAmount).toBe('800.00');
+    });
+
+    it('rechaza editar líneas si la orden no está en Draft', async () => {
+      prisma.purchaseOrder.findUnique.mockResolvedValue({
+        id: 'po-1',
+        status: PurchaseOrderStatus.Submitted,
+        lines: [{ id: 'line-1' }],
+      });
+
+      await expect(
+        service.replaceDraftLines(
+          'po-1',
+          [{ ingredientId: 'ing-1', unitId: 'unit-1', quantityOrdered: 1, unitCost: 10 }],
+          'user-1',
+          { ipAddress: '127.0.0.1', requestId: 'req-1' },
+        ),
+      ).rejects.toThrow('Las líneas solo se pueden editar en estado Draft');
     });
   });
 

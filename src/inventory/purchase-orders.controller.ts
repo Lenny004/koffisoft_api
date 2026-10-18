@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req } from '@nestjs/common';
 import { ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 
 import { RequirePermissions } from '../auth/decorators/permissions.decorator.js';
@@ -6,6 +6,7 @@ import type { AuthenticatedRequest } from '../auth/auth.types.js';
 import {
   CreatePurchaseOrderDto,
   UpdatePurchaseOrderDto,
+  ReplacePurchaseOrderLinesDto,
   PurchaseOrderListQueryDto,
   ReceivePurchaseOrderDto,
   CreateSupplierDto,
@@ -59,9 +60,29 @@ export class PurchaseOrdersController {
     return this.service.createOrder(dto, actorUserId, metadata);
   }
 
+  @Put(':id/lines')
+  @RequirePermissions('purchase_orders.manage')
+  @ApiOperation({ summary: 'Reemplazar líneas de una orden en Draft y recalcular el total' })
+  @ApiOkResponse({ type: PurchaseOrderResponseDto })
+  async replaceDraftLines(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: ReplacePurchaseOrderLinesDto,
+  ): Promise<PurchaseOrderResponseDto> {
+    const actorUserId = req.auth!.userId;
+    const metadata = {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      requestId: req.id,
+    };
+    return this.service.replaceDraftLines(id, dto.lines, actorUserId, metadata);
+  }
+
   @Patch(':id')
   @RequirePermissions('purchase_orders.manage')
-  @ApiOperation({ summary: 'Actualizar orden de compra (solo Draft/Submitted)' })
+  @ApiOperation({
+    summary: 'Actualizar orden de compra (notas en Draft/Submitted; líneas solo Draft)',
+  })
   @ApiOkResponse({ type: PurchaseOrderResponseDto })
   async updateOrder(
     @Param('id') id: string,

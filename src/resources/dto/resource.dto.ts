@@ -185,3 +185,53 @@ export class CompleteMaintenanceDto {
   @IsString()
   readonly notes?: string;
 }
+
+export class MaintenanceListQueryDto {
+  @ApiPropertyOptional({ description: 'Filtra por sede (requerido si no se indica resourceId).' })
+  @IsOptional()
+  @IsUUID()
+  readonly locationId?: string;
+
+  @ApiPropertyOptional({ description: 'Filtra los mantenimientos de un recurso concreto.' })
+  @IsOptional()
+  @IsUUID()
+  readonly resourceId?: string;
+
+  @ApiPropertyOptional({
+    description: 'true = historial de completados; false = pendientes; omitido = todos.',
+  })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
+    return value;
+  })
+  @IsBoolean()
+  readonly completed?: boolean;
+
+  @ApiPropertyOptional({ format: 'date' })
+  @IsOptional()
+  @IsDateString()
+  readonly dateFrom?: string;
+
+  @ApiPropertyOptional({ format: 'date' })
+  @IsOptional()
+  @IsDateString()
+  readonly dateTo?: string;
+
+  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 1))
+  @IsInt()
+  @Min(1)
+  readonly page: number = 1;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })
+  @IsOptional()
+  @Transform(({ value }) => (value ? parseInt(value, 10) : 20))
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  readonly pageSize: number = 20;
+}

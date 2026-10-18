@@ -1,9 +1,8 @@
-import { Controller, Get, Post, Query, Body, UseGuards, Req, Sse } from '@nestjs/common';
+import { Controller, Get, Post, Query, Body, Req, Sse } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiBearerAuth } from '@nestjs/swagger';
 import type { MessageEvent } from '@nestjs/common';
 import { Observable, map, takeUntil, fromEvent } from 'rxjs';
 
-import { SessionGuard } from '../auth/guards/session.guard.js';
 import { NotificationsService } from './notifications.service.js';
 import type { AuthenticatedRequest } from '../auth/auth.types.js';
 import {
@@ -20,7 +19,6 @@ import {
 /** Notificaciones del sistema con SSE en tiempo real. */
 @ApiTags('notifications')
 @Controller('notifications')
-@UseGuards(SessionGuard)
 @ApiBearerAuth('session')
 export class NotificationsController {
   constructor(private readonly service: NotificationsService) {}

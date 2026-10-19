@@ -93,6 +93,9 @@ export class AnalyticsService {
     });
   }
 
+  /**
+   * Lista sedes activas de los negocios autorizados para el usuario analítico.
+   */
   async listLocations(actorUserId: string): Promise<AnalyticsLocationResponseDto[]> {
     const businessIds = await this.authorizedBusinessIds(actorUserId);
     if (!businessIds.length) return [];
@@ -104,6 +107,9 @@ export class AnalyticsService {
     });
   }
 
+  /**
+   * Agrega visitas diarias en un rango acotado y devuelve totales.
+   */
   async getSummary(query: AnalyticsRangeQueryDto): Promise<AnalyticsSummaryResponseDto> {
     const range = await this.resolveReportRange(query);
     const rows = await this.prisma.pageView.groupBy({
@@ -122,6 +128,9 @@ export class AnalyticsService {
     return { totalVisits: daily.reduce((total, point) => total + point.visits, 0), daily };
   }
 
+  /**
+   * Ranking de rutas más visitadas en el rango solicitado.
+   */
   async getPages(query: AnalyticsRangeQueryDto): Promise<AnalyticsPageResponseDto[]> {
     const range = await this.resolveReportRange(query);
     const rows = await this.prisma.pageView.groupBy({
@@ -135,6 +144,9 @@ export class AnalyticsService {
     return rows.map((row) => ({ path: row.path, visits: row._sum.viewCount ?? 0 }));
   }
 
+  /**
+   * Ranking de ítems de menú y eventos más vistos en el rango.
+   */
   async getProducts(query: AnalyticsRangeQueryDto): Promise<AnalyticsProductResponseDto[]> {
     const range = await this.resolveReportRange(query);
     const rows = await this.prisma.pageView.groupBy({
@@ -155,6 +167,9 @@ export class AnalyticsService {
     }));
   }
 
+  /**
+   * Ranking de hosts referentes o tráfico directo en el rango.
+   */
   async getReferrers(query: AnalyticsRangeQueryDto): Promise<AnalyticsReferrerResponseDto[]> {
     const range = await this.resolveReportRange(query);
     const rows = await this.prisma.pageView.groupBy({
@@ -290,14 +305,23 @@ export class AnalyticsService {
   }
 }
 
+/**
+ * Detecta user-agents de bots para excluirlos del conteo.
+ */
 export function isBotUserAgent(userAgent: string | undefined): boolean {
   return !userAgent || BOT_PATTERN.test(userAgent);
 }
 
+/**
+ * Indica si la ruta pertenece al modo vista previa.
+ */
 export function isPreviewPath(path: string): boolean {
   return /^\/preview(?:\/|$)/u.test(path.trim());
 }
 
+/**
+ * Normaliza y valida rutas internas antes de persistir page views.
+ */
 export function normalizePath(value: string): string | null {
   const candidate = value.trim();
   if (!candidate || candidate.length > 500 || !candidate.startsWith('/')) return null;
@@ -312,6 +336,9 @@ export function normalizePath(value: string): string | null {
   }
 }
 
+/**
+ * Extrae el hostname de un referer HTTP(S) o devuelve null.
+ */
 export function normalizeRefererHost(value: string | undefined): string | null {
   if (!value?.trim()) return null;
   try {
@@ -323,11 +350,17 @@ export function normalizeRefererHost(value: string | undefined): string | null {
   }
 }
 
+/**
+ * Convierte strings opcionales en null si quedan vacíos tras trim.
+ */
 function normalizeOptional(value: string | undefined): string | null {
   const normalized = value?.trim();
   return normalized ? normalized : null;
 }
 
+/**
+ * Agrupa el user-agent en familias conocidas para reportes.
+ */
 function classifyUserAgent(userAgent: string | undefined): string | null {
   if (!userAgent) return null;
   if (/edg\//iu.test(userAgent)) return 'Edge';
@@ -338,6 +371,9 @@ function classifyUserAgent(userAgent: string | undefined): string | null {
   return 'Otro';
 }
 
+/**
+ * Formatea una fecha calendario en la zona horaria indicada.
+ */
 function dateKey(value: Date, timezone: string): string {
   try {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -353,17 +389,26 @@ function dateKey(value: Date, timezone: string): string {
   }
 }
 
+/**
+ * Parsea YYYY-MM-DD a medianoche UTC o null si es inválida.
+ */
 function dateAtUtc(value: string): Date | null {
   if (!DATE_PATTERN.test(value)) return null;
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
 }
 
+/**
+ * Desplaza una clave de fecha calendario N días en UTC.
+ */
 function shiftDateKey(value: string, days: number): string {
   const date = dateAtUtc(value) ?? new Date();
   return dateKey(addDays(date, days), 'UTC');
 }
 
+/**
+ * Suma días calendario en UTC sobre una fecha base.
+ */
 function addDays(value: Date, days: number): Date {
   const result = new Date(value);
   result.setUTCDate(result.getUTCDate() + days);

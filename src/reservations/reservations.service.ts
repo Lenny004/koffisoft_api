@@ -154,6 +154,9 @@ export class ReservationsService {
     return this.toPublicReservation(reservation);
   }
 
+/**
+ * Lista reservas administrativas con filtros de fecha, estado y espacio.
+ */
   async listReservations(query: ReservationListQueryDto): Promise<ReservationPageDto> {
     const where: Prisma.ReservationWhereInput = {
       locationId: query.locationId,
@@ -193,6 +196,9 @@ export class ReservationsService {
     };
   }
 
+/**
+ * Devuelve detalle de reserva con mesas asignadas.
+ */
   async getReservation(id: string): Promise<ReservationResponseDto> {
     const row = await this.prisma.reservation.findUnique({
       where: { id },
@@ -304,6 +310,9 @@ export class ReservationsService {
     return this.getReservation(reservationId);
   }
 
+/**
+ * Aplica transición de estado válida y libera mesas al cancelar o completar.
+ */
   async transitionReservation(
     id: string,
     target: ReservationStatus,
@@ -349,6 +358,9 @@ export class ReservationsService {
     return this.getReservation(id);
   }
 
+/**
+ * Reasigna mesas verificando capacidad y traslapes en transacción.
+ */
   async assignTables(
     id: string,
     dto: AssignReservationTablesDto,
@@ -371,6 +383,9 @@ export class ReservationsService {
     return this.getReservation(id);
   }
 
+/**
+ * Lógica compartida de asignación de mesas dentro de una transacción Prisma.
+ */
   private async assignTablesInTransaction(
     tx: Prisma.TransactionClient,
     reservation: {
@@ -439,6 +454,9 @@ export class ReservationsService {
     });
   }
 
+/**
+ * Lista espacios del venue con mesas anidadas.
+ */
   async listSpaces(query: VenueListQueryDto): Promise<VenueSpaceResponseDto[]> {
     const rows = await this.prisma.venueSpace.findMany({
       where: { locationId: query.locationId, ...(query.includeInactive ? {} : { active: true }) },
@@ -448,12 +466,18 @@ export class ReservationsService {
     return rows.map((row) => this.toSpace(row));
   }
 
+/**
+ * Consulta un espacio con sus mesas.
+ */
   async getSpace(id: string): Promise<VenueSpaceResponseDto> {
     const row = await this.prisma.venueSpace.findUnique({ where: { id }, include: spaceInclude });
     if (!row) throw new NotFoundException('Espacio no encontrado.');
     return this.toSpace(row);
   }
 
+/**
+ * Crea espacio; traduce conflictos Prisma a respuestas HTTP.
+ */
   async createSpace(dto: CreateVenueSpaceDto): Promise<VenueSpaceResponseDto> {
     try {
       const row = await this.prisma.venueSpace.create({
@@ -467,6 +491,9 @@ export class ReservationsService {
     }
   }
 
+/**
+ * Actualiza configuración de un espacio existente.
+ */
   async updateSpace(id: string, dto: UpdateVenueSpaceDto): Promise<VenueSpaceResponseDto> {
     try {
       const row = await this.prisma.venueSpace.update({
@@ -481,6 +508,9 @@ export class ReservationsService {
     }
   }
 
+/**
+ * Desactiva lógicamente un espacio.
+ */
   async deleteSpace(id: string): Promise<VenueSpaceResponseDto> {
     try {
       const row = await this.prisma.venueSpace.update({
@@ -495,6 +525,9 @@ export class ReservationsService {
     }
   }
 
+/**
+ * Lista mesas opcionalmente filtradas por espacio.
+ */
   async listTables(spaceId?: string): Promise<DiningTableResponseDto[]> {
     const rows = await this.prisma.diningTable.findMany({
       where: spaceId ? { spaceId } : undefined,
@@ -503,12 +536,18 @@ export class ReservationsService {
     return rows.map((row) => this.toTable(row));
   }
 
+/**
+ * Consulta una mesa por id.
+ */
   async getTable(id: string): Promise<DiningTableResponseDto> {
     const row = await this.prisma.diningTable.findUnique({ where: { id } });
     if (!row) throw new NotFoundException('Mesa no encontrada.');
     return this.toTable(row);
   }
 
+/**
+ * Crea mesa validando que el espacio exista.
+ */
   async createTable(dto: CreateDiningTableDto): Promise<DiningTableResponseDto> {
     const space = await this.prisma.venueSpace.findUnique({
       where: { id: dto.spaceId },
@@ -524,6 +563,9 @@ export class ReservationsService {
     }
   }
 
+/**
+ * Actualiza mesa o responde no encontrada.
+ */
   async updateTable(id: string, dto: UpdateDiningTableDto): Promise<DiningTableResponseDto> {
     try {
       const row = await this.prisma.diningTable.update({ where: { id }, data: dto });
@@ -535,10 +577,16 @@ export class ReservationsService {
     }
   }
 
+/**
+ * Desactiva mesa reutilizando actualización parcial.
+ */
   async deleteTable(id: string): Promise<DiningTableResponseDto> {
     return this.updateTable(id, { active: false });
   }
 
+/**
+ * Calcula disponibilidad por espacio considerando reservas, eventos y capacidad libre.
+ */
   private async findAvailabilitySpaces(
     client: PrismaService | Prisma.TransactionClient,
     locationId: string,
@@ -610,6 +658,9 @@ export class ReservationsService {
     });
   }
 
+/**
+ * Mapea espacio Prisma al DTO administrativo.
+ */
   private toSpace(row: SpaceRecord): VenueSpaceResponseDto {
     return {
       id: row.id,
@@ -627,6 +678,9 @@ export class ReservationsService {
     };
   }
 
+/**
+ * Mapea mesa al DTO de respuesta.
+ */
   private toTable(row: {
     id: string;
     spaceId: string;
@@ -639,6 +693,9 @@ export class ReservationsService {
     return { ...row };
   }
 
+/**
+ * Mapea reserva recién creada al DTO público mínimo.
+ */
   private toPublicReservation(row: {
     reservationCode: string;
     status: ReservationStatus;
@@ -655,6 +712,9 @@ export class ReservationsService {
     };
   }
 
+/**
+ * Mapea reserva completa con mesas al DTO administrativo.
+ */
   private toReservation(row: ReservationRecord): ReservationResponseDto {
     return {
       id: row.id,
@@ -690,16 +750,25 @@ export class ReservationsService {
     };
   }
 
+/**
+ * Genera código único legible para nuevas reservas.
+ */
   private newReservationCode(): string {
     return `RES-${Date.now().toString(36).toUpperCase()}-${randomBytes(4).toString('hex').toUpperCase()}`;
   }
 
+/**
+ * Traduce errores Prisma conocidos a Conflict o NotFound.
+ */
   private rethrowPrismaConflict(error: unknown): void {
     if (this.isPrismaCode(error, 'P2002'))
       throw new ConflictException('El recurso ya existe o está ocupado.');
     if (this.isPrismaCode(error, 'P2025')) throw new NotFoundException('El recurso no existe.');
   }
 
+/**
+ * Indica si un error Prisma corresponde a un código concreto.
+ */
   private isPrismaCode(error: unknown, code: string): boolean {
     return error instanceof Prisma.PrismaClientKnownRequestError && error.code === code;
   }
@@ -727,22 +796,34 @@ const validReservationTransitions: Record<ReservationStatus, readonly Reservatio
   [ReservationStatus.Expired]: [],
 };
 
+/**
+ * Combina fecha y hora en instante con offset fijo de El Salvador.
+ */
 function localDateTime(date: string, time: string): Date {
   const result = new Date(`${date}T${time}:00-06:00`);
   if (Number.isNaN(result.getTime())) throw new BadRequestException('Fecha u hora local inválida.');
   return result;
 }
 
+/**
+ * Inicio de día local para filtros de listado.
+ */
 function localDate(date: string): Date {
   return localDateTime(date, '00:00');
 }
 
+/**
+ * Límite exclusivo del día siguiente en filtros locales.
+ */
 function nextLocalDate(date: string): Date {
   const result = localDate(date);
   result.setUTCDate(result.getUTCDate() + 1);
   return result;
 }
 
+/**
+ * Metadatos de paginación para listados de reservas.
+ */
 function pageMeta(page: number, pageSize: number, total: number): PageMetaDto {
   return { page, pageSize, total, totalPages: total === 0 ? 0 : Math.ceil(total / pageSize) };
 }

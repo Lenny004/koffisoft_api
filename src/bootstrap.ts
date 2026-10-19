@@ -20,6 +20,9 @@ import { UsersModule } from './users/users.module.js';
 import { AnalyticsModule } from './analytics/analytics.module.js';
 import { BackupsModule } from './backups/backups.module.js';
 
+/**
+ * Construye la app Fastify con CORS, validación global, filtros y Swagger fuera de producción.
+ */
 export async function createApplication(): Promise<NestFastifyApplication> {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
   const config = app.get<AppConfig>(APP_CONFIG);
@@ -48,6 +51,9 @@ export async function createApplication(): Promise<NestFastifyApplication> {
   return app;
 }
 
+/**
+ * Genera el documento OpenAPI incluyendo los módulos HTTP expuestos en desarrollo.
+ */
 export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObject {
   const config = app.get<AppConfig>(APP_CONFIG);
   const options = new DocumentBuilder()
@@ -79,6 +85,9 @@ export function createOpenApiDocument(app: NestFastifyApplication): OpenAPIObjec
   });
 }
 
+/**
+ * Monta la UI de Swagger en la ruta /docs usando el documento OpenAPI generado.
+ */
 function setupSwagger(app: NestFastifyApplication): void {
   const document = createOpenApiDocument(app);
   SwaggerModule.setup('docs', app, document);

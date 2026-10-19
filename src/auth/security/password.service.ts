@@ -12,10 +12,12 @@ export const ARGON2ID_OPTIONS = {
 /** Encapsula el único algoritmo permitido para contraseñas y códigos de recuperación. */
 @Injectable()
 export class PasswordService {
+  /** Genera un hash Argon2id con los parámetros centralizados del servicio. */
   async hash(value: string): Promise<string> {
     return argon2.hash(value, ARGON2ID_OPTIONS);
   }
 
+  /** Compara un valor en claro con un hash almacenado; un hash inválido se trata como fallo silencioso. */
   async verify(hash: string, value: string): Promise<boolean> {
     try {
       return await argon2.verify(hash, value);
@@ -25,6 +27,7 @@ export class PasswordService {
     }
   }
 
+  /** Indica si el hash debe regenerarse porque los parámetros Argon2id cambiaron o el formato es ilegible. */
   needsRehash(hash: string): boolean {
     try {
       return argon2.needsRehash(hash, ARGON2ID_OPTIONS);

@@ -113,10 +113,25 @@ interface SeoRow {
 }
 
 interface SeoDelegate {
+  /**
+   * Contrato del delegate Prisma para buscar un registro SEO.
+   */
   findFirst(args: { where: Record<string, unknown>; orderBy?: unknown }): Promise<SeoRow | null>;
+  /**
+   * Contrato del delegate Prisma para listar registros SEO.
+   */
   findMany(args: { where: Record<string, unknown>; orderBy?: unknown }): Promise<SeoRow[]>;
+  /**
+   * Persiste un override SEO validando URLs y evitando duplicados por recurso.
+   */
   create(args: { data: Record<string, unknown> }): Promise<SeoRow>;
+  /**
+   * Contrato del delegate Prisma para actualizar un registro SEO.
+   */
   update(args: { where: { id: string }; data: Record<string, unknown> }): Promise<SeoRow>;
+  /**
+   * Contrato del delegate Prisma para eliminar registros SEO en lote.
+   */
   deleteMany(args: { where: Record<string, unknown> }): Promise<{ count: number }>;
 }
 
@@ -146,6 +161,9 @@ export class SeoService {
     this.seo = (prisma as PrismaService & { seoMetadata: SeoDelegate }).seoMetadata;
   }
 
+  /**
+   * Resuelve metadatos SEO públicos mezclando defaults del recurso y overrides guardados.
+   */
   async getPublic(query: PublicSeoQueryDto): Promise<SeoMetadataResponseDto> {
     const resource = await this.resolveResource(
       query.resourceType,
@@ -157,6 +175,9 @@ export class SeoService {
     return this.toResponse(row, resource, query.resourceType, query.resourceKey);
   }
 
+  /**
+   * Lista overrides SEO de una sede incluyendo recursos dinámicos publicados.
+   */
   async listAdmin(query: SeoListQueryDto): Promise<SeoMetadataResponseDto[]> {
     const location = await this.getLocation(query.locationId);
     const now = new Date();
@@ -265,6 +286,9 @@ export class SeoService {
     );
   }
 
+  /**
+   * Persiste un override SEO validando URLs y evitando duplicados por recurso.
+   */
   async create(dto: CreateSeoMetadataDto): Promise<SeoMetadataResponseDto> {
     const resource = await this.resolveResource(
       dto.resourceType,
@@ -330,12 +354,18 @@ export class SeoService {
     return this.toResponse(row, resource, current.resourceType, current.resourceKey);
   }
 
+  /**
+   * Elimina un override SEO administrativo verificando la sede.
+   */
   async remove(id: string, locationId: string): Promise<{ deleted: boolean }> {
     const current = await this.findAdminRow(id, locationId);
     const result = await this.seo.deleteMany({ where: { id: current.id } });
     return { deleted: result.count === 1 };
   }
 
+  /**
+   * Construye el XML del sitemap omitiendo entradas marcadas como noindex.
+   */
   async getSitemapXml(): Promise<string> {
     const now = new Date();
     const locations = await this.prisma.location.findMany({
@@ -454,6 +484,9 @@ export class SeoService {
     return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
   }
 
+  /**
+   * Genera robots.txt apuntando al sitemap absoluto del sitio público.
+   */
   getRobotsTxt(): string {
     return `User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: ${this.absoluteUrl('/sitemap.xml')}\n`;
   }
@@ -653,6 +686,9 @@ export class SeoService {
   }
 }
 
+/**
+ * Valida URLs HTTP(S) sin credenciales ni caracteres de control.
+ */
 export function validateHttpUrl(value: string, label: string): string {
   if (/[\u0000-\u001f\u007f\\]/u.test(value)) {
     throw new BadRequestException(`${label} debe ser una URL HTTP(S) segura.`);
@@ -669,6 +705,9 @@ export function validateHttpUrl(value: string, label: string): string {
   return value;
 }
 
+/**
+ * Escapa caracteres reservados para insertar URLs en XML de sitemap.
+ */
 function escapeXml(value: string): string {
   return value
     .replaceAll('&', '&amp;')

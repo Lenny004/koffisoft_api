@@ -51,6 +51,9 @@ export class ContactService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+/**
+ * Acepta mensaje público con honeypot, rate limit y deduplicación reciente silenciosa.
+ */
   async createPublic(
     dto: CreatePublicContactMessageDto,
     ipAddress = 'unknown',
@@ -108,6 +111,9 @@ export class ContactService {
     return { accepted: true };
   }
 
+/**
+ * Lista mensajes de la bandeja administrativa con paginación y filtros.
+ */
   async list(query: ContactMessageListQueryDto): Promise<ContactMessagePageDto> {
     const where = this.buildWhere(query);
     const [rows, total] = await Promise.all([
@@ -132,6 +138,9 @@ export class ContactService {
     };
   }
 
+/**
+ * Devuelve un mensaje con historial de auditoría de la entidad.
+ */
   async get(id: string, locationId: string): Promise<ContactMessageResponseDto> {
     const row = await this.findContact(id, locationId);
     const audits = await this.prisma.auditLog.findMany({
@@ -145,6 +154,9 @@ export class ContactService {
     );
   }
 
+/**
+ * Actualiza estado, asignación o archivo respetando transiciones permitidas.
+ */
   async update(
     id: string,
     locationId: string,
@@ -187,6 +199,9 @@ export class ContactService {
     return this.get(id, locationId);
   }
 
+/**
+ * Convierte mensaje a cliente idempotente dentro de transacción.
+ */
   async convertToCustomer(
     id: string,
     locationId: string,
@@ -226,6 +241,9 @@ export class ContactService {
     return { type: 'customer', ...result };
   }
 
+/**
+ * Crea reserva administrativa desde contacto o reutiliza vínculo existente.
+ */
   async convertToReservation(
     id: string,
     locationId: string,
@@ -268,6 +286,9 @@ export class ContactService {
     return { type: 'reservation', id: reservation.id, created: true };
   }
 
+/**
+ * Crea evento desde contacto o reutiliza conversión previa.
+ */
   async convertToEvent(
     id: string,
     locationId: string,
@@ -307,6 +328,9 @@ export class ContactService {
     return { type: 'event', id: event.id, created: true };
   }
 
+/**
+ * Construye filtros Prisma para la bandeja de contacto.
+ */
   private buildWhere(query: ContactMessageListQueryDto): Prisma.ContactMessageWhereInput {
     return {
       locationId: query.locationId,
@@ -326,6 +350,9 @@ export class ContactService {
     };
   }
 
+/**
+ * Carga mensaje por id y sede o responde no encontrado.
+ */
   private async findContact(id: string, locationId: string): Promise<ContactRecord> {
     const row = await this.prisma.contactMessage.findFirst({
       where: { id, locationId },
@@ -335,6 +362,9 @@ export class ContactService {
     return row;
   }
 
+/**
+ * Verifica sede activa antes de aceptar contacto público.
+ */
   private async ensureLocation(locationId: string): Promise<void> {
     const location = await this.prisma.location.findFirst({
       where: { id: locationId, active: true },
@@ -343,6 +373,9 @@ export class ContactService {
     if (!location) throw new NotFoundException('Sede no encontrada.');
   }
 
+/**
+ * Valida que el usuario asignado pertenezca al negocio de la sede.
+ */
   private async assertAssignee(userId: string, locationId: string): Promise<void> {
     const location = await this.prisma.location.findFirst({
       where: { id: locationId, active: true },
@@ -360,6 +393,9 @@ export class ContactService {
     if (!user) throw new NotFoundException('Usuario asignable no encontrado.');
   }
 
+/**
+ * Impide saltos de estado no permitidos en el flujo del mensaje.
+ */
   private assertTransition(current: ContactMessageStatus, target?: ContactMessageStatus): void {
     if (!target || target === current) return;
     const allowed: Record<ContactMessageStatus, readonly ContactMessageStatus[]> = {
@@ -383,6 +419,9 @@ export class ContactService {
     }
   }
 
+/**
+ * Crea cliente persona a partir de datos snapshot del mensaje.
+ */
   private async createCustomerFromContact(current: ContactRecord): Promise<string> {
     const customer = await this.prisma.customer.create({
       data: {
@@ -397,6 +436,9 @@ export class ContactService {
     return customer.id;
   }
 
+/**
+ * Vincula reserva o evento al mensaje con auditoría e idempotencia.
+ */
   private async linkConversion(
     current: ContactRecord,
     locationId: string,
@@ -425,6 +467,9 @@ export class ContactService {
     });
   }
 
+/**
+ * Registra cambios del mensaje en audit_log dentro de transacción.
+ */
   private async writeAudit(
     tx: Prisma.TransactionClient,
     actorUserId: string,
@@ -445,6 +490,9 @@ export class ContactService {
     });
   }
 
+/**
+ * Snapshot de campos relevantes para auditoría de contacto.
+ */
   private auditState(row: ContactRecord): object {
     return {
       status: row.status,
@@ -456,6 +504,9 @@ export class ContactService {
     };
   }
 
+/**
+ * Mapea fila Prisma al DTO administrativo del mensaje.
+ */
   private toResponse(
     row: ContactRecord,
     audit: ContactAuditResponseDto[],
@@ -490,10 +541,16 @@ export class ContactService {
     };
   }
 
+/**
+ * Formatea relación resumida id/etiqueta para UI.
+ */
   private relation(id: string, label: string): ContactRelationResponseDto {
     return { id, label };
   }
 
+/**
+ * Mapea fila de audit_log al DTO de historial del mensaje.
+ */
   private toAudit(row: {
     action: string;
     actorUserId: string | null;

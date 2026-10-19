@@ -1,0 +1,925 @@
+{
+  "summary": {
+    "files": 135,
+    "completo": 52,
+    "parcial": 0,
+    "pendiente": 0,
+    "sinFunciones": 83
+  },
+  "report": [
+    {
+      "rel": "src/analytics/analytics.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/analytics/analytics.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/analytics/analytics.service.ts",
+      "total": 15,
+      "missing": 0,
+      "documented": 15,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/analytics/dto/analytics-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/analytics/dto/analytics.dto.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/announcements/announcements.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/announcements/announcements.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/announcements/announcements.service.ts",
+      "total": 5,
+      "missing": 0,
+      "documented": 5,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/announcements/dto/announcement-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/announcements/dto/announcement.dto.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/app.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/audit-log.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/auth.controller.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/auth.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/auth.service.ts",
+      "total": 7,
+      "missing": 0,
+      "documented": 7,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/auth.types.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/decorators/auth-flow.decorator.ts",
+      "total": 3,
+      "missing": 0,
+      "documented": 3,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/decorators/permissions.decorator.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/decorators/public.decorator.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/dto/audit-log.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/dto/auth-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/dto/login.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/dto/mfa.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/dto/password-reset.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/dto/password.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/dto/setup.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/fastify.d.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/guards/csrf.guard.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/guards/permission.guard.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/guards/session.guard.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/security/access-scope.service.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/security/audit.service.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/auth/security/mfa-crypto.service.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/security/password.service.ts",
+      "total": 5,
+      "missing": 0,
+      "documented": 5,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/security/session.service.ts",
+      "total": 5,
+      "missing": 0,
+      "documented": 5,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/auth/security/totp.service.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/backups/backup-process.runner.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/backups/backups.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/backups/backups.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/backups/backups.scheduler.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/backups/backups.service.ts",
+      "total": 8,
+      "missing": 0,
+      "documented": 8,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/backups/dto/backup-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/backups/dto/backup.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/bootstrap.ts",
+      "total": 3,
+      "missing": 0,
+      "documented": 3,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/common/http-exception.filter.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/config/app-config.ts",
+      "total": 12,
+      "missing": 0,
+      "documented": 12,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/config/config.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/contact/contact-rate-limit.service.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/contact/contact.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/contact/contact.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/contact/contact.service.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/contact/dto/contact-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/contact/dto/contact.dto.ts",
+      "total": 3,
+      "missing": 0,
+      "documented": 3,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/database/database.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/database/prisma.service.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/domain-events/domain-events.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/domain-events/events/backup.events.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/domain-events/events/contact.events.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/domain-events/events/index.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/domain-events/events/inventory.events.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/domain-events/events/purchase-order.events.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/domain-events/events/reservation.events.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/domain-events/events/resource.events.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/domain-events/events/security.events.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/events/dto/event-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/events/dto/event.dto.ts",
+      "total": 3,
+      "missing": 0,
+      "documented": 3,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/events/events.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/events/events.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/events/events.service.ts",
+      "total": 25,
+      "missing": 0,
+      "documented": 25,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/health/health.controller.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/health/health.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/inventory/dto/inventory-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/inventory/dto/inventory.dto.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/inventory/dto/purchase-order-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/inventory/dto/purchase-order.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/inventory/inventory.controller.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/inventory/inventory.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/inventory/inventory.service.ts",
+      "total": 23,
+      "missing": 0,
+      "documented": 23,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/inventory/purchase-orders.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/inventory/purchase-orders.service.ts",
+      "total": 8,
+      "missing": 0,
+      "documented": 8,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/jobs/alerts.scheduler.ts",
+      "total": 5,
+      "missing": 0,
+      "documented": 5,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/jobs/jobs.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/mailer/console-mailer.service.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/mailer/mailer.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/mailer/mailer.service.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/mailer/smtp-mailer.service.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/main.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/menu/dto/allergen.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/dto/availability.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/dto/category.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/dto/item.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/dto/menu-query.dto.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/menu/dto/menu-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/dto/modifier.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/dto/price.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/dto/variant.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/menu.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/menu.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/menu/menu.service.ts",
+      "total": 40,
+      "missing": 0,
+      "documented": 40,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/notifications/dto/notification-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/notifications/dto/notification.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/notifications/notifications.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/notifications/notifications.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/notifications/notifications.service.ts",
+      "total": 12,
+      "missing": 0,
+      "documented": 12,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/publication/dto/publication-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/publication/dto/publication.dto.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/publication/publication.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/publication/publication.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/publication/publication.scheduler.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/publication/publication.service.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/reservations/dto/reservation-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/reservations/dto/reservation.dto.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/reservations/reservations.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/reservations/reservations.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/reservations/reservations.service.ts",
+      "total": 16,
+      "missing": 0,
+      "documented": 16,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/resources/dto/resource-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/resources/dto/resource.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/resources/resources.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/resources/resources.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/resources/resources.service.ts",
+      "total": 3,
+      "missing": 0,
+      "documented": 3,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/seo/dto/seo-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/seo/dto/seo.dto.ts",
+      "total": 1,
+      "missing": 0,
+      "documented": 1,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/seo/seo.controller.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/seo/seo.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/seo/seo.service.ts",
+      "total": 13,
+      "missing": 0,
+      "documented": 13,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/site/dto/site-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/site/dto/site.dto.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/site/site.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/site/site.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/site/site.service.ts",
+      "total": 6,
+      "missing": 0,
+      "documented": 6,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/users/dto/users-response.dto.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/users/dto/users.dto.ts",
+      "total": 2,
+      "missing": 0,
+      "documented": 2,
+      "status": "completo",
+      "missingNames": []
+    },
+    {
+      "rel": "src/users/users.controller.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/users/users.module.ts",
+      "total": 0,
+      "missing": 0,
+      "status": "sin-funciones"
+    },
+    {
+      "rel": "src/users/users.service.ts",
+      "total": 6,
+      "missing": 0,
+      "documented": 6,
+      "status": "completo",
+      "missingNames": []
+    }
+  ]
+}

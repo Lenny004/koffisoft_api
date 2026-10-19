@@ -51,6 +51,9 @@ export class PurchaseOrdersService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+/**
+ * Pagina órdenes de compra de una sede con filtros opcionales de estado y proveedor.
+ */
   async listOrders(query: PurchaseOrderListQueryDto): Promise<PurchaseOrderPageDto> {
     const page = query.page ?? 1;
     const perPage = Math.min(query.perPage ?? 20, 100);
@@ -89,6 +92,9 @@ export class PurchaseOrdersService {
     };
   }
 
+/**
+ * Devuelve una orden con proveedor y líneas o responde no encontrada.
+ */
   async getOrder(id: string): Promise<PurchaseOrderResponseDto> {
     const order = await this.prisma.purchaseOrder.findUnique({
       where: { id },
@@ -110,6 +116,9 @@ export class PurchaseOrdersService {
     return toPurchaseOrderResponse(order);
   }
 
+/**
+ * Crea orden en borrador, calcula total, audita y emite evento de dominio.
+ */
   async createOrder(
     dto: CreatePurchaseOrderDto,
     actorUserId: string,
@@ -182,6 +191,9 @@ export class PurchaseOrdersService {
     return toPurchaseOrderResponse(order);
   }
 
+/**
+ * Actualiza notas, entrega esperada o líneas según reglas de estado Draft/Submitted.
+ */
   async updateOrder(
     id: string,
     dto: UpdatePurchaseOrderDto,
@@ -254,6 +266,9 @@ export class PurchaseOrdersService {
     return toPurchaseOrderResponse(updated);
   }
 
+/**
+ * Atajo para reemplazar líneas en borrador reutilizando updateOrder.
+ */
   async replaceDraftLines(
     id: string,
     lines: UpdatePurchaseOrderLineDto[],
@@ -263,6 +278,9 @@ export class PurchaseOrdersService {
     return this.updateOrder(id, { lines }, actorUserId, metadata);
   }
 
+/**
+ * Pasa la orden de Draft a Submitted con auditoría.
+ */
   async submitOrder(
     id: string,
     actorUserId: string,
@@ -277,6 +295,9 @@ export class PurchaseOrdersService {
     );
   }
 
+/**
+ * Aprueba una orden Submitted, registra aprobador y emite evento.
+ */
   async approveOrder(
     id: string,
     actorUserId: string,
@@ -333,6 +354,9 @@ export class PurchaseOrdersService {
     return toPurchaseOrderResponse(approved);
   }
 
+/**
+ * Cancela una orden que aún no fue recibida por completo.
+ */
   async cancelOrder(
     id: string,
     actorUserId: string,
@@ -357,6 +381,9 @@ export class PurchaseOrdersService {
     );
   }
 
+/**
+ * Recibe una orden Approved creando lotes, movimientos y actualizando proveedor.
+ */
   async receiveOrder(
     id: string,
     dto: ReceivePurchaseOrderDto,
@@ -495,6 +522,9 @@ export class PurchaseOrdersService {
     return toPurchaseOrderResponse(received);
   }
 
+/**
+ * Resume hasta 50 órdenes recibidas de un proveedor con total acumulado.
+ */
   async getSupplierOrderHistory(supplierId: string): Promise<SupplierOrderHistoryDto> {
     const orders = await this.prisma.purchaseOrder.findMany({
       where: { supplierId, status: PurchaseOrderStatus.Received },
@@ -523,6 +553,9 @@ export class PurchaseOrdersService {
     };
   }
 
+/**
+ * Pagina proveedores de compras por sede.
+ */
   async listSuppliers(query: SupplierListQueryDto): Promise<SupplierPageDto> {
     const page = query.page ?? 1;
     const perPage = Math.min(query.perPage ?? 20, 100);
@@ -550,6 +583,9 @@ export class PurchaseOrdersService {
     };
   }
 
+/**
+ * Obtiene un proveedor por id.
+ */
   async getSupplier(id: string): Promise<SupplierResponseDto> {
     const supplier = await this.prisma.supplier.findUnique({ where: { id } });
 
@@ -560,6 +596,9 @@ export class PurchaseOrdersService {
     return toSupplierResponse(supplier);
   }
 
+/**
+ * Crea proveedor de compras con código único por sede y auditoría.
+ */
   async createSupplier(
     dto: CreateSupplierDto,
     actorUserId: string,
@@ -608,6 +647,9 @@ export class PurchaseOrdersService {
     return toSupplierResponse(supplier);
   }
 
+/**
+ * Actualiza datos operativos del proveedor de compras.
+ */
   async updateSupplier(
     id: string,
     dto: UpdateSupplierDto,
@@ -653,6 +695,9 @@ export class PurchaseOrdersService {
     return toSupplierResponse(updated);
   }
 
+/**
+ * Aplica un cambio de estado genérico con registro en auditoría.
+ */
   private async transitionStatus(
     id: string,
     status: PurchaseOrderStatus,
@@ -689,6 +734,9 @@ export class PurchaseOrdersService {
     return toPurchaseOrderResponse(updated);
   }
 
+/**
+ * Genera número secuencial PO-AAAAMM-#### por sede y mes.
+ */
   private async generateOrderNumber(locationId: string): Promise<string> {
     const today = new Date();
     const prefix = `PO-${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}`;
@@ -713,6 +761,9 @@ export class PurchaseOrdersService {
     return `${prefix}-${String(sequence).padStart(4, '0')}`;
   }
 
+/**
+ * Verifica existencia de sede antes de operaciones de compra.
+ */
   private async ensureLocationExists(locationId: string): Promise<void> {
     const location = await this.prisma.location.findUnique({
       where: { id: locationId },
@@ -724,6 +775,9 @@ export class PurchaseOrdersService {
     }
   }
 
+/**
+ * Verifica proveedor existente y devuelve nombre para eventos.
+ */
   private async ensureSupplierExists(supplierId: string): Promise<{ name: string }> {
     const supplier = await this.prisma.supplier.findUnique({
       where: { id: supplierId },
@@ -737,6 +791,9 @@ export class PurchaseOrdersService {
     return supplier;
   }
 
+/**
+ * Verifica que la bodega de recepción exista.
+ */
   private async ensureStorageLocationExists(storageLocationId: string): Promise<void> {
     const storage = await this.prisma.storageLocation.findUnique({
       where: { id: storageLocationId },
@@ -748,6 +805,9 @@ export class PurchaseOrdersService {
     }
   }
 
+/**
+ * Suma costo total de líneas de orden en actualización.
+ */
   private calculateLinesTotal(lines: UpdatePurchaseOrderLineDto[]): Prisma.Decimal {
     return lines.reduce(
       (sum, line) => sum.add(new Prisma.Decimal(line.quantityOrdered).mul(line.unitCost)),
@@ -755,6 +815,9 @@ export class PurchaseOrdersService {
     );
   }
 
+/**
+ * Sincroniza líneas de borrador: altas, bajas y recálculo por transacción.
+ */
   private async replaceDraftLinesInTx(
     tx: Prisma.TransactionClient,
     purchaseOrderId: string,
@@ -805,6 +868,9 @@ export class PurchaseOrdersService {
   }
 }
 
+/**
+ * Mapea orden Prisma al DTO de respuesta de compras.
+ */
 function toPurchaseOrderResponse(order: PurchaseOrderRecord): PurchaseOrderResponseDto {
   return {
     id: order.id,
@@ -826,6 +892,9 @@ function toPurchaseOrderResponse(order: PurchaseOrderRecord): PurchaseOrderRespo
   };
 }
 
+/**
+ * Mapea línea de orden al DTO con cantidades recibidas opcionales.
+ */
 function toLineResponse(line: PurchaseOrderRecord['lines'][number]): PurchaseOrderLineResponseDto {
   return {
     id: line.id,
@@ -841,6 +910,9 @@ function toLineResponse(line: PurchaseOrderRecord['lines'][number]): PurchaseOrd
   };
 }
 
+/**
+ * Mapea proveedor al DTO del módulo de órdenes de compra.
+ */
 function toSupplierResponse(supplier: SupplierRecord): SupplierResponseDto {
   return {
     id: supplier.id,

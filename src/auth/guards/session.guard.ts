@@ -22,6 +22,9 @@ export class SessionGuard implements CanActivate {
     private readonly authService: AuthService,
   ) {}
 
+  /**
+   * Resuelve la cookie de sesión, valida MFA y contraseña obligatoria, y adjunta auth al request.
+   */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),

@@ -66,6 +66,9 @@ type QuoteRecord = Prisma.EventQuoteGetPayload<{ include: typeof quoteInclude }>
 export class EventsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Devuelve espacios y paquetes publicados para cotización pública.
+   */
   async getPublicCatalog(locationId: string): Promise<PublicEventCatalogResponseDto> {
     const location = await this.prisma.location.findFirst({
       where: { id: locationId, active: true },
@@ -109,6 +112,9 @@ export class EventsService {
     };
   }
 
+  /**
+   * Lista eventos visibles al público según estado editorial y fechas.
+   */
   async getPublicEvents(locationId: string): Promise<PublicPublishedEventDto[]> {
     const location = await this.prisma.location.findFirst({
       where: { id: locationId, active: true },
@@ -182,6 +188,9 @@ export class EventsService {
     return this.toPublicEvent(event);
   }
 
+  /**
+   * Lista eventos administrativos de una sede con filtros.
+   */
   async listEvents(query: EventListQueryDto): Promise<EventPageDto> {
     const where: Prisma.EventWhereInput = {
       locationId: query.locationId,
@@ -208,12 +217,18 @@ export class EventsService {
     };
   }
 
+  /**
+   * Obtiene un evento administrativo verificando la sede.
+   */
   async getEvent(id: string): Promise<EventResponseDto> {
     const row = await this.prisma.event.findUnique({ where: { id }, include: eventInclude });
     if (!row) throw new NotFoundException('Evento no encontrado.');
     return this.toEvent(row);
   }
 
+  /**
+   * Crea un evento y reserva espacios validando solapamientos.
+   */
   async createEvent(dto: CreateEventDto): Promise<EventResponseDto> {
     validateInterval(dto.startsAt, dto.endsAt, dto.setupStartsAt);
     validateGuestRange(dto.estimatedGuestCount, dto.confirmedGuestCount);
@@ -252,6 +267,9 @@ export class EventsService {
     }
   }
 
+  /**
+   * Actualiza un evento y reconcilia reservas de espacio.
+   */
   async updateEvent(id: string, dto: UpdateEventDto): Promise<EventResponseDto> {
     const current = await this.prisma.event.findUnique({
       where: { id },
@@ -423,6 +441,9 @@ export class EventsService {
     }
   }
 
+  /**
+   * Libera una reserva de espacio asociada a un evento.
+   */
   async releaseSpaceBooking(id: string): Promise<EventSpaceBookingResponseDto> {
     try {
       const row = await this.prisma.eventSpaceBooking.update({
@@ -448,6 +469,9 @@ export class EventsService {
     return rows.map((row) => this.toPackage(row));
   }
 
+  /**
+   * Obtiene un paquete de eventos por identificador.
+   */
   async getPackage(id: string): Promise<EventPackageResponseDto> {
     const row = await this.prisma.eventPackage.findUnique({
       where: { id },
@@ -457,6 +481,9 @@ export class EventsService {
     return this.toPackage(row);
   }
 
+  /**
+   * Crea un paquete con líneas y rangos de invitados válidos.
+   */
   async createPackage(dto: CreateEventPackageDto): Promise<EventPackageResponseDto> {
     await this.ensureLocation(dto.locationId);
     dto.lines?.forEach(validatePackageLine);
@@ -499,6 +526,9 @@ export class EventsService {
     return this.toPackage(row);
   }
 
+  /**
+   * Actualiza paquete, líneas y precios con validaciones de negocio.
+   */
   async updatePackage(id: string, dto: UpdateEventPackageDto): Promise<EventPackageResponseDto> {
     dto.lines?.forEach(validatePackageLine);
     const current = await this.prisma.eventPackage.findUnique({
@@ -561,10 +591,16 @@ export class EventsService {
     }
   }
 
+  /**
+   * Desactiva un paquete de eventos (borrado lógico).
+   */
   async deletePackage(id: string): Promise<EventPackageResponseDto> {
     return this.updatePackage(id, { active: false });
   }
 
+  /**
+   * Lista cotizaciones de eventos de una sede.
+   */
   async listQuotes(eventId: string): Promise<EventQuotePageDto> {
     const rows = await this.prisma.eventQuote.findMany({
       where: { eventId },
@@ -577,12 +613,18 @@ export class EventsService {
     };
   }
 
+  /**
+   * Obtiene una cotización con sus requisitos y totales.
+   */
   async getQuote(id: string): Promise<EventQuoteResponseDto> {
     const row = await this.prisma.eventQuote.findUnique({ where: { id }, include: quoteInclude });
     if (!row) throw new NotFoundException('Cotización no encontrada.');
     return this.toQuote(row);
   }
 
+  /**
+   * Genera una cotización a partir de paquete, fechas e invitados.
+   */
   async createQuote(eventId: string, dto: CreateEventQuoteDto): Promise<EventQuoteResponseDto> {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
@@ -680,6 +722,9 @@ export class EventsService {
     }
   }
 
+  /**
+   * Elimina un requisito de cotización si aún es editable.
+   */
   async deleteRequirement(id: string): Promise<void> {
     try {
       await this.prisma.eventRequirement.update({
@@ -979,6 +1024,9 @@ export function calculateQuoteTotals(dto: CreateEventQuoteDto): QuoteCalculation
   return { lines, subtotalAmount, discountAmount, taxableAmount, taxAmount, totalAmount };
 }
 
+/**
+ * Valida que el intervalo de fechas del evento sea coherente.
+ */
 function validateInterval(startsAt: string, endsAt: string, setupStartsAt?: string): void {
   const starts = new Date(startsAt);
   const ends = new Date(endsAt);
@@ -990,6 +1038,9 @@ function validateInterval(startsAt: string, endsAt: string, setupStartsAt?: stri
   }
 }
 
+/**
+ * Valida solapamiento de reservas de espacio en el intervalo.
+ */
 function validateBookingInterval(dto: CreateEventSpaceBookingDto): void {
   validateInterval(dto.startsAt, dto.endsAt, dto.setupStartsAt);
   if (dto.teardownEndsAt && new Date(dto.teardownEndsAt) <= new Date(dto.endsAt)) {
@@ -1000,22 +1051,34 @@ function validateBookingInterval(dto: CreateEventSpaceBookingDto): void {
   }
 }
 
+/**
+ * Parsea decimal no negativo o lanza error de validación.
+ */
 function nonNegativeDecimal(value: string, label: string): Prisma.Decimal {
   const decimal = new Prisma.Decimal(value);
   if (decimal.isNegative()) throw new BadRequestException(`${label} no puede ser negativo.`);
   return decimal;
 }
 
+/**
+ * Parsea decimal estrictamente positivo.
+ */
 function positiveDecimal(value: string, label: string): Prisma.Decimal {
   const decimal = nonNegativeDecimal(value, label);
   if (decimal.isZero()) throw new BadRequestException(`${label} debe ser mayor que cero.`);
   return decimal;
 }
 
+/**
+ * Asegura que un Prisma.Decimal no sea negativo.
+ */
 function validateNonNegativeDecimal(value: string | undefined, label: string): void {
   if (value !== undefined) nonNegativeDecimal(value, label);
 }
 
+/**
+ * Valida mínimo y máximo de invitados del evento.
+ */
 function validateGuestRange(
   estimatedGuestCount: number,
   confirmedGuestCount?: number,
@@ -1030,12 +1093,18 @@ function validateGuestRange(
   }
 }
 
+/**
+ * Valida rango de invitados permitido por el paquete.
+ */
 function validatePackageGuestRange(minGuestCount?: number, maxGuestCount?: number): void {
   if (minGuestCount !== undefined && maxGuestCount !== undefined && maxGuestCount < minGuestCount) {
     throw new BadRequestException('El máximo de invitados debe ser mayor o igual al mínimo.');
   }
 }
 
+/**
+ * Valida una línea de paquete (cantidad, precio y servicio).
+ */
 function validatePackageLine(line: NonNullable<CreateEventPackageDto['lines']>[number]): void {
   if (
     (line.lineType === EventQuoteLineType.Menu || line.lineType === EventQuoteLineType.Beverage) &&

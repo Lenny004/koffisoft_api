@@ -27,6 +27,9 @@ export class SmtpMailerService extends MailerService {
     });
   }
 
+  /**
+   * Envía por SMTP el enlace de recuperación usando la URL pública configurada.
+   */
   async sendPasswordReset(to: string, token: string): Promise<void> {
     const resetUrl = `${process.env.PUBLIC_SITE_URL}/reset-password?token=${token}`;
 
@@ -48,6 +51,9 @@ export class SmtpMailerService extends MailerService {
     this.logger.log(`Correo de recuperación enviado a ${to}`);
   }
 
+  /**
+   * Envía por SMTP el correo de bienvenida al usuario recién creado.
+   */
   async sendWelcome(to: string, name: string): Promise<void> {
     await this.transporter.sendMail({
       from: process.env.MAIL_FROM ?? '"Koffi-Soft" <no-reply@koffisoft.example.invalid>',

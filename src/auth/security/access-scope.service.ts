@@ -7,6 +7,9 @@ import { PrismaService } from '../../database/prisma.service.js';
 export class AccessScopeService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Falla con 404 si la sede no existe, está inactiva o el actor no tiene rol en su negocio.
+   */
   async assertLocationAccess(actorUserId: string, locationId: string): Promise<void> {
     const location = await this.prisma.location.findFirst({
       where: { id: locationId, active: true },
@@ -20,6 +23,7 @@ export class AccessScopeService {
     }
   }
 
+  /** IDs de negocio alcanzables vía roles activos del usuario (sin duplicados). */
   async authorizedBusinessIds(actorUserId: string): Promise<string[]> {
     const actor = await this.prisma.user.findUnique({
       where: { id: actorUserId },

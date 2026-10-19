@@ -54,10 +54,12 @@ export class AuthController {
   @Public()
   @ApiOperation({ summary: 'Indica si el alta inicial del propietario sigue disponible' })
   @ApiResponse({ status: 200, type: SetupStatusDto })
+  /** Expone si el flujo de alta inicial del propietario sigue habilitado. */
   async setupStatus(): Promise<SetupStatusDto> {
     return { required: await this.authService.isSetupRequired() };
   }
 
+  /** Completa el primer uso, delega en el servicio y fija la cookie de sesión resultante. */
   @Post('setup')
   @HttpCode(HttpStatus.CREATED)
   @Public()
@@ -85,6 +87,7 @@ export class AuthController {
     };
   }
 
+  /** Autentica con correo y contraseña y devuelve el estado de MFA y cookie de sesión. */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Public()
@@ -112,6 +115,7 @@ export class AuthController {
     };
   }
 
+  /** Valida TOTP sobre una sesión con MFA pendiente y renueva la cookie. */
   @Post('mfa/verify')
   @HttpCode(HttpStatus.OK)
   @AllowMfaPending()
@@ -138,6 +142,7 @@ export class AuthController {
     };
   }
 
+  /** Acepta un código de recuperación MFA en sesión pendiente y renueva la cookie. */
   @Post('mfa/recovery')
   @HttpCode(HttpStatus.OK)
   @AllowMfaPending()
@@ -164,6 +169,7 @@ export class AuthController {
     };
   }
 
+  /** Revoca la sesión del navegador actual y elimina la cookie. */
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @Public()
@@ -178,6 +184,7 @@ export class AuthController {
     return { ok: true };
   }
 
+  /** Cierra todas las sesiones del usuario autenticado y limpia la cookie local. */
   @Post('logout-all')
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
@@ -195,6 +202,7 @@ export class AuthController {
     return { ok: true, revokedSessions };
   }
 
+  /** Devuelve el perfil, RBAC y estado MFA de la sesión vigente. */
   @Get('me')
   @AllowPasswordChange()
   @ApiSecurity('sessionCookie')
@@ -204,6 +212,7 @@ export class AuthController {
     return this.authService.me(this.requiredContext(request));
   }
 
+  /** Inicia el enrolamiento TOTP y responde con la URI para el autenticador. */
   @Post('mfa/totp/setup')
   @AllowMfaEnrollment()
   @ApiSecurity('sessionCookie')
@@ -221,6 +230,7 @@ export class AuthController {
     return { ...result, status: 'pending' };
   }
 
+  /** Confirma el factor TOTP, entrega códigos de recuperación y actualiza la cookie de sesión. */
   @Post('mfa/totp/confirm')
   @AllowMfaEnrollment()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
@@ -241,6 +251,7 @@ export class AuthController {
     return { recoveryCodes: result.recoveryCodes };
   }
 
+  /** Desactiva TOTP tras verificación reforzada y renueva la cookie según política MFA. */
   @Post('mfa/totp/disable')
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
@@ -260,6 +271,7 @@ export class AuthController {
     return { mfaEnabled: false };
   }
 
+  /** Regenera códigos de recuperación tras validar contraseña y TOTP del titular. */
   @Post('mfa/recovery-codes')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiSecurity('sessionCookie')
@@ -277,6 +289,7 @@ export class AuthController {
     return { recoveryCodes };
   }
 
+  /** Cambia la contraseña autenticado y sincroniza la cookie con la sesión rotada. */
   @Post('password')
   @AllowPasswordChange()
   @HttpCode(HttpStatus.OK)
@@ -297,6 +310,7 @@ export class AuthController {
     return { ok: true };
   }
 
+  /** Solicita restablecimiento de contraseña con respuesta genérica ante cualquier correo. */
   @Post('forgot-password')
   @Public()
   @Throttle({ default: { limit: 3, ttl: 60_000 } })
@@ -311,6 +325,7 @@ export class AuthController {
     return { message: 'Si el correo existe, recibirás instrucciones de recuperación.' };
   }
 
+  /** Aplica una contraseña nueva usando el token de recuperación entregado por correo. */
   @Post('reset-password')
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
@@ -325,6 +340,7 @@ export class AuthController {
     return { ok: true };
   }
 
+  /** Exige contexto de autenticación resuelto por el guard de sesión. */
   private requiredContext(request: AuthenticatedRequest): AuthContext {
     if (!request.auth) {
       throw new UnauthorizedException('Autenticación requerida.');

@@ -13,11 +13,17 @@ export class PublicationScheduler implements OnModuleInit, OnModuleDestroy {
 
   constructor(private readonly publicationService: PublicationService) {}
 
+  /**
+   * Programa el polling de transiciones editoriales al iniciar el módulo.
+   */
   onModuleInit(): void {
     this.timer = setInterval(() => void this.process(), PUBLICATION_POLL_INTERVAL_MS);
     void this.process();
   }
 
+  /**
+   * Detiene el intervalo de transiciones editoriales al destruir el módulo.
+   */
   onModuleDestroy(): void {
     if (this.timer) clearInterval(this.timer);
   }

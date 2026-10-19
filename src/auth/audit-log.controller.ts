@@ -15,6 +15,7 @@ import { AuditLogQueryDto, AuditLogPageDto, AuditLogResponseDto } from './dto/au
 export class AuditLogController {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Lista entradas de auditoría con filtros opcionales y paginación en una sola transacción de conteo y datos. */
   @Get()
   @RequirePermissions('audit_logs.read')
   @ApiOperation({ summary: 'Consultar bitácora de auditoría' })

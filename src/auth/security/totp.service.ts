@@ -11,10 +11,12 @@ export interface TotpVerification {
 /** Mantiene la política TOTP compatible con RFC 6238 y con aplicaciones autenticadoras comunes. */
 @Injectable()
 export class TotpService {
+  /** Genera una semilla aleatoria compatible con aplicaciones autenticadoras estándar. */
   generateSecret(): string {
     return generateSecret();
   }
 
+  /** Construye la URI otpauth para enrolar el factor con el correo del usuario. */
   generateUri(email: string, secret: string): string {
     return generateURI({
       issuer: 'Koffi-Soft',
@@ -23,6 +25,9 @@ export class TotpService {
     });
   }
 
+  /**
+   * Valida un código TOTP en la ventana actual más un paso de tolerancia; devuelve el time step usado.
+   */
   async verifyCode(
     secret: string,
     token: string,

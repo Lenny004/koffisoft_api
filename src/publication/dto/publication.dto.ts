@@ -8,6 +8,9 @@ export type PublicationResourceType = (typeof PUBLICATION_RESOURCE_TYPES)[number
 export const PUBLICATION_ACTIONS = ['draft', 'schedule', 'publish', 'unpublish'] as const;
 export type PublicationAction = (typeof PUBLICATION_ACTIONS)[number];
 
+/**
+ * Recorta espacios en strings antes de validar el DTO.
+ */
 function trimValue({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }

@@ -45,6 +45,9 @@ export type AuthenticatedRequest = FastifyRequest & {
   auth?: AuthContext;
 };
 
+/**
+ * Extrae IP, user-agent y request id de Fastify con límites de longitud para auditoría.
+ */
 export function requestMetadata(request: FastifyRequest): RequestMetadata {
   const userAgent = request.headers['user-agent'];
   const requestId = request.id;

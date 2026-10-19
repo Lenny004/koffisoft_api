@@ -24,10 +24,12 @@ import { InventoryMovementType } from '../../generated/prisma/enums.js';
 
 const DECIMAL_PATTERN = /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/u;
 
+/** Recorta espacios en strings antes de validar el DTO. */
 function trimValue({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }
 
+/** Normaliza booleanos desde query string o valor nativo antes de validar. */
 function parseBoolean({ value }: { value: unknown }): unknown {
   if (value === undefined || value === null || value === '') return undefined;
   if (value === true || value === 'true') return true;

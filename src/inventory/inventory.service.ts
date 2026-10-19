@@ -133,6 +133,9 @@ type AuditData = Prisma.InputJsonObject;
 export class InventoryService {
   constructor(private readonly prisma: PrismaService) {}
 
+/**
+ * Lista unidades de medida del catálogo global, priorizando las activas.
+ */
   async listUnits(): Promise<UnitResponseDto[]> {
     const rows = await this.prisma.unit.findMany({
       orderBy: [{ active: 'desc' }, { code: 'asc' }],
@@ -146,6 +149,9 @@ export class InventoryService {
     }));
   }
 
+/**
+ * Lista categorías de ingredientes ordenadas por nombre.
+ */
   async listIngredientCategories(): Promise<IngredientCategoryResponseDto[]> {
     const rows = await this.prisma.ingredientCategory.findMany({
       orderBy: [{ active: 'desc' }, { name: 'asc' }],
@@ -153,6 +159,9 @@ export class InventoryService {
     return rows.map((row) => ({ id: row.id, name: row.name, active: row.active }));
   }
 
+/**
+ * Lista bodegas de una sede; puede incluir ubicaciones inactivas.
+ */
   async listStorageLocations(
     query: StorageLocationListQueryDto,
   ): Promise<StorageLocationResponseDto[]> {
@@ -173,6 +182,9 @@ export class InventoryService {
     }));
   }
 
+/**
+ * Pagina proveedores de la sede con conteo de vínculos a ingredientes.
+ */
   async listSuppliers(query: SupplierListQueryDto): Promise<SupplierPageDto> {
     await this.requireLocation(this.prisma, query.locationId);
     const where = this.supplierWhere(query);
@@ -193,6 +205,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Obtiene un proveedor por id acotado a la sede indicada.
+ */
   async getSupplier(id: string, locationId: string): Promise<SupplierResponseDto> {
     const row = await this.prisma.supplier.findFirst({
       where: { id, locationId },
@@ -202,6 +217,9 @@ export class InventoryService {
     return this.toSupplier(row);
   }
 
+/**
+ * Crea un proveedor en transacción, valida código único y registra auditoría.
+ */
   async createSupplier(
     dto: CreateSupplierDto,
     actorUserId: string,
@@ -234,6 +252,9 @@ export class InventoryService {
     return this.toSupplier(row);
   }
 
+/**
+ * Actualiza datos del proveedor; el código debe seguir siendo único en la sede.
+ */
   async updateSupplier(
     id: string,
     locationId: string,
@@ -279,6 +300,9 @@ export class InventoryService {
     return this.toSupplier(row);
   }
 
+/**
+ * Desactiva lógicamente un proveedor sin eliminar su historial.
+ */
   async removeSupplier(
     id: string,
     locationId: string,
@@ -312,6 +336,9 @@ export class InventoryService {
     return this.toSupplier(row);
   }
 
+/**
+ * Lista ingredientes con saldo agregado por movimientos en la sede o bodega.
+ */
   async listIngredients(query: IngredientListQueryDto): Promise<IngredientPageDto> {
     await this.requireLocation(this.prisma, query.locationId);
     if (query.storageLocationId) {
@@ -341,6 +368,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Devuelve un ingrediente y su saldo actual en la sede.
+ */
   async getIngredient(id: string, locationId: string): Promise<IngredientResponseDto> {
     await this.requireLocation(this.prisma, locationId);
     const row = await this.prisma.ingredient.findUnique({
@@ -352,6 +382,9 @@ export class InventoryService {
     return this.toIngredient(row, stocks.get(id) ?? new Prisma.Decimal(0));
   }
 
+/**
+ * Crea un ingrediente, opcionalmente reemplaza vínculos con proveedores y audita.
+ */
   async createIngredient(
     dto: CreateIngredientDto,
     actorUserId: string,
@@ -391,6 +424,9 @@ export class InventoryService {
     return this.toIngredient(row, new Prisma.Decimal(0));
   }
 
+/**
+ * Actualiza un ingrediente; impide cambiar la unidad base si hay historial operativo.
+ */
   async updateIngredient(
     id: string,
     dto: UpdateIngredientDto,
@@ -465,6 +501,9 @@ export class InventoryService {
     return this.toIngredient(row, stocks.get(id) ?? new Prisma.Decimal(0));
   }
 
+/**
+ * Desactiva lógicamente un ingrediente conservando movimientos y recetas.
+ */
   async removeIngredient(
     id: string,
     locationId: string,
@@ -493,6 +532,9 @@ export class InventoryService {
     return this.toIngredient(row, stocks.get(id) ?? new Prisma.Decimal(0));
   }
 
+/**
+ * Pagina recepciones de mercancía con filtros por proveedor, fechas y búsqueda.
+ */
   async listReceipts(query: GoodsReceiptListQueryDto): Promise<GoodsReceiptPageDto> {
     await this.requireLocation(this.prisma, query.locationId);
     const where: Prisma.GoodsReceiptWhereInput = {
@@ -532,12 +574,18 @@ export class InventoryService {
     };
   }
 
+/**
+ * Devuelve el detalle de una recepción con lotes y líneas.
+ */
   async getReceipt(id: string, locationId: string): Promise<GoodsReceiptResponseDto> {
     const row = await this.findReceiptDetail(this.prisma, id, locationId);
     if (!row) throw new NotFoundException('Recepción no encontrada.');
     return this.toReceipt(row);
   }
 
+/**
+ * Registra una recepción idempotente por número; crea lotes y movimientos de entrada.
+ */
   async createReceipt(
     dto: CreateGoodsReceiptDto,
     actorUserId: string,
@@ -676,6 +724,9 @@ export class InventoryService {
     return this.toReceipt(row);
   }
 
+/**
+ * Pagina movimientos del libro mayor con filtros por bodega, ingrediente y fechas.
+ */
   async listMovements(query: InventoryMovementListQueryDto): Promise<InventoryMovementPageDto> {
     await this.requireLocation(this.prisma, query.locationId);
     if (query.storageLocationId) {
@@ -712,6 +763,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Registra ajuste, merma o entrada manual con bloqueo por bodega e idempotencia opcional.
+ */
   async createAdjustment(
     dto: CreateInventoryAdjustmentDto,
     actorUserId: string,
@@ -843,6 +897,9 @@ export class InventoryService {
     return this.toMovement(row);
   }
 
+/**
+ * Calcula alertas de stock bajo y lotes por vencer en la sede.
+ */
   async listAlerts(query: InventoryAlertQueryDto): Promise<InventoryAlertsResponseDto> {
     await this.requireLocation(this.prisma, query.locationId);
     const ingredients = await this.prisma.ingredient.findMany({
@@ -923,6 +980,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Pagina recetas versionadas filtradas por variante de menú y sede.
+ */
   async listRecipes(query: RecipeListQueryDto): Promise<RecipePageDto> {
     await this.requireLocation(this.prisma, query.locationId);
     const where = this.recipeWhere(query);
@@ -943,6 +1003,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Obtiene una receta validando que la variante pertenezca a la sede.
+ */
   async getRecipe(id: string, locationId: string): Promise<RecipeResponseDto> {
     const row = await this.prisma.recipe.findFirst({
       where: {
@@ -955,6 +1018,9 @@ export class InventoryService {
     return this.toRecipe(row);
   }
 
+/**
+ * Crea una receta con vigencia sin traslapes y líneas en unidad base del ingrediente.
+ */
   async createRecipe(
     dto: CreateRecipeDto,
     actorUserId: string,
@@ -1035,6 +1101,9 @@ export class InventoryService {
     return this.toRecipe(row);
   }
 
+/**
+ * Actualiza notas o estado activo de una receta; revalida traslapes al reactivar.
+ */
   async updateRecipe(
     id: string,
     locationId: string,
@@ -1090,6 +1159,9 @@ export class InventoryService {
     return this.toRecipe(row);
   }
 
+/**
+ * Arma el filtro Prisma para listado paginado de proveedores.
+ */
   private supplierWhere(query: SupplierListQueryDto): Prisma.SupplierWhereInput {
     return {
       locationId: query.locationId,
@@ -1107,6 +1179,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Arma el filtro Prisma para listado paginado de ingredientes.
+ */
   private ingredientWhere(query: IngredientListQueryDto): Prisma.IngredientWhereInput {
     return {
       ...(query.includeInactive ? {} : { active: true }),
@@ -1122,6 +1197,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Arma el filtro Prisma para listado paginado de recetas por sede.
+ */
   private recipeWhere(query: RecipeListQueryDto): Prisma.RecipeWhereInput {
     return {
       ...(query.includeInactive ? {} : { active: true }),
@@ -1142,6 +1220,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Verifica que el código de proveedor no esté duplicado en la sede.
+ */
   private async assertSupplierCodeAvailable(
     client: DbClient,
     locationId: string,
@@ -1155,6 +1236,9 @@ export class InventoryService {
     if (duplicate) throw new ConflictException('El código de proveedor ya existe en la sede.');
   }
 
+/**
+ * Verifica unicidad global de SKU y nombre de ingrediente.
+ */
   private async assertIngredientIdentityAvailable(
     client: DbClient,
     sku: string,
@@ -1171,6 +1255,9 @@ export class InventoryService {
     if (duplicate) throw new ConflictException('El SKU o nombre del ingrediente ya existe.');
   }
 
+/**
+ * Confirma que la sede existe y está activa.
+ */
   private async requireLocation(client: DbClient, id: string): Promise<void> {
     const location = await client.location.findFirst({
       where: { id, active: true },
@@ -1179,6 +1266,9 @@ export class InventoryService {
     if (!location) throw new NotFoundException('Sede no encontrada.');
   }
 
+/**
+ * Confirma que el proveedor pertenece a la sede y está activo.
+ */
   private async requireSupplierForLocation(
     client: DbClient,
     supplierId: string,
@@ -1191,6 +1281,9 @@ export class InventoryService {
     if (!supplier) throw new NotFoundException('Proveedor no encontrado para la sede.');
   }
 
+/**
+ * Valida categoría y unidad base activas antes de persistir un ingrediente.
+ */
   private async requireCategoryAndUnit(
     client: DbClient,
     categoryId: string,
@@ -1208,6 +1301,9 @@ export class InventoryService {
     if (!unit) throw new NotFoundException('Unidad de ingrediente no encontrada o inactiva.');
   }
 
+/**
+ * Confirma que la unidad indicada existe y está activa.
+ */
   private async requireActiveUnit(client: DbClient, unitId: string): Promise<void> {
     const unit = await client.unit.findFirst({
       where: { id: unitId, active: true },
@@ -1216,6 +1312,9 @@ export class InventoryService {
     if (!unit) throw new NotFoundException('Unidad no encontrada o inactiva.');
   }
 
+/**
+ * Resuelve una bodega activa de la sede o responde no encontrada.
+ */
   private async requireStorageLocation(
     client: DbClient,
     storageLocationId: string,
@@ -1229,6 +1328,9 @@ export class InventoryService {
     return storage;
   }
 
+/**
+ * Toma un candado transaccional por bodega antes de mutar existencias.
+ */
   private async lockStorageLocation(
     client: Prisma.TransactionClient,
     storageLocationId: string,
@@ -1239,6 +1341,9 @@ export class InventoryService {
     await this.requireStorageLocation(client, storageLocationId, locationId);
   }
 
+/**
+ * Reemplaza por completo los vínculos ingrediente–proveedor con validaciones de negocio.
+ */
   private async replaceSupplierLinks(
     client: Prisma.TransactionClient,
     ingredientId: string,
@@ -1283,6 +1388,9 @@ export class InventoryService {
     }
   }
 
+/**
+ * Agrega saldos por ingrediente sumando deltas de movimientos en la sede o bodega.
+ */
   private async stockByIngredient(
     client: DbClient,
     locationId: string,
@@ -1309,6 +1417,9 @@ export class InventoryService {
     );
   }
 
+/**
+ * Calcula el saldo de un ingrediente en una bodega concreta.
+ */
   private async stockForIngredient(
     client: DbClient,
     storageLocationId: string,
@@ -1321,6 +1432,9 @@ export class InventoryService {
     return result._sum.quantityDelta ?? new Prisma.Decimal(0);
   }
 
+/**
+ * Calcula el saldo restante de un lote a partir de sus movimientos.
+ */
   private async stockForLot(
     client: Prisma.TransactionClient,
     inventoryLotId: string,
@@ -1332,6 +1446,9 @@ export class InventoryService {
     return result._sum.quantityDelta ?? new Prisma.Decimal(0);
   }
 
+/**
+ * Agrega saldos por lote para un conjunto de ids.
+ */
   private async lotStockById(
     client: DbClient,
     lotIds: string[],
@@ -1352,6 +1469,9 @@ export class InventoryService {
     );
   }
 
+/**
+ * Carga una recepción con detalle de líneas, lotes y proveedor.
+ */
   private async findReceiptDetail(
     client: DbClient,
     id: string,
@@ -1366,10 +1486,16 @@ export class InventoryService {
     return client.goodsReceipt.findUnique({ where: { id }, include: receiptDetailInclude });
   }
 
+/**
+ * Carga un movimiento de inventario con datos de bodega e ingrediente.
+ */
   private async findMovement(client: DbClient, id: string): Promise<MovementRow | null> {
     return client.inventoryMovement.findUnique({ where: { id }, include: movementInclude });
   }
 
+/**
+ * Valida líneas de receta: ingredientes activos y unidad base coherente.
+ */
   private async validateRecipeLines(
     client: Prisma.TransactionClient,
     lines: CreateRecipeDto['lines'],
@@ -1402,6 +1528,9 @@ export class InventoryService {
     }
   }
 
+/**
+ * Impide vigencias de receta activas que se traslapen en la misma variante.
+ */
   private async assertRecipeIntervalAvailable(
     client: Prisma.TransactionClient,
     menuItemVariantId: string,
@@ -1423,6 +1552,9 @@ export class InventoryService {
       throw new ConflictException('La vigencia de la receta se traslapa con otra activa.');
   }
 
+/**
+ * Mapea fila Prisma de proveedor al DTO de respuesta.
+ */
   private toSupplier(row: SupplierRow): SupplierResponseDto {
     return {
       id: row.id,
@@ -1440,6 +1572,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Mapea fila Prisma de ingrediente al DTO incluyendo saldo y alerta de mínimo.
+ */
   private toIngredient(row: IngredientRow, stock: Prisma.Decimal): IngredientResponseDto {
     return {
       id: row.id,
@@ -1471,6 +1606,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Mapea recepción al ítem resumido del listado paginado.
+ */
   private toReceiptListItem(row: ReceiptListRow): GoodsReceiptListItemDto {
     return {
       id: row.id,
@@ -1485,6 +1623,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Mapea recepción detallada al DTO con líneas y metadatos de lote.
+ */
   private toReceipt(row: ReceiptDetailRow): GoodsReceiptResponseDto {
     return {
       ...this.toReceiptListItem({ ...row, lines: row.lines.map((line) => ({ id: line.id })) }),
@@ -1506,6 +1647,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Mapea movimiento de inventario al DTO expuesto por la API.
+ */
   private toMovement(row: MovementRow): InventoryMovementResponseDto {
     return {
       id: row.id,
@@ -1526,6 +1670,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Mapea receta con variante de menú e ingredientes al DTO de respuesta.
+ */
   private toRecipe(row: RecipeRow): RecipeResponseDto {
     return {
       id: row.id,
@@ -1554,6 +1701,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Extrae campos auditables de un proveedor.
+ */
   private supplierAuditData(row: SupplierRow): AuditData {
     return {
       locationId: row.locationId,
@@ -1563,6 +1713,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Extrae campos auditables de un ingrediente.
+ */
   private ingredientAuditData(row: IngredientRow): AuditData {
     return {
       categoryId: row.categoryId,
@@ -1574,6 +1727,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Extrae campos auditables de una receta.
+ */
   private recipeAuditData(row: RecipeRow): AuditData {
     return {
       menuItemVariantId: row.menuItemVariantId,
@@ -1583,6 +1739,9 @@ export class InventoryService {
     };
   }
 
+/**
+ * Persiste un evento de auditoría dentro de la transacción en curso.
+ */
   private async writeAudit(
     tx: Prisma.TransactionClient,
     actorUserId: string,
@@ -1609,11 +1768,17 @@ export class InventoryService {
     });
   }
 
+/**
+ * Construye metadatos de paginación estándar para respuestas de inventario.
+ */
   private pageMeta(page: number, pageSize: number, total: number): InventoryPageMetaDto {
     return { page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
   }
 }
 
+/**
+ * Parsea un decimal no negativo o lanza error de validación con etiqueta legible.
+ */
 function nonNegativeDecimal(value: string, label: string): Prisma.Decimal {
   let decimal: Prisma.Decimal;
   try {
@@ -1627,30 +1792,48 @@ function nonNegativeDecimal(value: string, label: string): Prisma.Decimal {
   return decimal;
 }
 
+/**
+ * Parsea un decimal estrictamente positivo para cantidades operativas.
+ */
 function positiveDecimal(value: string, label: string): Prisma.Decimal {
   const decimal = nonNegativeDecimal(value, label);
   if (decimal.isZero()) throw new BadRequestException(`${label} debe ser mayor que cero.`);
   return decimal;
 }
 
+/**
+ * Normaliza una fecha calendario UTC a medianoche Z.
+ */
 function startOfDate(value: string): Date {
   return new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
 }
 
+/**
+ * Inicio del día operativo en zona horaria de El Salvador (-06:00).
+ */
 function startOfOperationalDate(value: string): Date {
   return new Date(`${value.slice(0, 10)}T00:00:00.000-06:00`);
 }
 
+/**
+ * Límite exclusivo del día siguiente al rango operativo local.
+ */
 function startOfNextDate(value: string): Date {
   return addDays(startOfOperationalDate(value), 1);
 }
 
+/**
+ * Suma días calendario en UTC a una fecha.
+ */
 function addDays(value: Date, days: number): Date {
   const result = new Date(value);
   result.setUTCDate(result.getUTCDate() + days);
   return result;
 }
 
+/**
+ * Fecha calendario actual en America/El_Salvador con formato ISO.
+ */
 function todayInElSalvador(now = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/El_Salvador',
@@ -1660,6 +1843,9 @@ function todayInElSalvador(now = new Date()): string {
   }).format(now);
 }
 
+/**
+ * Compara payload de recepción con registro existente para idempotencia segura.
+ */
 function receiptPayloadMatches(dto: CreateGoodsReceiptDto, row: ReceiptDetailRow): boolean {
   const existingStorageLocationId = row.lines[0]?.inventoryLot.storageLocationId ?? '';
   const expected = {
@@ -1711,6 +1897,9 @@ function receiptPayloadMatches(dto: CreateGoodsReceiptDto, row: ReceiptDetailRow
   return JSON.stringify(expected) === JSON.stringify(actual);
 }
 
+/**
+ * Valida que no se repita ingrediente+lote en líneas de una recepción.
+ */
 function validateReceiptLines(dto: CreateGoodsReceiptDto): void {
   const keys = dto.lines.map((line) => `${line.ingredientId}:${line.lotCode}`);
   if (new Set(keys).size !== keys.length) {
@@ -1720,6 +1909,9 @@ function validateReceiptLines(dto: CreateGoodsReceiptDto): void {
   }
 }
 
+/**
+ * Valida duplicados de ingrediente y coherencia de fechas al crear receta.
+ */
 function validateRecipeLines(dto: CreateRecipeDto): void {
   if (new Set(dto.lines.map((line) => line.ingredientId)).size !== dto.lines.length) {
     throw new BadRequestException('Una receta no puede repetir el mismo ingrediente.');
@@ -1729,6 +1921,9 @@ function validateRecipeLines(dto: CreateRecipeDto): void {
   validateRecipeDates(effectiveFrom, effectiveTo);
 }
 
+/**
+ * Exige que la vigencia final de receta sea posterior a la inicial.
+ */
 function validateRecipeDates(effectiveFrom: Date, effectiveTo: Date | null): void {
   if (effectiveTo && effectiveTo <= effectiveFrom) {
     throw new BadRequestException('La vigencia final debe ser posterior a la inicial.');

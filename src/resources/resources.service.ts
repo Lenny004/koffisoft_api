@@ -34,6 +34,9 @@ type ResourceRow = Prisma.ResourceGetPayload<{ include: typeof resourceInclude }
 export class ResourcesService {
   constructor(private readonly prisma: PrismaService) {}
 
+/**
+ * Pagina recursos de una sede con filtros de categoría, estado y búsqueda.
+ */
   async listResources(query: ResourceListQueryDto): Promise<ResourcePageDto> {
     await this.requireLocation(query.locationId);
     const where = this.buildWhere(query);
@@ -61,6 +64,9 @@ export class ResourcesService {
     };
   }
 
+/**
+ * Obtiene recurso por id acotado a la sede.
+ */
   async getResource(id: string, locationId: string): Promise<ResourceResponseDto> {
     const row = await this.prisma.resource.findFirst({
       where: { id, locationId },
@@ -70,6 +76,9 @@ export class ResourcesService {
     return this.toResponse(row);
   }
 
+/**
+ * Crea recurso validando código único, proveedor opcional y auditoría.
+ */
   async createResource(
     dto: CreateResourceDto,
     actorUserId: string,
@@ -113,6 +122,9 @@ export class ResourcesService {
     return this.toResponse(row);
   }
 
+/**
+ * Actualiza recurso con validación de código y proveedor en transacción.
+ */
   async updateResource(
     id: string,
     locationId: string,
@@ -176,6 +188,9 @@ export class ResourcesService {
     return this.toResponse(row);
   }
 
+/**
+ * Programa mantenimiento futuro para un recurso existente.
+ */
   async scheduleMaintenance(
     dto: CreateMaintenanceScheduleDto,
   ): Promise<MaintenanceScheduleResponseDto> {
@@ -200,6 +215,9 @@ export class ResourcesService {
     return this.toMaintenanceResponse(schedule);
   }
 
+/**
+ * Marca mantenimiento como completado con actor y notas.
+ */
   async completeMaintenance(
     scheduleId: string,
     dto: CompleteMaintenanceDto,
@@ -221,6 +239,9 @@ export class ResourcesService {
     return this.toMaintenanceResponse(schedule);
   }
 
+/**
+ * Lista mantenimientos por sede o recurso con filtros de fecha y completado.
+ */
   async listMaintenances(query: MaintenanceListQueryDto): Promise<MaintenancePageDto> {
     if (!query.locationId && !query.resourceId) {
       throw new BadRequestException('Indica locationId o resourceId para listar mantenimientos.');
@@ -287,6 +308,9 @@ export class ResourcesService {
     };
   }
 
+/**
+ * Arma condiciones Prisma para listado de recursos.
+ */
   private buildWhere(query: ResourceListQueryDto): Prisma.ResourceWhereInput {
     return {
       locationId: query.locationId,
@@ -305,6 +329,9 @@ export class ResourcesService {
     };
   }
 
+/**
+ * Verifica sede activa antes de operar recursos.
+ */
   private async requireLocation(
     locationId: string,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
@@ -316,6 +343,9 @@ export class ResourcesService {
     if (!location) throw new NotFoundException('Sede no encontrada.');
   }
 
+/**
+ * Verifica proveedor activo de la misma sede cuando se vincula.
+ */
   private async requireSupplier(
     supplierId: string,
     locationId: string,
@@ -328,6 +358,9 @@ export class ResourcesService {
     if (!supplier) throw new NotFoundException('Proveedor no encontrado para la sede.');
   }
 
+/**
+ * Impide códigos de recurso duplicados en la sede.
+ */
   private async assertResourceCodeAvailable(
     locationId: string,
     resourceCode: string,
@@ -345,6 +378,9 @@ export class ResourcesService {
     if (duplicate) throw new ConflictException('El código de recurso ya existe en la sede.');
   }
 
+/**
+ * Persiste auditoría de cambios de recurso en transacción.
+ */
   private async writeAudit(
     tx: Prisma.TransactionClient,
     actorUserId: string,
@@ -371,6 +407,9 @@ export class ResourcesService {
     });
   }
 
+/**
+ * Mapea fila Prisma de recurso al DTO de respuesta.
+ */
   private toResponse(row: ResourceRow): ResourceResponseDto {
     return {
       id: row.id,
@@ -391,6 +430,9 @@ export class ResourcesService {
     };
   }
 
+/**
+ * Mapea programación de mantenimiento al DTO con datos del recurso.
+ */
   private toMaintenanceResponse(row: {
     id: string;
     resourceId: string;

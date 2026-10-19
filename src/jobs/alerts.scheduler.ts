@@ -22,8 +22,8 @@ export class AlertsScheduler {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  /** Ejecuta cada hora: detecta stock bajo sin duplicar alertas. */
   @Cron(CronExpression.EVERY_HOUR)
+  /** Cron horario: emite eventos de stock bajo evitando duplicados en 24 h. */
   async checkLowStock(): Promise<void> {
     this.logger.log('Ejecutando verificación de stock bajo...');
 
@@ -75,8 +75,8 @@ export class AlertsScheduler {
     }
   }
 
-  /** Ejecuta diariamente: detecta lotes por vencer sin duplicar alertas. */
   @Cron(CronExpression.EVERY_DAY_AT_8AM)
+  /** Cron diario: emite alertas de lotes que vencen dentro del umbral configurado. */
   async checkExpiringLots(): Promise<void> {
     this.logger.log('Ejecutando verificación de lotes por vencer...');
 
@@ -133,8 +133,8 @@ export class AlertsScheduler {
     }
   }
 
-  /** Ejecuta diariamente: recordatorios de pedido a proveedores. */
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
+  /** Cron diario: emite recordatorios de pedido según días desde la última orden. */
   async checkSupplierReminders(): Promise<void> {
     this.logger.log('Ejecutando verificación de recordatorios de proveedores...');
 
@@ -178,8 +178,8 @@ export class AlertsScheduler {
     }
   }
 
-  /** Ejecuta diariamente: recordatorios de mantenimientos pendientes. */
   @Cron(CronExpression.EVERY_DAY_AT_10AM)
+  /** Cron diario: emite recordatorios de mantenimientos en los próximos tres días. */
   async checkMaintenanceDue(): Promise<void> {
     this.logger.log('Ejecutando verificación de mantenimientos pendientes...');
 
@@ -237,8 +237,8 @@ export class AlertsScheduler {
     }
   }
 
-  /** Ejecuta diariamente: limpia notificaciones leídas y archivadas antiguas. */
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
+  /** Cron diario: purga notificaciones archivadas más antiguas que la retención. */
   async cleanupNotifications(): Promise<void> {
     this.logger.log('Ejecutando limpieza de notificaciones antiguas...');
 

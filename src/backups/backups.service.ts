@@ -51,6 +51,9 @@ export class BackupService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  /**
+   * Lista trabajos de respaldo recientes filtrados opcionalmente por tipo.
+   */
   async list(type?: BackupType, limit = 100): Promise<BackupResponseDto[]> {
     const jobs = await this.prisma.backupJob.findMany({
       where: type ? { type } : undefined,
@@ -212,6 +215,9 @@ export class BackupService {
     };
   }
 
+  /**
+   * Elimina artefactos vencidos y marca jobs como expirados sin abortar el lote ante fallos.
+   */
   async cleanupExpired(metadata: RequestMetadata = {}): Promise<number> {
     const jobs = await this.prisma.backupJob.findMany({
       where: {
@@ -236,6 +242,9 @@ export class BackupService {
     return cleaned;
   }
 
+  /**
+   * Encola un respaldo completo si no hay otro job pendiente o en ejecución.
+   */
   async runScheduled(): Promise<void> {
     if (!this.config.backupsEnabled) return;
     const activeJob = await this.prisma.backupJob.findFirst({
@@ -408,6 +417,9 @@ export class BackupService {
   }
 }
 
+/**
+ * Resuelve una clave de almacenamiento dentro del directorio raíz sin path traversal.
+ */
 export function safeStoragePath(storageRoot: string, storageKey: string): string {
   if (!storageKey || storageKey.includes('\0'))
     throw new Error('La referencia de almacenamiento no es válida.');
@@ -420,6 +432,9 @@ export function safeStoragePath(storageRoot: string, storageKey: string): string
   return candidate;
 }
 
+/**
+ * Calcula SHA-256 de un archivo de respaldo leyéndolo en streaming.
+ */
 export async function checksumFile(filePath: string): Promise<string> {
   const hash = createHash('sha256');
   const stream = createReadStream(filePath);
@@ -427,6 +442,9 @@ export async function checksumFile(filePath: string): Promise<string> {
   return hash.digest('hex');
 }
 
+/**
+ * Redacta credenciales y trunca el mensaje de error del worker de respaldos.
+ */
 function formatBackupError(error: unknown): string {
   const details =
     error instanceof BackupProcessError
@@ -441,6 +459,9 @@ function formatBackupError(error: unknown): string {
     .slice(0, ERROR_DETAILS_MAX_LENGTH);
 }
 
+/**
+ * Mapea un job de Prisma al DTO HTTP de respaldo.
+ */
 function toResponse(job: BackupJobRow): BackupResponseDto {
   return {
     id: job.id,

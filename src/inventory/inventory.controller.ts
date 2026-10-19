@@ -65,6 +65,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista unidades de inventario' })
   @ApiResponse({ status: 200, type: [UnitResponseDto] })
+/**
+ * Expone el catálogo global de unidades de inventario.
+ */
   listUnits(): Promise<UnitResponseDto[]> {
     return this.service.listUnits();
   }
@@ -74,6 +77,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista categorías de ingredientes' })
   @ApiResponse({ status: 200, type: [IngredientCategoryResponseDto] })
+/**
+ * Expone categorías de ingredientes para formularios administrativos.
+ */
   listCategories(): Promise<IngredientCategoryResponseDto[]> {
     return this.service.listIngredientCategories();
   }
@@ -83,6 +89,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista bodegas de una sede' })
   @ApiResponse({ status: 200, type: [StorageLocationResponseDto] })
+/**
+ * Lista bodegas verificando acceso del usuario a la sede.
+ */
   listStorageLocations(
     @Query() query: StorageLocationListQueryDto,
     @Req() request: AuthenticatedRequest,
@@ -97,6 +106,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista ingredientes con saldo calculado por movimientos' })
   @ApiResponse({ status: 200, type: IngredientPageDto })
+/**
+ * Lista ingredientes con saldo; exige alcance sobre locationId.
+ */
   listIngredients(
     @Query() query: IngredientListQueryDto,
     @Req() request: AuthenticatedRequest,
@@ -110,6 +122,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta un ingrediente y su saldo actual' })
   @ApiResponse({ status: 200, type: IngredientResponseDto })
+/**
+ * Consulta un ingrediente y su saldo en la sede autorizada.
+ */
   getIngredient(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: InventoryLocationQueryDto,
@@ -125,6 +140,9 @@ export class InventoryController {
   @RequirePermissions('inventory.manage')
   @ApiOperation({ summary: 'Crea un ingrediente sin alterar existencias' })
   @ApiResponse({ status: 201, type: IngredientResponseDto })
+/**
+ * Crea un ingrediente sin modificar existencias.
+ */
   createIngredient(
     @Body() dto: CreateIngredientDto,
     @Req() request: AuthenticatedRequest,
@@ -138,6 +156,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Actualiza datos de un ingrediente sin editar el stock' })
   @ApiResponse({ status: 200, type: IngredientResponseDto })
+/**
+ * Actualiza metadatos de ingrediente en la sede del query.
+ */
   updateIngredient(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateIngredientDto,
@@ -161,6 +182,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva lógicamente un ingrediente' })
   @ApiResponse({ status: 200, type: IngredientResponseDto })
+/**
+ * Desactiva un ingrediente en la sede autorizada.
+ */
   removeIngredient(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
@@ -181,6 +205,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista proveedores con filtros y paginación' })
   @ApiResponse({ status: 200, type: SupplierPageDto })
+/**
+ * Lista proveedores paginados con alcance de sede.
+ */
   listSuppliers(
     @Query() query: SupplierListQueryDto,
     @Req() request: AuthenticatedRequest,
@@ -194,6 +221,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta el detalle de un proveedor' })
   @ApiResponse({ status: 200, type: SupplierResponseDto })
+/**
+ * Detalle de proveedor acotado a la sede del usuario.
+ */
   getSupplier(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: InventoryLocationQueryDto,
@@ -209,6 +239,9 @@ export class InventoryController {
   @RequirePermissions('suppliers.manage')
   @ApiOperation({ summary: 'Crea un proveedor' })
   @ApiResponse({ status: 201, type: SupplierResponseDto })
+/**
+ * Crea proveedor validando acceso a la sede del cuerpo.
+ */
   createSupplier(
     @Body() dto: CreateSupplierDto,
     @Req() request: AuthenticatedRequest,
@@ -224,6 +257,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Actualiza un proveedor' })
   @ApiResponse({ status: 200, type: SupplierResponseDto })
+/**
+ * Actualiza proveedor en la sede indicada por query.
+ */
   updateSupplier(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSupplierDto,
@@ -247,6 +283,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva lógicamente un proveedor' })
   @ApiResponse({ status: 200, type: SupplierResponseDto })
+/**
+ * Desactiva proveedor tras validar alcance de sede.
+ */
   removeSupplier(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
@@ -267,6 +306,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista recepciones con filtros y paginación' })
   @ApiResponse({ status: 200, type: GoodsReceiptPageDto })
+/**
+ * Lista recepciones con filtros en la sede autorizada.
+ */
   listReceipts(
     @Query() query: GoodsReceiptListQueryDto,
     @Req() request: AuthenticatedRequest,
@@ -280,6 +322,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta una recepción con sus lotes y líneas' })
   @ApiResponse({ status: 200, type: GoodsReceiptResponseDto })
+/**
+ * Detalle de recepción con lotes en sede autorizada.
+ */
   getReceipt(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: InventoryLocationQueryDto,
@@ -295,6 +340,9 @@ export class InventoryController {
   @RequirePermissions('inventory.receive')
   @ApiOperation({ summary: 'Registra una recepción y genera movimientos de entrada' })
   @ApiResponse({ status: 201, type: GoodsReceiptResponseDto })
+/**
+ * Registra recepción y movimientos; requiere permiso inventory.receive.
+ */
   createReceipt(
     @Body() dto: CreateGoodsReceiptDto,
     @Req() request: AuthenticatedRequest,
@@ -309,6 +357,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Consulta el historial de movimientos con paginación' })
   @ApiResponse({ status: 200, type: InventoryMovementPageDto })
+/**
+ * Historial paginado de movimientos en la sede.
+ */
   listMovements(
     @Query() query: InventoryMovementListQueryDto,
     @Req() request: AuthenticatedRequest,
@@ -321,6 +372,9 @@ export class InventoryController {
   @RequirePermissions('inventory.adjust')
   @ApiOperation({ summary: 'Registra un ajuste o merma con motivo' })
   @ApiResponse({ status: 201, type: InventoryMovementResponseDto })
+/**
+ * Registra ajuste o merma con motivo en bodega autorizada.
+ */
   createAdjustment(
     @Body() dto: CreateInventoryAdjustmentDto,
     @Req() request: AuthenticatedRequest,
@@ -335,6 +389,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista alertas de stock bajo y vencimientos próximos' })
   @ApiResponse({ status: 200, type: InventoryAlertsResponseDto })
+/**
+ * Alertas de stock bajo y vencimientos para la sede.
+ */
   listAlerts(
     @Query() query: InventoryAlertQueryDto,
     @Req() request: AuthenticatedRequest,
@@ -347,6 +404,9 @@ export class InventoryController {
   @RequirePermissions('inventory.read')
   @ApiOperation({ summary: 'Lista recetas por variante del menú' })
   @ApiResponse({ status: 200, type: RecipePageDto })
+/**
+ * Lista recetas de la sede con paginación.
+ */
   listRecipes(
     @Query() query: RecipeListQueryDto,
     @Req() request: AuthenticatedRequest,
@@ -360,6 +420,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Consulta una receta con sus ingredientes' })
   @ApiResponse({ status: 200, type: RecipeResponseDto })
+/**
+ * Detalle de receta validando sede del query.
+ */
   getRecipe(
     @Param('id', ParseUUIDPipe) id: string,
     @Query() query: InventoryLocationQueryDto,
@@ -375,6 +438,9 @@ export class InventoryController {
   @RequirePermissions('recipes.manage')
   @ApiOperation({ summary: 'Crea una receta versionada para una variante' })
   @ApiResponse({ status: 201, type: RecipeResponseDto })
+/**
+ * Crea receta versionada en la sede del DTO.
+ */
   createRecipe(
     @Body() dto: CreateRecipeDto,
     @Req() request: AuthenticatedRequest,
@@ -390,6 +456,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Archiva o anota una receta existente' })
   @ApiResponse({ status: 200, type: RecipeResponseDto })
+/**
+ * Actualiza notas o vigencia de receta en sede autorizada.
+ */
   updateRecipe(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateRecipeDto,
@@ -413,6 +482,9 @@ export class InventoryController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOperation({ summary: 'Desactiva una receta sin borrar su historial' })
   @ApiResponse({ status: 200, type: RecipeResponseDto })
+/**
+ * Desactiva receta delegando en actualización con active false.
+ */
   removeRecipe(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() request: AuthenticatedRequest,
@@ -429,6 +501,9 @@ export class InventoryController {
     );
   }
 
+/**
+ * Obtiene el id de usuario autenticado o falla en rutas administrativas.
+ */
   private actorId(request: AuthenticatedRequest): string {
     if (!request.auth?.userId) {
       throw new Error('La ruta administrativa requiere una sesión autenticada.');
@@ -436,6 +511,9 @@ export class InventoryController {
     return request.auth.userId;
   }
 
+/**
+ * Ejecuta una operación tras comprobar acceso del actor a la sede.
+ */
   private async withLocation<T>(
     request: AuthenticatedRequest,
     locationId: string,

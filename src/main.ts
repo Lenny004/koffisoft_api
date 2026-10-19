@@ -4,6 +4,9 @@ import 'dotenv/config';
 import { APP_CONFIG, type AppConfig } from './config/app-config.js';
 import { createApplication } from './bootstrap.js';
 
+/**
+ * Arranca NestJS con la configuración validada y escucha en el host/puerto definidos.
+ */
 async function bootstrap(): Promise<void> {
   const app = await createApplication();
 

@@ -14,6 +14,9 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 export const SEO_RESOURCE_TYPES = ['menu_item', 'event', 'announcement', 'page'] as const;
 export type SeoResourceType = (typeof SEO_RESOURCE_TYPES)[number];
 
+/**
+ * Recorta espacios en strings antes de validar el DTO.
+ */
 function trimValue({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }

@@ -6,6 +6,7 @@ import { APP_CONFIG, type AppConfig } from '../../config/app-config.js';
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
+/** Toma el primer valor cuando Fastify entrega un encabezado repetido como arreglo. */
 function firstHeader(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -15,6 +16,9 @@ function firstHeader(value: string | string[] | undefined): string | undefined {
 export class CsrfGuard implements CanActivate {
   constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
 
+  /**
+   * Compara Origin o Referer de escrituras contra corsOrigins; métodos seguros pasan sin comprobar.
+   */
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
 
@@ -39,6 +43,7 @@ export class CsrfGuard implements CanActivate {
     return true;
   }
 
+  /** Deriva el origen scheme+host del Referer cuando el encabezado Origin no viene. */
   private originFromReferer(referer: string): string | undefined {
     try {
       const parsed = new URL(referer);

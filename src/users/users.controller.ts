@@ -44,6 +44,7 @@ import { UsersService } from './users.service.js';
 export class UsersController {
   constructor(private readonly service: UsersService) {}
 
+  /** Lista roles administrables filtrados por negocio autorizado del actor. */
   @Get('users/admin/roles')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('roles.read')
@@ -56,6 +57,7 @@ export class UsersController {
     return this.service.listRoles(query, this.actorId(request));
   }
 
+  /** Expone el catálogo de permisos del sistema. */
   @Get('users/admin/permissions')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('permissions.read')
@@ -65,6 +67,7 @@ export class UsersController {
     return this.service.listPermissions(query);
   }
 
+  /** Pagina usuarios con filtros de estado, rol y búsqueda. */
   @Get('users/admin')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.read')
@@ -74,6 +77,7 @@ export class UsersController {
     return this.service.listUsers(query);
   }
 
+  /** Consulta el detalle administrativo de un usuario por UUID. */
   @Get('users/admin/:id')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.read')
@@ -84,6 +88,7 @@ export class UsersController {
     return this.service.getUser(id);
   }
 
+  /** Crea una cuenta administrativa y registra la acción en auditoría. */
   @Post('users/admin')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.manage')
@@ -96,6 +101,7 @@ export class UsersController {
     return this.service.createUser(dto, this.actorId(request), requestMetadata(request));
   }
 
+  /** Actualiza identidad y vínculo laboral no sensibles de un usuario. */
   @Patch('users/admin/:id')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.manage')
@@ -110,6 +116,7 @@ export class UsersController {
     return this.service.updateUser(id, dto, this.actorId(request), requestMetadata(request));
   }
 
+  /** Reactiva una cuenta bloqueada o inactiva. */
   @Post('users/admin/:id/activate')
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
@@ -124,6 +131,7 @@ export class UsersController {
     return this.service.activateUser(id, this.actorId(request), requestMetadata(request));
   }
 
+  /** Desactiva una cuenta distinta a la del actor autenticado. */
   @Post('users/admin/:id/deactivate')
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
@@ -138,6 +146,7 @@ export class UsersController {
     return this.service.deactivateUser(id, this.actorId(request), requestMetadata(request));
   }
 
+  /** Bloquea el acceso de un usuario y revoca sus sesiones. */
   @Post('users/admin/:id/block')
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
@@ -152,6 +161,7 @@ export class UsersController {
     return this.service.blockUser(id, this.actorId(request), requestMetadata(request));
   }
 
+  /** Sustituye el conjunto de roles activos asignados al usuario. */
   @Put('users/admin/:id/roles')
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
@@ -167,6 +177,7 @@ export class UsersController {
     return this.service.assignRoles(id, dto, this.actorId(request), requestMetadata(request));
   }
 
+  /** Reinicia MFA del usuario objetivo desde consola administrativa. */
   @Post('users/admin/:id/reset-mfa')
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
@@ -181,6 +192,7 @@ export class UsersController {
     return this.service.resetMfa(id, this.actorId(request), requestMetadata(request));
   }
 
+  /** Obliga al usuario a cambiar contraseña en el próximo acceso. */
   @Post('users/admin/:id/force-password-change')
   @HttpCode(HttpStatus.OK)
   @ApiSecurity('sessionCookie')
@@ -195,6 +207,7 @@ export class UsersController {
     return this.service.forcePasswordChange(id, this.actorId(request), requestMetadata(request));
   }
 
+  /** Lista empleados con alcance por negocio del actor y paginación. */
   @Get('employees/admin')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.read')
@@ -207,6 +220,7 @@ export class UsersController {
     return this.service.listEmployees(query, this.actorId(request));
   }
 
+  /** Devuelve el detalle de un empleado accesible para el actor. */
   @Get('employees/admin/:id')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.read')
@@ -220,6 +234,7 @@ export class UsersController {
     return this.service.getEmployee(id, this.actorId(request));
   }
 
+  /** Registra un empleado y opcionalmente lo vincula a un usuario existente. */
   @Post('employees/admin')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.manage')
@@ -232,6 +247,7 @@ export class UsersController {
     return this.service.createEmployee(dto, this.actorId(request), requestMetadata(request));
   }
 
+  /** Modifica datos laborales y relación con cuenta de usuario. */
   @Patch('employees/admin/:id')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.manage')
@@ -246,6 +262,7 @@ export class UsersController {
     return this.service.updateEmployee(id, dto, this.actorId(request), requestMetadata(request));
   }
 
+  /** Desactiva lógicamente un empleado y propaga efectos a la cuenta vinculada. */
   @Delete('employees/admin/:id')
   @ApiSecurity('sessionCookie')
   @RequirePermissions('users.manage')
@@ -259,6 +276,7 @@ export class UsersController {
     return this.service.removeEmployee(id, this.actorId(request), requestMetadata(request));
   }
 
+  /** Obtiene el userId del contexto de sesión para operaciones administrativas. */
   private actorId(request: AuthenticatedRequest): string {
     if (!request.auth?.userId) {
       throw new Error('La ruta administrativa requiere una sesión autenticada.');

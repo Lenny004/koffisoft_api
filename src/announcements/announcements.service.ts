@@ -15,6 +15,9 @@ import type { AnnouncementResponseDto } from './dto/announcement-response.dto.js
 export class AnnouncementsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Lista avisos publicados y vigentes para consumo público por sede.
+   */
   async listPublic(query: PublicAnnouncementQueryDto): Promise<AnnouncementResponseDto[]> {
     const now = new Date();
     const rows = await this.prisma.importantAnnouncement.findMany({
@@ -34,6 +37,9 @@ export class AnnouncementsService {
     return rows.map((row) => this.toResponse(row));
   }
 
+  /**
+   * Lista avisos de una sede para administración con filtro de inactivos.
+   */
   async listAdmin(query: AnnouncementListQueryDto): Promise<AnnouncementResponseDto[]> {
     const rows = await this.prisma.importantAnnouncement.findMany({
       where: { locationId: query.locationId, ...(query.includeInactive ? {} : { active: true }) },
@@ -42,6 +48,9 @@ export class AnnouncementsService {
     return rows.map((row) => this.toResponse(row));
   }
 
+  /**
+   * Crea un aviso validando sede, fechas y URL del CTA.
+   */
   async create(dto: CreateAnnouncementDto): Promise<AnnouncementResponseDto> {
     this.validateDates(dto.startsAt, dto.endsAt);
     const ctaUrl = validateCtaUrl(dto.ctaUrl);
@@ -95,6 +104,9 @@ export class AnnouncementsService {
     return this.toResponse(row);
   }
 
+  /**
+   * Desactiva un aviso de la sede indicada (borrado lógico).
+   */
   async remove(id: string, locationId: string): Promise<AnnouncementResponseDto> {
     const result = await this.prisma.importantAnnouncement.updateMany({
       where: { id, locationId },

@@ -92,6 +92,9 @@ type PublicationIdentity = PublicationRecord & { resourceType: PublicationResour
 export class PublicationService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Devuelve la zona horaria editorial de una sede activa para programar publicaciones.
+   */
   async getContext(locationId: string): Promise<PublicationContextResponseDto> {
     const location = await this.prisma.location.findFirst({
       where: { id: locationId, active: true },
@@ -156,6 +159,9 @@ export class PublicationService {
     };
   }
 
+  /**
+   * Valida un token de vista previa, lo consume una sola vez y devuelve el recurso en borrador.
+   */
   async consumePreview(token: string): Promise<PreviewResponseDto> {
     if (!/^[A-Za-z0-9_-]{32,128}$/u.test(token)) {
       throw new NotFoundException('Vista previa no encontrada o expirada.');

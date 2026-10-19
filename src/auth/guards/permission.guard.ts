@@ -10,6 +10,7 @@ import { REQUIRED_PERMISSIONS_KEY } from '../decorators/permissions.decorator.js
 export class PermissionGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
+  /** Exige que request.auth.permissions contenga todos los permisos declarados en la ruta. */
   canActivate(context: ExecutionContext): boolean {
     const required = this.reflector.getAllAndOverride<string[]>(REQUIRED_PERMISSIONS_KEY, [
       context.getHandler(),

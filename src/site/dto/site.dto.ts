@@ -23,10 +23,16 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/u;
 const SERVICE_TYPE_PATTERN = /^[a-z][a-z0-9_-]*$/u;
 
+/**
+ * Recorta espacios en strings antes de validar el DTO.
+ */
 function trimValue({ value }: { value: unknown }): unknown {
   return typeof value === 'string' ? value.trim() : value;
 }
 
+/**
+ * Normaliza booleanos desde query string o valor nativo antes de validar.
+ */
 function parseBoolean({ value }: { value: unknown }): unknown {
   if (value === undefined || value === null || value === '') return undefined;
   if (value === true || value === 'true') return true;

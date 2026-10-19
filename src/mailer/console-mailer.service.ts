@@ -7,6 +7,9 @@ import { MailerService } from './mailer.service.js';
 export class ConsoleMailerService extends MailerService {
   private readonly logger = new Logger(ConsoleMailerService.name);
 
+  /**
+   * Imprime en consola el contenido del correo de recuperación (solo desarrollo).
+   */
   async sendPasswordReset(to: string, token: string): Promise<void> {
     this.logger.log('='.repeat(80));
     this.logger.log('📧 Correo de Recuperación de Contraseña (Desarrollo)');
@@ -29,6 +32,9 @@ export class ConsoleMailerService extends MailerService {
     this.logger.log('='.repeat(80));
   }
 
+  /**
+   * Imprime en consola el correo de bienvenida (solo desarrollo).
+   */
   async sendWelcome(to: string, name: string): Promise<void> {
     this.logger.log('='.repeat(80));
     this.logger.log('📧 Correo de Bienvenida (Desarrollo)');

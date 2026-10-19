@@ -67,6 +67,9 @@ export class NotificationsService {
     };
   }
 
+  /**
+   * Cuenta notificaciones no leídas y no archivadas del usuario.
+   */
   async getUnreadCount(userId: string): Promise<UnreadCountResponseDto> {
     const unreadCount = await this.prisma.notification.count({
       where: { recipientUserId: userId, readAt: null, archived: false },
@@ -74,6 +77,9 @@ export class NotificationsService {
     return { unreadCount };
   }
 
+  /**
+   * Marca una notificación o todas las pendientes como leídas para el usuario.
+   */
   async markAsRead(userId: string, dto: MarkNotificationAsReadDto): Promise<void> {
     if (dto.notificationId) {
       await this.prisma.notification.updateMany({
@@ -88,6 +94,9 @@ export class NotificationsService {
     }
   }
 
+  /**
+   * Archiva una notificación del usuario sin borrarla físicamente.
+   */
   async archiveNotification(userId: string, dto: ArchiveNotificationDto): Promise<void> {
     await this.prisma.notification.updateMany({
       where: { id: dto.notificationId, recipientUserId: userId },
@@ -95,6 +104,9 @@ export class NotificationsService {
     });
   }
 
+  /**
+   * Obtiene o crea el Subject RxJS de SSE para el usuario.
+   */
   getNotificationStream(userId: string): Subject<NotificationResponseDto> {
     if (!this.notificationStreams.has(userId)) {
       this.notificationStreams.set(userId, new Subject<NotificationResponseDto>());
@@ -103,6 +115,9 @@ export class NotificationsService {
   }
 
   @OnEvent('inventory.low-stock')
+  /**
+   * Persiste y difunde alerta de stock bajo hacia admins conectados por SSE.
+   */
   async handleLowStock(event: LowStockDetectedEvent): Promise<void> {
     const notification = await this.prisma.notification.create({
       data: {
@@ -118,6 +133,9 @@ export class NotificationsService {
   }
 
   @OnEvent('inventory.lot-expiring')
+  /**
+   * Persiste y difunde alerta de lote por vencer hacia admins.
+   */
   async handleLotExpiring(event: LotExpiringEvent): Promise<void> {
     const notification = await this.prisma.notification.create({
       data: {
@@ -133,6 +151,9 @@ export class NotificationsService {
   }
 
   @OnEvent('reservation.created')
+  /**
+   * Notifica a admins sobre una reserva nueva recibida.
+   */
   async handleReservationCreated(event: ReservationCreatedEvent): Promise<void> {
     const notification = await this.prisma.notification.create({
       data: {
@@ -148,6 +169,9 @@ export class NotificationsService {
   }
 
   @OnEvent('contact.message-received')
+  /**
+   * Notifica a admins sobre un mensaje de contacto entrante.
+   */
   async handleContactMessage(event: ContactMessageReceivedEvent): Promise<void> {
     const notification = await this.prisma.notification.create({
       data: {
@@ -163,6 +187,9 @@ export class NotificationsService {
   }
 
   @OnEvent('backup.completed')
+  /**
+   * Notifica éxito de respaldo con tamaño y duración resumidos.
+   */
   async handleBackupCompleted(event: BackupCompletedEvent): Promise<void> {
     const sizeMB = (Number(event.sizeBytes) / (1024 * 1024)).toFixed(2);
     const notification = await this.prisma.notification.create({
@@ -179,6 +206,9 @@ export class NotificationsService {
   }
 
   @OnEvent('backup.failed')
+  /**
+   * Notifica fallo de respaldo con el error registrado.
+   */
   async handleBackupFailed(event: BackupFailedEvent): Promise<void> {
     const notification = await this.prisma.notification.create({
       data: {
@@ -194,6 +224,9 @@ export class NotificationsService {
   }
 
   @OnEvent('resource.maintenance-due')
+  /**
+   * Notifica mantenimiento de recurso próximo según calendario.
+   */
   async handleMaintenanceDue(event: ResourceMaintenanceDueEvent): Promise<void> {
     const notification = await this.prisma.notification.create({
       data: {
@@ -209,6 +242,9 @@ export class NotificationsService {
   }
 
   @OnEvent('supplier.reminder-due')
+  /**
+   * Notifica recordatorio de pedido o entrega de proveedor.
+   */
   async handleSupplierReminder(event: SupplierReminderDueEvent): Promise<void> {
     const typeText = event.reminderType === 'delivery' ? 'entrega' : 'pedido';
     const notification = await this.prisma.notification.create({

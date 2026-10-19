@@ -30,6 +30,9 @@ export class ResourcesController {
   @RequirePermissions('resources.read')
   @ApiOperation({ summary: 'Listar recursos de una sede' })
   @ApiOkResponse({ type: ResourcePageDto })
+/**
+ * Lista recursos administrativos de una sede.
+ */
   async listResources(@Query() query: ResourceListQueryDto): Promise<ResourcePageDto> {
     return this.service.listResources(query);
   }
@@ -40,6 +43,9 @@ export class ResourcesController {
     summary: 'Listar mantenimientos (global o por recurso, con historial de completados)',
   })
   @ApiOkResponse({ type: MaintenancePageDto })
+/**
+ * Lista mantenimientos globales o filtrados con historial de completados.
+ */
   async listMaintenances(@Query() query: MaintenanceListQueryDto): Promise<MaintenancePageDto> {
     return this.service.listMaintenances(query);
   }
@@ -48,6 +54,9 @@ export class ResourcesController {
   @RequirePermissions('resources.read')
   @ApiOperation({ summary: 'Listar mantenimientos de un recurso' })
   @ApiOkResponse({ type: MaintenancePageDto })
+/**
+ * Lista mantenimientos de un recurso concreto.
+ */
   async listResourceMaintenances(
     @Param('id') id: string,
     @Query() query: MaintenanceListQueryDto,
@@ -59,6 +68,9 @@ export class ResourcesController {
   @RequirePermissions('resources.read')
   @ApiOperation({ summary: 'Obtener un recurso' })
   @ApiOkResponse({ type: ResourceResponseDto })
+/**
+ * Consulta recurso exigiendo locationId en query.
+ */
   async getResource(
     @Param('id') id: string,
     @Query('locationId') locationId: string,
@@ -70,6 +82,9 @@ export class ResourcesController {
   @RequirePermissions('resources.manage')
   @ApiOperation({ summary: 'Crear un recurso' })
   @ApiOkResponse({ type: ResourceResponseDto })
+/**
+ * Crea recurso con actor autenticado y metadatos de petición.
+ */
   async createResource(
     @Req() req: AuthenticatedRequest,
     @Body() dto: CreateResourceDto,
@@ -87,6 +102,9 @@ export class ResourcesController {
   @RequirePermissions('resources.manage')
   @ApiOperation({ summary: 'Actualizar un recurso' })
   @ApiOkResponse({ type: ResourceResponseDto })
+/**
+ * Actualiza recurso en sede indicada por query.
+ */
   async updateResource(
     @Param('id') id: string,
     @Query('locationId') locationId: string,
@@ -106,6 +124,9 @@ export class ResourcesController {
   @RequirePermissions('resources.manage')
   @ApiOperation({ summary: 'Programar un mantenimiento' })
   @ApiOkResponse({ type: MaintenanceScheduleResponseDto })
+/**
+ * Programa fecha de mantenimiento para un recurso.
+ */
   async scheduleMaintenance(
     @Body() dto: CreateMaintenanceScheduleDto,
   ): Promise<MaintenanceScheduleResponseDto> {
@@ -116,6 +137,9 @@ export class ResourcesController {
   @RequirePermissions('resources.manage')
   @ApiOperation({ summary: 'Completar un mantenimiento' })
   @ApiOkResponse({ type: MaintenanceScheduleResponseDto })
+/**
+ * Completa mantenimiento registrando usuario y notas.
+ */
   async completeMaintenance(
     @Param('id') id: string,
     @Req() req: AuthenticatedRequest,

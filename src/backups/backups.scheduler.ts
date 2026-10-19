@@ -15,6 +15,9 @@ export class BackupScheduler implements OnModuleInit, OnModuleDestroy {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
+  /**
+   * Inicia el ciclo programado de respaldos y retención cuando está habilitado.
+   */
   onModuleInit(): void {
     if (!this.config.backupsEnabled || this.config.backupScheduleMinutes <= 0) return;
     const interval = this.config.backupScheduleMinutes * 60_000;
@@ -22,6 +25,9 @@ export class BackupScheduler implements OnModuleInit, OnModuleDestroy {
     void this.process();
   }
 
+  /**
+   * Cancela el temporizador de respaldos al apagar la aplicación.
+   */
   onModuleDestroy(): void {
     if (this.timer) clearInterval(this.timer);
   }

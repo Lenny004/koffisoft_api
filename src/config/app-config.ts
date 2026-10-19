@@ -1,6 +1,9 @@
 import { Buffer } from 'node:buffer';
 import { resolve } from 'node:path';
 
+/**
+ * Token de inyección para acceder a la configuración validada de la aplicación.
+ */
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
 export interface AppConfig {
@@ -38,6 +41,9 @@ export interface AppConfig {
 type Environment = Record<string, string | undefined>;
 const BASE64_RE = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u;
 
+/**
+ * Interpreta variables de entorno booleanas; lanza si el valor no es true ni false.
+ */
 function parseBoolean(value: string | undefined, name: string, fallback: boolean): boolean {
   if (value === undefined) {
     return fallback;
@@ -54,6 +60,9 @@ function parseBoolean(value: string | undefined, name: string, fallback: boolean
   throw new Error(`${name} debe ser true o false.`);
 }
 
+/**
+ * Parsea un entero positivo desde entorno o usa el valor por defecto indicado.
+ */
 function parsePositiveNumber(value: string | undefined, name: string, fallback: number): number {
   const parsed = value === undefined ? fallback : Number(value);
 
@@ -64,6 +73,9 @@ function parsePositiveNumber(value: string | undefined, name: string, fallback: 
   return parsed;
 }
 
+/**
+ * Parsea un número ≥ 0 desde entorno o usa el valor por defecto indicado.
+ */
 function parseNonNegativeNumber(value: string | undefined, name: string, fallback: number): number {
   const parsed = value === undefined ? fallback : Number(value);
 
@@ -74,6 +86,9 @@ function parseNonNegativeNumber(value: string | undefined, name: string, fallbac
   return parsed;
 }
 
+/**
+ * Resuelve una ruta de filesystem absoluta y rechaza entradas vacías o con NUL.
+ */
 function parsePath(value: string | undefined, name: string, fallback: string): string {
   const candidate = (value ?? fallback).trim();
   if (!candidate || candidate.includes('\0')) {
@@ -83,6 +98,9 @@ function parsePath(value: string | undefined, name: string, fallback: string): s
   return resolve(candidate);
 }
 
+/**
+ * Valida el nombre de un ejecutable externo sin caracteres nulos.
+ */
 function parseCommand(value: string | undefined, name: string, fallback: string): string {
   const candidate = (value ?? fallback).trim();
   if (!candidate || candidate.includes('\0')) {
@@ -92,6 +110,9 @@ function parseCommand(value: string | undefined, name: string, fallback: string)
   return candidate;
 }
 
+/**
+ * Valida orígenes CORS exactos HTTP(S) sin comodines ni rutas en producción.
+ */
 function parseOrigins(value: string | undefined, nodeEnv: string): readonly string[] {
   const origins = (value ?? 'http://localhost:5173')
     .split(',')
@@ -122,6 +143,9 @@ function parseOrigins(value: string | undefined, nodeEnv: string): readonly stri
   return origins.map((origin) => new URL(origin).origin);
 }
 
+/**
+ * Normaliza la URL pública del sitio sin credenciales ni barra final redundante.
+ */
 function parsePublicSiteUrl(value: string | undefined): string {
   const candidate = (value ?? 'http://localhost:5173').trim().replace(/\/$/u, '');
   let parsed: URL;
@@ -138,6 +162,9 @@ function parsePublicSiteUrl(value: string | undefined): string {
   return parsed.origin + parsed.pathname.replace(/\/$/u, '');
 }
 
+/**
+ * Decodifica la llave AES-256 de MFA desde Base64 y exige exactamente 32 bytes.
+ */
 function parseMfaKey(value: string | undefined, nodeEnv: string): Buffer {
   if (!value) {
     throw new Error(
@@ -157,6 +184,9 @@ function parseMfaKey(value: string | undefined, nodeEnv: string): Buffer {
   return key;
 }
 
+/**
+ * Parsea la lista de roles que requieren MFA y valida el formato de cada código.
+ */
 function parseRoles(value: string | undefined): readonly string[] {
   const roles = (value ?? 'owner,admin,manager')
     .split(',')
@@ -170,6 +200,9 @@ function parseRoles(value: string | undefined): readonly string[] {
   return roles;
 }
 
+/**
+ * Deriva el nombre de cookie de sesión respetando el prefijo __Host- cuando aplica.
+ */
 function parseCookieName(value: string | undefined, secure: boolean): string {
   const requested = value?.trim() || 'koffisoft_session';
   if (requested.startsWith('__Host-') && !secure) {

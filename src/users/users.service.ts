@@ -127,6 +127,7 @@ export class UsersService {
     private readonly passwords: PasswordService,
   ) {}
 
+  /** Lista usuarios administrativos con filtros, búsqueda textual y paginación consistente. */
   async listUsers(query: UserListQueryDto): Promise<UserPageDto> {
     const search = query.search || undefined;
     const where: Prisma.UserWhereInput = {
@@ -168,10 +169,12 @@ export class UsersService {
     };
   }
 
+  /** Devuelve el detalle administrativo de un usuario existente. */
   async getUser(id: string): Promise<UserResponseDto> {
     return this.toUserResponse(await this.requireUser(id));
   }
 
+  /** Crea un usuario con roles opcionales, valida identidad y deja rastro en audit_log. */
   async createUser(
     dto: CreateUserDto,
     actorUserId: string,
@@ -213,6 +216,7 @@ export class UsersService {
     return this.toUserResponse(row);
   }
 
+  /** Actualiza datos no sensibles del usuario respetando unicidad de username y correo. */
   async updateUser(
     id: string,
     dto: UpdateUserDto,
@@ -254,6 +258,7 @@ export class UsersService {
     return this.toUserResponse(row);
   }
 
+  /** Reactiva la cuenta y limpia contadores y bloqueos temporales de acceso. */
   async activateUser(
     id: string,
     actorUserId: string,
@@ -262,6 +267,7 @@ export class UsersService {
     return this.changeUserStatus(id, UserStatus.Active, actorUserId, metadata);
   }
 
+  /** Desactiva la cuenta de un tercero preservando al menos un administrador activo. */
   async deactivateUser(
     id: string,
     actorUserId: string,
@@ -271,6 +277,7 @@ export class UsersService {
     return this.changeUserStatus(id, UserStatus.Inactive, actorUserId, metadata);
   }
 
+  /** Bloquea la cuenta, revoca sesiones y garantiza que quede otro admin activo si aplica. */
   async blockUser(
     id: string,
     actorUserId: string,
@@ -280,6 +287,7 @@ export class UsersService {
     return this.changeUserStatus(id, UserStatus.Locked, actorUserId, metadata);
   }
 
+  /** Reemplaza roles activos del usuario bajo candado de invariante administrativa y jerarquía de roles. */
   async assignRoles(
     id: string,
     dto: AssignUserRolesDto,
@@ -327,6 +335,7 @@ export class UsersService {
     return this.toUserResponse(row);
   }
 
+  /** Desactiva factores MFA, invalida recuperación y revoca sesiones del usuario objetivo. */
   async resetMfa(
     id: string,
     actorUserId: string,
@@ -374,6 +383,7 @@ export class UsersService {
     return this.toUserResponse(row);
   }
 
+  /** Marca mustChangePassword para obligar al cambio en el siguiente inicio de sesión. */
   async forcePasswordChange(
     id: string,
     actorUserId: string,
@@ -399,6 +409,7 @@ export class UsersService {
     return this.toUserResponse(row);
   }
 
+  /** Lista roles visibles para los negocios autorizados del actor, con permisos activos. */
   async listRoles(query: RoleListQueryDto, actorUserId: string): Promise<RoleResponseDto[]> {
     const authorizedBusinesses = await this.actorBusinessIds(this.prisma, actorUserId);
     if (query.businessId && !authorizedBusinesses.includes(query.businessId)) {
@@ -416,6 +427,7 @@ export class UsersService {
     return rows.map((row) => this.toRoleResponse(row));
   }
 
+  /** Devuelve el catálogo de permisos, opcionalmente incluyendo inactivos. */
   async listPermissions(query: PermissionListQueryDto): Promise<PermissionResponseDto[]> {
     return this.prisma.permission.findMany({
       where: query.includeInactive ? {} : { active: true },
@@ -424,6 +436,7 @@ export class UsersService {
     });
   }
 
+  /** Lista empleados de negocios autorizados con filtros de sede, estado y paginación. */
   async listEmployees(query: EmployeeListQueryDto, actorUserId: string): Promise<EmployeePageDto> {
     const authorizedBusinesses = await this.actorBusinessIds(this.prisma, actorUserId);
     const search = query.search || undefined;
@@ -462,10 +475,12 @@ export class UsersService {
     };
   }
 
+  /** Obtiene un empleado si pertenece a un negocio accesible para el actor. */
   async getEmployee(id: string, actorUserId: string): Promise<EmployeeResponseDto> {
     return this.toEmployeeResponse(await this.requireEmployee(id, actorUserId));
   }
 
+  /** Alta de empleado en sede autorizada con vínculo opcional a cuenta de usuario. */
   async createEmployee(
     dto: CreateEmployeeDto,
     actorUserId: string,
@@ -507,6 +522,7 @@ export class UsersService {
     return this.toEmployeeResponse(row);
   }
 
+  /** Actualiza datos laborales, fechas y vínculo usuario-empleado con reglas de negocio. */
   async updateEmployee(
     id: string,
     dto: UpdateEmployeeDto,
@@ -567,6 +583,7 @@ export class UsersService {
     return this.toEmployeeResponse(row);
   }
 
+  /** Baja lógica del empleado y desactivación en cascada de la cuenta vinculada si existe. */
   async removeEmployee(
     id: string,
     actorUserId: string,
@@ -599,6 +616,7 @@ export class UsersService {
     return this.toEmployeeResponse(row);
   }
 
+  /** Aplica un cambio de estado de cuenta, revoca sesiones cuando deja de estar activa y audita. */
   private async changeUserStatus(
     id: string,
     status: UserStatus,
@@ -696,12 +714,14 @@ export class UsersService {
     }
   }
 
+  /** Carga el usuario administrativo o responde 404. */
   private async requireUser(id: string): Promise<UserRow> {
     const user = await this.prisma.user.findUnique({ where: { id }, select: userSelect });
     if (!user) throw new NotFoundException('Usuario no encontrado.');
     return user;
   }
 
+  /** Carga el empleado dentro del alcance de negocios del actor o responde 404. */
   private async requireEmployee(id: string, actorUserId: string): Promise<EmployeeRow> {
     const authorizedBusinesses = await this.actorBusinessIds(this.prisma, actorUserId);
     const employee = await this.prisma.employee.findFirst({
@@ -712,6 +732,7 @@ export class UsersService {
     return employee;
   }
 
+  /** Impide username o correo duplicados respecto a otro usuario. */
   private async assertUserIdentityAvailable(
     tx: Prisma.TransactionClient,
     username: string,
@@ -731,6 +752,7 @@ export class UsersService {
     if (existing) throw new ConflictException('El nombre de usuario o correo ya está registrado.');
   }
 
+  /** Valida empleado para vínculo 1:1 con usuario y acceso del actor al negocio de la sede. */
   private async requireEmployeeForLink(
     tx: Prisma.TransactionClient,
     employeeId: string | null | undefined,
@@ -755,6 +777,7 @@ export class UsersService {
     }
   }
 
+  /** Resuelve roles activos dentro de los negocios del actor o rechaza IDs inválidos. */
   private async requireActiveRoles(
     tx: Prisma.TransactionClient,
     roleIds: string[],
@@ -774,6 +797,7 @@ export class UsersService {
     return roles;
   }
 
+  /** Verifica permiso roles.manage y que el actor no conceda un rol por encima de su rango. */
   private async assertRoleAssignmentAuthority(
     tx: Prisma.TransactionClient,
     actorUserId: string,
@@ -821,6 +845,7 @@ export class UsersService {
     }
   }
 
+  /** Comprueba que el actor tenga rol en el negocio del recurso. */
   private async assertBusinessAccess(
     tx: PrismaService | Prisma.TransactionClient,
     actorUserId: string,
@@ -832,6 +857,7 @@ export class UsersService {
     }
   }
 
+  /** Devuelve los businessId distintos asociados a roles activos del actor. */
   private async actorBusinessIds(
     tx: PrismaService | Prisma.TransactionClient,
     actorUserId: string,
@@ -843,6 +869,7 @@ export class UsersService {
     return [...new Set(actor.map(({ role }) => role.businessId))];
   }
 
+  /** Garantiza que el usuario exista y no esté ya ligado a otro empleado distinto. */
   private async requireUserForEmployeeLink(
     tx: Prisma.TransactionClient,
     userId: string | null | undefined,
@@ -859,6 +886,7 @@ export class UsersService {
     }
   }
 
+  /** Exige sede activa y acceso del actor al negocio propietario. */
   private async requireLocation(
     tx: Prisma.TransactionClient,
     id: string,
@@ -873,6 +901,7 @@ export class UsersService {
     await this.assertBusinessAccess(tx, actorUserId, location.businessId);
   }
 
+  /** Evita dejar el sistema sin al menos un administrador activo distinto del excluido. */
   private async assertAnotherActiveAdmin(
     tx: Prisma.TransactionClient,
     excludedUserId: string,
@@ -893,11 +922,12 @@ export class UsersService {
       throw new ConflictException('No puede dejar el sistema sin un administrador activo.');
   }
 
-  /** Serializa cambios de estado y roles para que el conteo de admins sea atómico. */
+  /** Toma candado advisory para serializar cambios que afectan el conteo de administradores. */
   private async lockAdminInvariant(tx: Prisma.TransactionClient): Promise<void> {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ADMIN_INVARIANT_LOCK_KEY})`;
   }
 
+  /** Rechaza rangos de fechas laborales incoherentes antes de persistir. */
   private validateEmployeeDates(hireDate: string, terminationDate: string | null): void {
     if (!terminationDate) return;
     if (new Date(terminationDate) < new Date(hireDate)) {
@@ -905,6 +935,7 @@ export class UsersService {
     }
   }
 
+  /** Inserta una fila en audit_log dentro de la transacción en curso. */
   private async writeAudit(
     tx: Prisma.TransactionClient,
     actorUserId: string,
@@ -931,6 +962,7 @@ export class UsersService {
     });
   }
 
+  /** Reduce un usuario a los campos relevantes para before/after en auditoría. */
   private userAuditData(row: UserRow): AuditData {
     return {
       username: row.username,
@@ -941,6 +973,7 @@ export class UsersService {
     };
   }
 
+  /** Reduce un empleado a los campos relevantes para before/after en auditoría. */
   private employeeAuditData(row: EmployeeRow): AuditData {
     return {
       locationId: row.locationId,
@@ -951,6 +984,7 @@ export class UsersService {
     };
   }
 
+  /** Mapea la fila Prisma de usuario al DTO de respuesta administrativa. */
   private toUserResponse(row: UserRow): UserResponseDto {
     return {
       id: row.id,
@@ -980,6 +1014,7 @@ export class UsersService {
     };
   }
 
+  /** Mapea la fila Prisma de empleado al DTO de respuesta administrativa. */
   private toEmployeeResponse(row: EmployeeRow): EmployeeResponseDto {
     return {
       id: row.id,
@@ -999,6 +1034,7 @@ export class UsersService {
     };
   }
 
+  /** Mapea un rol con permisos activos al DTO expuesto en listados. */
   private toRoleResponse(row: RoleRow): RoleResponseDto {
     return {
       id: row.id,
@@ -1010,14 +1046,17 @@ export class UsersService {
     };
   }
 
+  /** Indica si un código de rol cuenta como administrador para invariantes del módulo. */
   private isAdminRole(code: string): boolean {
     return (ADMIN_ROLE_CODES as readonly string[]).includes(code);
   }
 
+  /** Elimina duplicados preservando el orden de la primera aparición. */
   private uniqueIds(ids: string[]): string[] {
     return [...new Set(ids)];
   }
 
+  /** Calcula metadatos de paginación server-side a partir del total de filas. */
   private pageMeta(page: number, pageSize: number, total: number): PageMetaDto {
     return { page, pageSize, total, totalPages: Math.ceil(total / pageSize) };
   }

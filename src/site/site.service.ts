@@ -34,6 +34,9 @@ type SiteRow = Prisma.LocationGetPayload<{ include: typeof siteInclude }>;
 export class SiteService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Devuelve perfil, horarios y excepciones publicables de una sede activa.
+   */
   async getSite(locationId: string): Promise<SiteContentResponseDto> {
     const row = await this.requireLocation(locationId);
     return this.toResponse(row);
@@ -276,24 +279,39 @@ export class SiteService {
   }
 }
 
+/**
+ * Convierte HH:mm a Date UTC usado solo como contenedor de hora.
+ */
 function timeOnly(value: string): Date {
   const [hours, minutes] = value.split(':').map(Number);
   return new Date(Date.UTC(1970, 0, 1, hours ?? 0, minutes ?? 0));
 }
 
+/**
+ * Formatea una hora almacenada como Date UTC a cadena HH:mm.
+ */
 function formatTime(value: Date): string {
   return `${String(value.getUTCHours()).padStart(2, '0')}:${String(value.getUTCMinutes()).padStart(2, '0')}`;
 }
 
+/**
+ * Convierte HH:mm a minutos desde medianoche para comparar ventanas.
+ */
 function timeMinutes(value: string): number {
   const [hours, minutes] = value.split(':').map(Number);
   return (hours ?? 0) * 60 + (minutes ?? 0);
 }
 
+/**
+ * Parsea una fecha calendario ISO sin componente horario en UTC.
+ */
 function dateOnly(value: string): Date {
   return new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
 }
 
+/**
+ * Filtra miembros del equipo con forma válida desde JSON almacenado en perfil.
+ */
 function normalizeTeam(value: Prisma.JsonValue): SiteTeamMemberResponseDto[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((member) => {

@@ -402,6 +402,9 @@ export class MenuService {
     };
   }
 
+  /**
+   * Lista categorías de menú de una sede con búsqueda y paginación.
+   */
   async listCategories(query: MenuCategoryListQueryDto): Promise<AdminCategoryPageDto> {
     const where: Prisma.MenuCategoryWhereInput = {
       locationId: query.locationId,
@@ -433,6 +436,9 @@ export class MenuService {
     };
   }
 
+  /**
+   * Obtiene una categoría verificando que pertenezca a la sede.
+   */
   async getCategory(id: string, locationId: string): Promise<AdminCategoryResponseDto> {
     const row = await this.prisma.menuCategory.findFirst({
       where: { id, locationId },
@@ -444,6 +450,9 @@ export class MenuService {
     return this.toAdminCategory(row);
   }
 
+  /**
+   * Crea una categoría de menú en la sede indicada.
+   */
   async createCategory(dto: CreateMenuCategoryDto): Promise<AdminCategoryResponseDto> {
     await this.requireLocation(dto.locationId);
     const data: Prisma.MenuCategoryUncheckedCreateInput = {
@@ -482,6 +491,9 @@ export class MenuService {
     return this.getCategory(id, locationId);
   }
 
+  /**
+   * Desactiva una categoría de menú (borrado lógico).
+   */
   async deleteCategory(id: string, locationId: string): Promise<AdminCategoryResponseDto> {
     await this.getCategory(id, locationId);
     await this.db(() =>
@@ -523,6 +535,9 @@ export class MenuService {
     return Promise.all(ids.map((id) => this.getCategory(id, locationId)));
   }
 
+  /**
+   * Lista ítems de menú administrativos filtrados por sede.
+   */
   async listItems(query: MenuItemListQueryDto): Promise<AdminItemPageDto> {
     const where: Prisma.MenuItemWhereInput = {
       category: { locationId: query.locationId },
@@ -551,6 +566,9 @@ export class MenuService {
     return { data: rows.map((row) => this.toAdminItem(row)), meta: this.pageMeta(query, total) };
   }
 
+  /**
+   * Obtiene un ítem de menú por identificador.
+   */
   async getItem(id: string): Promise<AdminItemResponseDto> {
     const row = await this.prisma.menuItem.findUnique({ where: { id }, select: adminItemSelect });
     if (!row) {
@@ -559,6 +577,9 @@ export class MenuService {
     return this.toAdminItem(row);
   }
 
+  /**
+   * Crea un ítem de menú ligado a una categoría existente.
+   */
   async createItem(dto: CreateMenuItemDto): Promise<AdminItemResponseDto> {
     await this.requireCategory(dto.categoryId);
     const data: Prisma.MenuItemUncheckedCreateInput = {
@@ -577,6 +598,9 @@ export class MenuService {
     return this.toAdminItem(row);
   }
 
+  /**
+   * Actualiza campos editables de un ítem de menú.
+   */
   async updateItem(id: string, dto: UpdateMenuItemDto): Promise<AdminItemResponseDto> {
     await this.getItem(id);
     if (dto.categoryId !== undefined) {
@@ -599,11 +623,17 @@ export class MenuService {
     return this.getItem(id);
   }
 
+  /**
+   * Desactiva un ítem de menú (borrado lógico).
+   */
   async deleteItem(id: string): Promise<AdminItemResponseDto> {
     await this.db(() => this.prisma.menuItem.update({ where: { id }, data: { active: false } }));
     return this.getItem(id);
   }
 
+  /**
+   * Lista variantes de un ítem con paginación administrativa.
+   */
   async listVariants(itemId: string, query: MenuVariantListQueryDto): Promise<AdminVariantPageDto> {
     await this.requireItem(itemId);
     const where: Prisma.MenuItemVariantWhereInput = {
@@ -632,6 +662,9 @@ export class MenuService {
     return { data: rows.map((row) => this.toAdminVariant(row)), meta: this.pageMeta(query, total) };
   }
 
+  /**
+   * Obtiene el resumen administrativo de una variante.
+   */
   async getVariant(id: string): Promise<AdminVariantSummaryDto> {
     const row = await this.prisma.menuItemVariant.findUnique({
       where: { id },
@@ -672,6 +705,9 @@ export class MenuService {
     return this.toAdminVariant(row);
   }
 
+  /**
+   * Actualiza variante y mantiene una sola variante predeterminada activa.
+   */
   async updateVariant(id: string, dto: UpdateMenuItemVariantDto): Promise<AdminVariantSummaryDto> {
     const current = await this.requireVariantWithLocation(id);
     if (dto.prepStationId !== undefined) {
@@ -710,6 +746,9 @@ export class MenuService {
     return this.toAdminVariant(row);
   }
 
+  /**
+   * Desactiva una variante de menú.
+   */
   async deleteVariant(id: string): Promise<AdminVariantSummaryDto> {
     await this.db(() =>
       this.prisma.menuItemVariant.update({ where: { id }, data: { active: false } }),
@@ -717,6 +756,9 @@ export class MenuService {
     return this.getVariant(id);
   }
 
+  /**
+   * Lista precios históricos de una variante por canal.
+   */
   async listPrices(variantId: string, query: MenuPriceListQueryDto): Promise<AdminPricePageDto> {
     await this.requireVariantWithLocation(variantId);
     const where: Prisma.MenuPriceWhereInput = {
@@ -736,6 +778,9 @@ export class MenuService {
     return { data: rows.map((row) => this.toAdminPrice(row)), meta: this.pageMeta(query, total) };
   }
 
+  /**
+   * Registra un precio con vigencia y validación de fechas.
+   */
   async createPrice(variantId: string, dto: CreateMenuPriceDto): Promise<AdminPriceResponseDto> {
     const variant = await this.requireVariantWithLocation(variantId);
     this.ensureSameLocation(dto.locationId, variant.menuItem.category.locationId);
@@ -760,6 +805,9 @@ export class MenuService {
     return this.toAdminPrice(row);
   }
 
+  /**
+   * Actualiza un precio existente respetando ventanas de vigencia.
+   */
   async updatePrice(id: string, dto: UpdateMenuPriceDto): Promise<AdminPriceResponseDto> {
     const current = await this.getPriceRecord(id);
     const data: Prisma.MenuPriceUncheckedUpdateInput = {};
@@ -780,6 +828,9 @@ export class MenuService {
     return this.getPrice(id);
   }
 
+  /**
+   * Obtiene un precio administrativo por id.
+   */
   async getPrice(id: string): Promise<AdminPriceResponseDto> {
     const row = await this.prisma.menuPrice.findUnique({ where: { id }, select: adminPriceSelect });
     if (!row) {
@@ -788,11 +839,17 @@ export class MenuService {
     return this.toAdminPrice(row);
   }
 
+  /**
+   * Desactiva un precio (borrado lógico).
+   */
   async deletePrice(id: string): Promise<AdminPriceResponseDto> {
     await this.db(() => this.prisma.menuPrice.update({ where: { id }, data: { active: false } }));
     return this.getPrice(id);
   }
 
+  /**
+   * Lista alérgenos del catálogo con búsqueda paginada.
+   */
   async listAllergens(query: AllergenListQueryDto): Promise<AdminAllergenPageDto> {
     const where: Prisma.AllergenWhereInput = {
       ...(query.includeInactive ? {} : { active: true }),
@@ -821,6 +878,9 @@ export class MenuService {
     };
   }
 
+  /**
+   * Lista declaraciones de alérgenos activas de una variante.
+   */
   async listVariantAllergens(variantId: string): Promise<AdminMenuAllergenResponseDto[]> {
     await this.requireVariantWithLocation(variantId);
     const rows = await this.prisma.menuItemAllergen.findMany({
@@ -984,6 +1044,9 @@ export class MenuService {
     return this.getAvailability(id);
   }
 
+  /**
+   * Obtiene una ventana de disponibilidad por id.
+   */
   async getAvailability(id: string): Promise<AdminAvailabilityResponseDto> {
     const row = await this.prisma.menuAvailability.findUnique({
       where: { id },
@@ -993,6 +1056,9 @@ export class MenuService {
     return this.toAdminAvailability(row);
   }
 
+  /**
+   * Desactiva una ventana de disponibilidad.
+   */
   async deleteAvailability(id: string): Promise<AdminAvailabilityResponseDto> {
     await this.db(() =>
       this.prisma.menuAvailability.update({ where: { id }, data: { active: false } }),
@@ -1000,6 +1066,9 @@ export class MenuService {
     return this.getAvailability(id);
   }
 
+  /**
+   * Lista agotados temporales de una variante.
+   */
   async listOutages(variantId: string, query: MenuOutageListQueryDto): Promise<AdminOutagePageDto> {
     await this.requireVariantWithLocation(variantId);
     const where: Prisma.MenuItemOutageWhereInput = {
@@ -1044,6 +1113,9 @@ export class MenuService {
     return this.toAdminOutage(row);
   }
 
+  /**
+   * Actualiza un agotado temporal validando el intervalo.
+   */
   async updateOutage(id: string, dto: UpdateMenuItemOutageDto): Promise<AdminOutageResponseDto> {
     const current = await this.requireOutage(id);
     const startsAt = dto.startsAt ? new Date(dto.startsAt) : current.startsAt;
@@ -1061,6 +1133,9 @@ export class MenuService {
     return this.getOutage(id);
   }
 
+  /**
+   * Obtiene un agotado temporal por id.
+   */
   async getOutage(id: string): Promise<AdminOutageResponseDto> {
     const row = await this.prisma.menuItemOutage.findUnique({
       where: { id },
@@ -1070,6 +1145,9 @@ export class MenuService {
     return this.toAdminOutage(row);
   }
 
+  /**
+   * Desactiva un agotado temporal.
+   */
   async deleteOutage(id: string): Promise<AdminOutageResponseDto> {
     await this.db(() =>
       this.prisma.menuItemOutage.update({ where: { id }, data: { active: false } }),
@@ -1077,6 +1155,9 @@ export class MenuService {
     return this.getOutage(id);
   }
 
+  /**
+   * Lista grupos de modificadores de una sede.
+   */
   async listModifierGroups(query: ModifierGroupListQueryDto): Promise<AdminModifierGroupPageDto> {
     const where: Prisma.ModifierGroupWhereInput = {
       locationId: query.locationId,
@@ -1107,6 +1188,9 @@ export class MenuService {
     };
   }
 
+  /**
+   * Crea un grupo de modificadores con límites de selección.
+   */
   async createModifierGroup(dto: CreateModifierGroupDto): Promise<AdminModifierGroupResponseDto> {
     this.validateSelectionLimits(dto.selectionMin, dto.selectionMax);
     await this.requireLocation(dto.locationId);
@@ -1149,6 +1233,9 @@ export class MenuService {
     return this.getModifierGroup(id);
   }
 
+  /**
+   * Obtiene un grupo de modificadores por id.
+   */
   async getModifierGroup(id: string): Promise<AdminModifierGroupResponseDto> {
     const row = await this.prisma.modifierGroup.findUnique({
       where: { id },
@@ -1158,6 +1245,9 @@ export class MenuService {
     return this.toAdminModifierGroup(row);
   }
 
+  /**
+   * Desactiva un grupo de modificadores.
+   */
   async deleteModifierGroup(id: string): Promise<AdminModifierGroupResponseDto> {
     await this.db(() =>
       this.prisma.modifierGroup.update({ where: { id }, data: { active: false } }),
@@ -1165,6 +1255,9 @@ export class MenuService {
     return this.getModifierGroup(id);
   }
 
+  /**
+   * Crea un modificador dentro de un grupo.
+   */
   async createModifier(groupId: string, dto: CreateModifierDto): Promise<AdminModifierResponseDto> {
     await this.requireModifierGroup(groupId);
     const data: Prisma.ModifierUncheckedCreateInput = {
@@ -1181,6 +1274,9 @@ export class MenuService {
     return this.toAdminModifier(row);
   }
 
+  /**
+   * Actualiza un modificador existente.
+   */
   async updateModifier(id: string, dto: UpdateModifierDto): Promise<AdminModifierResponseDto> {
     await this.requireModifier(id);
     const data: Prisma.ModifierUncheckedUpdateInput = {};
@@ -1195,6 +1291,9 @@ export class MenuService {
     return this.getModifier(id);
   }
 
+  /**
+   * Obtiene un modificador por id.
+   */
   async getModifier(id: string): Promise<AdminModifierResponseDto> {
     const row = await this.prisma.modifier.findUnique({
       where: { id },
@@ -1204,6 +1303,9 @@ export class MenuService {
     return this.toAdminModifier(row);
   }
 
+  /**
+   * Desactiva un modificador.
+   */
   async deleteModifier(id: string): Promise<AdminModifierResponseDto> {
     await this.db(() => this.prisma.modifier.update({ where: { id }, data: { active: false } }));
     return this.getModifier(id);
@@ -1890,23 +1992,38 @@ export class MenuService {
   }
 }
 
+/**
+ * Parsea fecha calendario ISO a medianoche UTC.
+ */
 function dateOnly(value: string): Date {
   return new Date(`${value}T00:00:00.000Z`);
 }
 
+/**
+ * Formatea Date a cadena YYYY-MM-DD.
+ */
 function dateString(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
+/**
+ * Convierte HH:mm a Date UTC como contenedor de hora.
+ */
 function timeOnly(value: string): Date {
   const [hours, minutes] = value.split(':').map(Number);
   return new Date(Date.UTC(1970, 0, 1, hours ?? 0, minutes ?? 0));
 }
 
+/**
+ * Formatea hora UTC almacenada como HH:mm.
+ */
 function formatTime(value: Date): string {
   return `${String(value.getUTCHours()).padStart(2, '0')}:${String(value.getUTCMinutes()).padStart(2, '0')}`;
 }
 
+/**
+ * Convierte Date UTC de hora a minutos desde medianoche.
+ */
 function timeMinutes(value: Date): number {
   return value.getUTCHours() * 60 + value.getUTCMinutes();
 }

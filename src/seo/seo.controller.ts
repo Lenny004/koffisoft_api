@@ -117,6 +117,9 @@ export class SeoFeedController {
   @Public()
   @Header('Content-Type', 'application/xml; charset=utf-8')
   @ApiOperation({ summary: 'Genera sitemap desde contenido publicado' })
+  /**
+   * Expone sitemap.xml generado desde contenido publicado e índices SEO.
+   */
   getSitemap(): Promise<string> {
     return this.service.getSitemapXml();
   }
@@ -125,6 +128,9 @@ export class SeoFeedController {
   @Public()
   @Header('Content-Type', 'text/plain; charset=utf-8')
   @ApiOperation({ summary: 'Genera robots.txt con referencia al sitemap' })
+  /**
+   * Expone robots.txt con referencia al sitemap público.
+   */
   getRobots(): string {
     return this.service.getRobotsTxt();
   }

@@ -25,6 +25,7 @@ export interface CreatedSession {
   readonly record: SessionRecord;
 }
 
+/** Comprueba el formato base64url del token opaco antes de consultar la base de datos. */
 function isSessionToken(value: string): boolean {
   return /^[A-Za-z0-9_-]{43,}$/u.test(value);
 }
@@ -38,10 +39,12 @@ export class SessionService {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
+  /** Calcula el hash SHA-256 en hex que se persiste en lugar del token en claro. */
   hashToken(token: string): string {
     return createHash('sha256').update(token, 'utf8').digest('hex');
   }
 
+  /** Emite un token nuevo, persiste la sesión y registra SessionCreated en auditoría. */
   async createSession(
     userId: string,
     mfaVerified: boolean,
@@ -72,6 +75,7 @@ export class SessionService {
     return { token, record };
   }
 
+  /** Revoca la sesión actual y crea otra con la misma expiración absoluta dentro de una transacción. */
   async rotateSession(
     current: SessionRecord,
     mfaVerified: boolean,
@@ -122,6 +126,9 @@ export class SessionService {
     return rotated;
   }
 
+  /**
+   * Localiza una sesión activa por token, aplica idle timeout y actualiza lastUsedAt al usarla.
+   */
   async findValidSession(
     token: string,
     metadata: RequestMetadata = {},
@@ -168,6 +175,7 @@ export class SessionService {
     };
   }
 
+  /** Revoca la sesión asociada al token de cookie si el formato y el registro son válidos. */
   async revokeToken(
     token: string | undefined,
     reason: string,
@@ -188,6 +196,7 @@ export class SessionService {
     return this.revokeSession(session.id, reason, metadata, session.userId);
   }
 
+  /** Marca una fila de sesión como revocada y audita cuando la actualización afecta un registro. */
   async revokeSession(
     sessionId: string,
     reason: string,
@@ -214,6 +223,7 @@ export class SessionService {
     return false;
   }
 
+  /** Revoca en bloque las sesiones activas del usuario, opcionalmente exceptuando una sesión. */
   async revokeAll(
     userId: string,
     metadata: RequestMetadata,
@@ -242,6 +252,7 @@ export class SessionService {
     return result.count;
   }
 
+  /** Escribe la cookie httpOnly de sesión con maxAge acorde a expiresAt. */
   setCookie(reply: FastifyReply, token: string, expiresAt: Date): void {
     const maxAge = Math.max(1, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
     reply.setCookie(this.config.cookieName, token, {
@@ -254,6 +265,7 @@ export class SessionService {
     });
   }
 
+  /** Elimina la cookie de sesión usando los mismos atributos de seguridad que setCookie. */
   clearCookie(reply: FastifyReply): void {
     reply.clearCookie(this.config.cookieName, {
       httpOnly: true,
@@ -263,10 +275,12 @@ export class SessionService {
     });
   }
 
+  /** Lee el token opaco desde la cookie configurada en la petición entrante. */
   getToken(request: { cookies?: Record<string, string | undefined> }): string | undefined {
     return request.cookies?.[this.config.cookieName];
   }
 
+  /** Inserta la fila userSession con metadatos de red y estado MFA inicial. */
   private async createSessionRecord(
     client: PrismaService | Prisma.TransactionClient,
     userId: string,

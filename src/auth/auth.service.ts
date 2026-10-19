@@ -99,6 +99,7 @@ interface UsernameLookup {
   };
 }
 
+/** Normaliza un nombre o fragmento de correo a un slug ASCII apto como base de username. */
 function nameSlug(value: string): string {
   return value
     .normalize('NFD')
@@ -124,6 +125,7 @@ export class AuthService {
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
+  /** Arma roles, permisos y estado MFA activos; devuelve null si el usuario o empleado no pueden acceder. */
   async getAccessSnapshot(userId: string): Promise<AccessSnapshot | null> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -217,6 +219,7 @@ export class AuthService {
     };
   }
 
+  /** Valida credenciales, aplica bloqueos y rehash, abre sesión y señala pasos pendientes de MFA o contraseña. */
   async login(
     dto: LoginDto,
     metadata: RequestMetadata,
@@ -376,6 +379,7 @@ export class AuthService {
     };
   }
 
+  /** Confirma TOTP en una sesión pendiente, rota el token y registra auditoría de éxito o fallo. */
   async verifyMfa(
     context: AuthContext,
     dto: MfaCodeDto,
@@ -401,6 +405,7 @@ export class AuthService {
     return { session, usedRecoveryCode: false };
   }
 
+  /** Consume un código de recuperación MFA, completa la sesión y deja constancia en auditoría. */
   async verifyRecovery(
     context: AuthContext,
     dto: RecoveryCodeDto,
@@ -431,6 +436,7 @@ export class AuthService {
     return { session, usedRecoveryCode: true };
   }
 
+  /** Crea un factor TOTP pendiente cifrado y devuelve la URI otpauth para el autenticador. */
   async setupTotp(
     context: AuthContext,
     dto: MfaSetupDto,
@@ -471,6 +477,7 @@ export class AuthService {
     return { label: factor.label, uri };
   }
 
+  /** Activa el TOTP pendiente, emite códigos de recuperación nuevos y eleva la sesión a MFA verificado. */
   async confirmTotp(
     context: AuthContext,
     dto: MfaCodeDto,
@@ -547,6 +554,7 @@ export class AuthService {
     };
   }
 
+  /** Sustituye los códigos de recuperación tras verificar contraseña y TOTP del titular de la sesión. */
   async regenerateRecoveryCodes(
     context: AuthContext,
     dto: PasswordAndMfaCodeDto,
@@ -582,6 +590,7 @@ export class AuthService {
     return recoveryCodes.map(({ plain }) => plain);
   }
 
+  /** Desactiva TOTP tras reautenticación, invalida recuperación y revoca el resto de sesiones del usuario. */
   async disableTotp(
     context: AuthContext,
     dto: PasswordAndMfaCodeDto,
@@ -644,6 +653,7 @@ export class AuthService {
     return { session, enabled: false };
   }
 
+  /** Cambia la contraseña autenticado, revoca otras sesiones y rota la sesión actual conservando el estado MFA. */
   async changePassword(
     context: AuthContext,
     dto: ChangePasswordDto,
@@ -687,16 +697,19 @@ export class AuthService {
     return session;
   }
 
+  /** Revoca la sesión asociada al token de cookie cuando se envía uno. */
   async logout(token: string | undefined, metadata: RequestMetadata): Promise<void> {
     if (token) {
       await this.sessions.revokeToken(token, 'logout', metadata);
     }
   }
 
+  /** Revoca todas las sesiones activas del usuario autenticado y devuelve cuántas se cerraron. */
   async logoutAll(context: AuthContext, metadata: RequestMetadata): Promise<number> {
     return this.sessions.revokeAll(context.userId, metadata, 'logout_all');
   }
 
+  /** Proyecta el contexto de sesión ya resuelto al DTO público del endpoint /auth/me. */
   me(context: AuthContext): MeResponseDto {
     return {
       user: context.user,
@@ -711,6 +724,7 @@ export class AuthService {
     };
   }
 
+  /** Incrementa intentos fallidos, bloquea la cuenta al umbral configurado y audita el evento. */
   private async registerLoginFailure(
     user: LoginUser,
     metadata: RequestMetadata,
@@ -747,6 +761,7 @@ export class AuthService {
     }
   }
 
+  /** Obtiene el hash de contraseña almacenado para operaciones que exigen reautenticación. */
   private async getUserPassword(userId: string): Promise<{ passwordHash: string } | null> {
     return this.prisma.user.findUnique({
       where: { id: userId },
@@ -754,6 +769,7 @@ export class AuthService {
     });
   }
 
+  /** Localiza el factor TOTP activo más reciente del usuario, si existe. */
   private async getActiveFactor(userId: string): Promise<ActiveMfaFactor | null> {
     return this.prisma.userMfaFactor.findFirst({
       where: {
@@ -772,6 +788,7 @@ export class AuthService {
     });
   }
 
+  /** Verifica un TOTP y avanza el contador de ventana usada para impedir reutilización del mismo código. */
   private async consumeTotp(userId: string, code: string): Promise<boolean> {
     const factor = await this.getActiveFactor(userId);
     if (!factor) {
@@ -804,6 +821,7 @@ export class AuthService {
     return accepted.count === 1;
   }
 
+  /** Marca como usado el primer código de recuperación no consumido que coincida con el valor normalizado. */
   private async consumeRecoveryCode(userId: string, code: string): Promise<boolean> {
     const normalized = code.replaceAll('-', '').trim().toUpperCase();
     const candidates = await this.prisma.userMfaRecoveryCode.findMany({
@@ -829,6 +847,7 @@ export class AuthService {
     return used.count === 1;
   }
 
+  /** Genera el lote estándar de códigos de recuperación con su hash Argon2id para persistencia. */
   private async buildRecoveryCodes(): Promise<RecoveryCodeMaterial[]> {
     const codes: RecoveryCodeMaterial[] = [];
     for (let index = 0; index < RECOVERY_CODE_COUNT; index += 1) {
@@ -838,6 +857,7 @@ export class AuthService {
     return codes;
   }
 
+  /** Invalida códigos de recuperación vigentes y persiste un conjunto nuevo en una transacción. */
   private async replaceRecoveryCodes(userId: string, codes: RecoveryCodeMaterial[]): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
       await transaction.userMfaRecoveryCode.updateMany({
@@ -850,6 +870,7 @@ export class AuthService {
     });
   }
 
+  /** Reserva un username único derivado del nombre o correo, con sufijo aleatorio si hay colisión. */
   private async availableUsername(
     tx: UsernameLookup,
     firstName: string,
@@ -873,6 +894,7 @@ export class AuthService {
     throw new ConflictException('No se pudo reservar un nombre de usuario único.');
   }
 
+  /** Ejecuta el alta atómica del propietario inicial bajo candado advisory y fila system_setups id = 1. */
   private async createInitialOwner(
     tx: Prisma.TransactionClient,
     data: InitialOwnerData,
@@ -951,6 +973,7 @@ export class AuthService {
     return user.id;
   }
 
+  /** Emite un token de recuperación hasheado cuando el correo existe; no revela si la cuenta falta. */
   async requestPasswordReset(email: string, metadata: RequestMetadata): Promise<void> {
     const user = await this.prisma.user.findFirst({
       where: { email: { equals: email, mode: 'insensitive' } },
@@ -981,6 +1004,7 @@ export class AuthService {
     console.log(`[DEV] Token de recuperación para ${email}: ${token} (expira en 1 hora)`);
   }
 
+  /** Aplica una nueva contraseña con token válido, marca el token usado y revoca sesiones abiertas. */
   async resetPassword(
     token: string,
     newPassword: string,
@@ -1033,6 +1057,7 @@ export class AuthService {
     });
   }
 
+  /** Rota la sesión del contexto actual si sigue activa en base de datos. */
   private async rotateContextSession(
     context: AuthContext,
     mfaVerified: boolean,

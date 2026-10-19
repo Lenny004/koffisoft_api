@@ -14,6 +14,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     super({ adapter });
   }
 
+  /**
+   * Conecta a PostgreSQL al arranque solo si DATABASE_CONNECT_ON_BOOT está activo.
+   */
   async onModuleInit(): Promise<void> {
     // La conexión queda opt-in para que health checks y tests no necesiten PostgreSQL.
     if (process.env.DATABASE_CONNECT_ON_BOOT === 'true') {
@@ -21,6 +24,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }
   }
 
+  /**
+   * Cierra el pool de Prisma al apagar el módulo.
+   */
   async onModuleDestroy(): Promise<void> {
     await this.$disconnect();
   }
